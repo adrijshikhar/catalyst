@@ -1,0 +1,82 @@
+{
+  "skill_name": "session-degradation-watch",
+  "version": "0.6",
+  "evals": [
+    {
+      "id": 0,
+      "name": "warns-at-60-pct-context",
+      "category": "capability",
+      "prompt": "Invoke hooks/UserPromptSubmit-session-degradation-watch.sh with input JSON pointing transcript_path to skills/session-degradation-watch/evals/fixtures/transcript-60pct.jsonl. Save the hook's stdout to hook-out-60.json. The hook must emit a hookSpecificOutput.additionalContext mentioning context % and suggesting handoff WRITE.",
+      "files": [],
+      "assertions": [
+        "hook-out-60.json exists",
+        "hook-out-60.json parsed-with-jq contains hookSpecificOutput.additionalContext",
+        "additionalContext contains 'handoff' (suggests handoff WRITE as the action)",
+        "additionalContext contains '60%' OR '60 %' OR 'context' (names the signal)"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "force-at-85-pct",
+      "category": "capability",
+      "prompt": "Invoke the hook with transcript_path = transcript-85pct.jsonl. Save stdout to hook-out-85.json. The hook must emit a stronger message — 'call handoff NOW' or equivalent urgency wording.",
+      "files": [],
+      "assertions": [
+        "hook-out-85.json exists",
+        "additionalContext contains 'handoff'",
+        "additionalContext contains '85' OR '85%' OR 'force' OR 'NOW' OR 'immediately' (escalated urgency vs 60% case)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "repeated-tool-call-detected",
+      "category": "capability",
+      "prompt": "Invoke the hook with transcript_path = transcript-repeated-bash.jsonl (3 identical 'ls -la' calls in last 5 turns). Save stdout to hook-out-repeated.json. The hook must flag the loop.",
+      "files": [],
+      "assertions": [
+        "hook-out-repeated.json exists",
+        "additionalContext contains 'repeated' OR 'loop' OR 'identical' OR 'ls -la' (names the repeat)",
+        "additionalContext contains 'different' OR 'try' OR 'approach' (suggests trying something different)"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "stale-read-detected",
+      "category": "capability",
+      "prompt": "Invoke the hook with transcript_path = transcript-stale-read.jsonl (Edit on src/a.ts at turn 21, last Read of src/a.ts at turn 2 → 19-turn gap, exceeds 15-turn threshold). Save stdout to hook-out-stale.json. The hook must suggest re-Read.",
+      "files": [],
+      "assertions": [
+        "hook-out-stale.json exists",
+        "additionalContext contains 'stale' OR 're-Read' OR 're-read' OR 'reread'",
+        "additionalContext contains 'src/a.ts' (names the file)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "contradiction-flagged",
+      "category": "capability",
+      "prompt": "Create a fixture .claude/PROJECT_STATE.md with the line 'Decision: use JWT not session cookies'. Then invoke the hook with a transcript ending in a turn saying 'using session cookies for auth'. The hook must detect the string-level contradiction (decision says JWT, current direction says cookies) and flag it.",
+      "files": [
+        {"path": ".claude/PROJECT_STATE.md", "content": "Decision: use JWT not session cookies for auth.\n"},
+        {"path": "transcript-contradiction.jsonl", "content": "{\"type\":\"user\",\"content\":\"start\",\"turn\":1}\n{\"type\":\"assistant\",\"content\":\"using session cookies for auth\",\"turn\":2}\n"}
+      ],
+      "assertions": [
+        "hook-out-contradiction.json exists",
+        "additionalContext contains 'contradiction' OR 'conflict' OR 'PROJECT_STATE'",
+        "additionalContext mentions 'JWT' OR 'session cookies' (names the contradicting concept)"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "no-noise-on-clean-session",
+      "category": "regression",
+      "prompt": "Invoke the hook with transcript_path = transcript-clean.jsonl (small transcript, no signals). The hook must NOT emit any additionalContext OR must emit an empty/null additionalContext. False positives here are a release-blocking regression.",
+      "files": [],
+      "assertions": [
+        "hook-out-clean.json exists",
+        "hook-out-clean.json does NOT contain additionalContext OR additionalContext is empty string OR null",
+        "no hookSpecificOutput.additionalContext field present OR it's an empty string"
+      ]
+    }
+  ]
+}

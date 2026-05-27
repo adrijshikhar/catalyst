@@ -1,0 +1,40 @@
+{"type": "user", "content": "start", "turn": 1}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/a.ts"}, "turn": 2}
+{"type": "tool_result", "content": "contents", "turn": 2}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b3.ts"}, "turn": 3}
+{"type": "tool_result", "content": "misc", "turn": 3}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b4.ts"}, "turn": 4}
+{"type": "tool_result", "content": "misc", "turn": 4}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b5.ts"}, "turn": 5}
+{"type": "tool_result", "content": "misc", "turn": 5}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b6.ts"}, "turn": 6}
+{"type": "tool_result", "content": "misc", "turn": 6}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b7.ts"}, "turn": 7}
+{"type": "tool_result", "content": "misc", "turn": 7}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b8.ts"}, "turn": 8}
+{"type": "tool_result", "content": "misc", "turn": 8}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b9.ts"}, "turn": 9}
+{"type": "tool_result", "content": "misc", "turn": 9}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b10.ts"}, "turn": 10}
+{"type": "tool_result", "content": "misc", "turn": 10}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b11.ts"}, "turn": 11}
+{"type": "tool_result", "content": "misc", "turn": 11}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b12.ts"}, "turn": 12}
+{"type": "tool_result", "content": "misc", "turn": 12}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b13.ts"}, "turn": 13}
+{"type": "tool_result", "content": "misc", "turn": 13}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b14.ts"}, "turn": 14}
+{"type": "tool_result", "content": "misc", "turn": 14}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b15.ts"}, "turn": 15}
+{"type": "tool_result", "content": "misc", "turn": 15}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b16.ts"}, "turn": 16}
+{"type": "tool_result", "content": "misc", "turn": 16}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b17.ts"}, "turn": 17}
+{"type": "tool_result", "content": "misc", "turn": 17}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b18.ts"}, "turn": 18}
+{"type": "tool_result", "content": "misc", "turn": 18}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b19.ts"}, "turn": 19}
+{"type": "tool_result", "content": "misc", "turn": 19}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/b20.ts"}, "turn": 20}
+{"type": "tool_result", "content": "misc", "turn": 20}
+{"type": "tool_use", "name": "Edit", "input": {"file_path": "src/a.ts"}, "turn": 21}

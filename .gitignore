@@ -1,0 +1,25 @@
+.DS_Store
+.env
+.env.local
+*.log
+!skills/*/evals/evals.log
+node_modules/
+.idea/
+.vscode/
+*.swp
+.claude/handoffs/
+.claude/hooks/
+.claude/PROJECT_STATE.md
+.claude/HANDOFF.md
+.claude/.catalyst-oriented-*
+.claude/settings.json
+.claude/verify-gate.json
+.claude/coord/
+.claude/reviews/
+.claude/cache/
+skills/*-workspace/
+
+# Planning artifacts (specs + plans + roadmap) live in the private `projects`
+# repo, never in the public repo. Keep them local-only here.
+docs/superpowers/
+docs/ROADMAP.md

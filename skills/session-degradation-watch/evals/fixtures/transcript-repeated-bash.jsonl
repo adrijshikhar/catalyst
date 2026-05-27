@@ -1,0 +1,7 @@
+{"type":"user","content":"check it","turn":1}
+{"type":"tool_use","name":"Bash","input":{"command":"ls -la"},"turn":2}
+{"type":"tool_result","content":"file list","turn":2}
+{"type":"tool_use","name":"Bash","input":{"command":"ls -la"},"turn":3}
+{"type":"tool_result","content":"file list","turn":3}
+{"type":"tool_use","name":"Bash","input":{"command":"ls -la"},"turn":4}
+{"type":"tool_result","content":"file list","turn":4}

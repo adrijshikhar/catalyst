@@ -1,0 +1,102 @@
+{
+  "skill_name": "pipeline-templates",
+  "version": "0.5",
+  "evals": [
+    {
+      "id": 0,
+      "name": "list-shows-bundled-templates",
+      "category": "capability",
+      "prompt": "Run `/pipeline list` against the Catalyst repo. Output must include all 3 bundled template names (`audit-then-fix`, `research-plan-implement-review`, `parallel-review-synthesize`). Save the output to `list-output.txt`.",
+      "files": [],
+      "assertions": [
+        "list-output.txt exists",
+        "list-output.txt contains 'audit-then-fix'",
+        "list-output.txt contains 'research-plan-implement-review'",
+        "list-output.txt contains 'parallel-review-synthesize'",
+        "list-output.txt distinguishes bundled vs user templates (contains 'bundled' OR '[bundled]' OR 'plugin' OR 'user' OR 'saved')"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "dry-run-prints-plan-without-dispatching",
+      "category": "capability",
+      "prompt": "Run `/pipeline run audit-then-fix --dry-run` against the Catalyst repo. The skill must read the bundled template at `skills/pipeline-templates/templates/audit-then-fix.md`, render the stage plan, and print it to stdout. NO Agent tool calls happen during dry-run. Save the rendered plan to `dry-run-output.md`. Before invocation, take a snapshot of `.claude/eval-reports/` and any `.claude/audits/` directory contents (or note their absence). After invocation, confirm those directories are unchanged (same file list, same sizes).",
+      "files": [],
+      "assertions": [
+        "dry-run-output.md exists",
+        "dry-run-output.md contains 'Stage 1' OR 'stage 1'",
+        "dry-run-output.md contains 'parallel auditors' OR 'auditor' (audit-then-fix stage 1 is parallel)",
+        "dry-run-output.md mentions the template name 'audit-then-fix'",
+        "No Agent tool was invoked (no eval-report files created)",
+        ".claude/eval-reports/ directory is unchanged (same file list and sizes as pre-invocation snapshot)",
+        ".claude/audits/ directory state is unchanged (no new files; dir may still be absent if it was absent before)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "run-bundled-audit-then-fix-renders-stage-plan",
+      "category": "capability",
+      "prompt": "Run `/pipeline run audit-then-fix` (without --dry-run) against the Catalyst repo. The skill must (a) read the bundled template, (b) surface the stage-by-stage plan to the user before dispatching, (c) follow handoff PIPELINE mode's decompose → route → BRIEF → dispatch → synthesize order. Save the surfaced plan markdown to `run-output.md`.\n\nDo NOT actually dispatch live Agent subagents in this eval — instead, produce the BRIEF that WOULD be dispatched for stage 1. This eval covers the stage-plan rendering path; live dispatch is covered by separate post-Task-7 integration tests.\n\nThen also produce a second rendered plan for `research-plan-implement-review` (a 5-stage template) and save it as `run-output-rpir.md`. This proves the renderer handles templates with stage count > 3 (anti-pattern guard).",
+      "files": [],
+      "assertions": [
+        "run-output.md exists",
+        "run-output.md references handoff PIPELINE mode",
+        "run-output.md lists at least 4 stages from audit-then-fix (audit-then-fix has exactly 4 stages: parallel-audit, prioritize, fix-top-n, verify-fixes)",
+        "run-output.md mentions 'BRIEF' or 'brief'",
+        "run-output-rpir.md exists",
+        "run-output-rpir.md lists at least 5 stages from research-plan-implement-review (research, plan, contract-handshake, implement, review)"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "save-writes-file-and-list-shows-it",
+      "category": "capability",
+      "prompt": "Run `/pipeline save my-test-pipeline`. The skill must write a markdown template to `.claude/pipelines/my-test-pipeline.md` capturing the pipeline shape (stages, decomposition axis, synthesis approach). Then run `/pipeline list` and verify `my-test-pipeline` appears. Save both outputs.\n\nFor this eval, treat the current 'pipeline' as a 2-stage example: stage 1 is a parallel reviewer dispatch on 2 files, stage 2 is a synthesizer.",
+      "files": [],
+      "assertions": [
+        ".claude/pipelines/my-test-pipeline.md exists",
+        ".claude/pipelines/my-test-pipeline.md contains '## Stages'",
+        "list output (after save) contains 'my-test-pipeline'",
+        "list output labels my-test-pipeline as 'user' or 'saved' (distinguished from bundled)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "user-template-overrides-bundled",
+      "category": "capability",
+      "prompt": "Create `.claude/pipelines/audit-then-fix.md` with custom user content (different from bundled). Then run `/pipeline run audit-then-fix --dry-run`. The output must use the USER version (containing the marker `CUSTOM-USER-TEMPLATE`), not the bundled.",
+      "files": [
+        {"path": ".claude/pipelines/audit-then-fix.md", "content": "# Pipeline: audit-then-fix\n\nCUSTOM-USER-TEMPLATE — overrides bundled.\n\n## When to use\nUser-customized.\n\n## Decomposition axis\nconcern\n\n## Stages\n1. **custom-audit** (parallel)\n   - Subagent role: auditor\n   - Inputs: codebase\n   - Expected output: findings.md\n\n## Synthesis\nMerge.\n\n## Failure / abort criteria\nAny critical finding aborts.\n"}
+      ],
+      "assertions": [
+        "dry-run-output.md exists",
+        "dry-run-output.md contains 'CUSTOM-USER-TEMPLATE'",
+        "dry-run-output.md does NOT contain a bundled-template-only string (the bundled audit-then-fix mentions 'security + performance + correctness'; user's mentions 'custom-audit' only)"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "template-with-evaluator-stage-dispatches-via-evaluator-library",
+      "category": "regression",
+      "prompt": "The bundled `audit-then-fix` template has a stage 4 (evaluator role). The rendered plan for this stage must reference `evaluator-library` (the Tier 2 skill) by name — not hand-roll a rubric. The domain referenced must be one consistent with audit-then-fix (code-quality, security, OR performance — these are the only domains audit-then-fix should plausibly use for its verify-fixes stage). Save the rendered plan to `rendered-plan.md`.",
+      "files": [],
+      "assertions": [
+        "rendered-plan.md exists",
+        "rendered-plan.md contains 'evaluator-library' OR 'evaluator-library run'",
+        "rendered-plan.md mentions a domain consistent with audit-then-fix's verify stage: 'code-quality' OR 'security' OR 'performance' (NOT 'ui-design', 'prose', or 'accessibility' which would indicate the wrong domain choice)"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "template-domain-must-exist-in-bundled-set",
+      "category": "regression",
+      "prompt": "Scan every bundled template at `skills/pipeline-templates/templates/*.md`. For each occurrence of `evaluator-library run <X>` OR a 'default: ...' / 'domains' / 'domain' line that names evaluator domains, every named domain X must be one of the 6 bundled evaluator-library domains: `code-quality`, `ui-design`, `prose`, `security`, `performance`, `accessibility`. References to RUBRIC AXES (e.g., `clarity`, `accuracy`, `hook`, `brevity`, `correctness`, `readability`, `maintainability`, `test_coverage`) as if they were domains are a critique failure — axes belong INSIDE a rubric, not as dispatch keys. Save the audit result to `domain-audit.md` listing each file:line and the domain(s) it references, plus a final VERDICT line: PASS if all references are valid domains, FAIL otherwise (with the bogus references listed).",
+      "files": [],
+      "assertions": [
+        "domain-audit.md exists",
+        "domain-audit.md contains 'VERDICT: PASS' (all template domain references resolve to the 6 bundled domains)",
+        "domain-audit.md does NOT contain 'clarity' OR 'accuracy' OR 'hook' OR 'brevity' OR 'correctness' OR 'readability' as a flagged-bogus reference (these are axes; if the template lists them as domains the audit must FAIL)"
+      ]
+    }
+  ]
+}

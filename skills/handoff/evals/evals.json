@@ -1,0 +1,263 @@
+{
+  "skill_name": "handoff",
+  "version": "0.3",
+  "evals": [
+    {
+      "id": 0,
+      "name": "write-tier-2-branch",
+      "category": "capability",
+      "prompt": "Current branch is `feat/jwt-expiry` (read `.git-HEAD` if you need to confirm). The session has been debugging the JWT expiry off-by-one bug \u2014 switched `<` to `<=`, ran `pnpm test src/auth/`, 4 of 6 pass, 2 clock-skew tests fail at auth.spec.ts:42-78. Decisions in force: jose lib (not jsonwebtoken), Date.now() (not new Date()), `<=` comparison. Open risk: clock skew. Next acceptance check: 6/6 pass after adding a leeway parameter.\n\nThis is the first handoff for this project (no PROJECT_STATE.md exists yet). Write the handoff now, then explain which key tier you used and why.\n\nWrite outputs under `.claude/` at the current working directory.",
+      "files": [
+        {
+          "path": ".git-HEAD",
+          "content": "feat/jwt-expiry\n"
+        }
+      ],
+      "assertions": [
+        "Brief was written to .claude/handoffs/feat-jwt-expiry.md (tier 2 \u2014 branch sanitized)",
+        "Brief was NOT written to .claude/HANDOFF.md (tier 3 should not be used)",
+        "Brief contains a 'Resume prompt' section with paste-and-go text mentioning the next acceptance check",
+        "Brief contains '# Key: feat-jwt-expiry'",
+        "Brief State packet names branch feat/jwt-expiry",
+        "Brief lists at least one rejected path (new Date() or '<')",
+        "PROJECT_STATE.md was created at .claude/PROJECT_STATE.md with header + dated entry",
+        "PROJECT_STATE.md entry title includes the feature key (e.g., '[feat-jwt-expiry]')",
+        "Brief is under 200 lines",
+        "Chat response names tier 2 (branch) as the resolution chosen"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "write-tier-3-legacy-fallback",
+      "category": "capability",
+      "prompt": "There is no git repository here. Treat this working directory as plain filesystem only \u2014 do NOT run git commands. The session has been refactoring a logger; cleaned up 4 files. Next acceptance: no console.log in src/. Write the handoff now and explain which tier you used.\n\nWrite outputs under `.claude/` at the current working directory.",
+      "files": [],
+      "assertions": [
+        "Brief was written to .claude/HANDOFF.md (tier 3 \u2014 legacy fallback)",
+        "Brief was NOT written to .claude/handoffs/* (no feature key resolved)",
+        "Brief contains a 'Resume prompt' section",
+        "Chat response names tier 3 (legacy / no-git) as the resolution chosen",
+        "PROJECT_STATE.md was created (still repo-level, not feature-scoped)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "read-multi-brief",
+      "category": "capability",
+      "prompt": "Fresh session, resuming work. Current branch is `feat/jwt-expiry` (see .git-HEAD). There are multiple handoff briefs under .claude/handoffs/. Survey them, pick the one matching the current branch as the default, and tell me which others exist. Then write a short `resume_summary.md` summarizing what the chosen brief instructs (next acceptance, files to read first, locked decisions).\n\nDo NOT read .claude/PROJECT_STATE.md unless the chosen brief explicitly points there.",
+      "files": [
+        {
+          "path": ".git-HEAD",
+          "content": "feat/jwt-expiry\n"
+        },
+        {
+          "path": ".claude/handoffs/feat-jwt-expiry.md",
+          "content": "<fixture-from-task-2-step-3-feat-jwt-expiry>"
+        },
+        {
+          "path": ".claude/handoffs/feat-rate-limit.md",
+          "content": "<fixture-from-task-2-step-3-feat-rate-limit>"
+        }
+      ],
+      "assertions": [
+        "resume_summary.md exists in the working directory",
+        "Chosen brief is feat-jwt-expiry (matches current branch)",
+        "Chat response lists feat-rate-limit as the other available brief",
+        "resume_summary.md quotes the next acceptance check: 'pnpm test src/auth/auth.spec.ts passes 6/6'",
+        "resume_summary.md names at least one locked decision (jose, <=, or Date.now())",
+        "Skill did NOT auto-read or summarize PROJECT_STATE.md",
+        "Skill did NOT silently pick a brief without surfacing alternatives"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "read-legacy-fallback",
+      "category": "capability",
+      "prompt": "Fresh session. There is only a legacy `.claude/HANDOFF.md` here \u2014 no `.claude/handoffs/` directory. Read it and write a short `resume_summary.md` with: next acceptance check, files to read first, and a one-line statement that this is a legacy brief.",
+      "files": [
+        {
+          "path": ".claude/HANDOFF.md",
+          "content": "<fixture-from-task-2-step-4>"
+        }
+      ],
+      "assertions": [
+        "resume_summary.md exists",
+        "resume_summary.md quotes the next acceptance check from the legacy brief",
+        "resume_summary.md names src/utils/logger.ts as a file to read first",
+        "resume_summary.md flags that this was a legacy (tier-3) brief",
+        "Skill did NOT error or refuse on the v0.2-shaped brief (no Resume prompt section)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "recover-degraded",
+      "category": "capability",
+      "prompt": "Context has degraded. I keep re-reading files and contradicting earlier decisions. Current branch is `feat/jwt-expiry`. Reconstruct a fresh brief at the right location using whatever you can read from `.claude/` and from `git log` (treat the assumed output below as truth):\n\n```\ngit log --oneline -10\n  a4c7b2f fix(auth): switch expiry comparison to <= for boundary case\n  9e1d0aa feat(auth): migrate from jsonwebtoken to jose\ngit branch --show-current  \u2192  feat/jwt-expiry\n```\n\nDo NOT prepend anything to PROJECT_STATE.md \u2014 recovery is re-assembly, not fresh signal. Tell me what to do after you finish.",
+      "files": [
+        {
+          "path": ".git-HEAD",
+          "content": "feat/jwt-expiry\n"
+        },
+        {
+          "path": ".claude/handoffs/feat-jwt-expiry.md",
+          "content": "# (stale brief from before the degradation)\n## State packet\n- Branch: feat/jwt-expiry\n- Tests run: none recently\n"
+        },
+        {
+          "path": ".claude/PROJECT_STATE.md",
+          "content": "# Project state \u2014 narrative log\n\n## 2026-05-23 \u2014 [feat-jwt-expiry] off-by-one fix\n### Decisions\n- Use `Date.now()` (not new Date()) \u2014 allocation in hot path\n- Use `<=` not `<` \u2014 exact-boundary tokens were rejected\n- Lib is `jose` not `jsonwebtoken`\n"
+        }
+      ],
+      "assertions": [
+        "Recovered brief was overwritten at .claude/handoffs/feat-jwt-expiry.md (sticky key)",
+        "PROJECT_STATE.md size after recovery == size before (byte-for-byte unchanged)",
+        "Recovered brief surfaces the jose, <=, and Date.now() decisions",
+        "Chat response tells user to /clear and resume by paste-and-go of the Resume prompt"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "brief-subagent-mode",
+      "category": "capability",
+      "prompt": "Don't dispatch a subagent \u2014 just produce the BRIEF that you would pass to one. The subagent's subtask is: 'Audit the JWT verify call sites in src/auth/middleware.ts and src/auth/verify.ts for missing leeway parameter.' Decisions in force: jose (not jsonwebtoken), `<=` not `<`, Date.now() ms. Rejected: new Date() (alloc in hot path). The subagent must NOT read PROJECT_STATE.md.\n\nWrite the rendered brief as the literal content of a file `brief.md` in the current directory. Do not also write a HANDOFF.md or modify PROJECT_STATE.md.",
+      "files": [],
+      "assertions": [
+        "brief.md exists in the working directory",
+        "brief.md is 30 lines or fewer",
+        "brief.md does NOT contain the string '# Project state \u2014 narrative log' (no PROJECT_STATE inlined)",
+        "brief.md names the subtask (audit verify call sites)",
+        "brief.md names at least one rejected path (new Date())",
+        "brief.md names at least one file to read (middleware.ts or verify.ts)",
+        "brief.md does NOT contain a 'Resume prompt' section (BRIEF mode is for subagents, not sessions)",
+        "No HANDOFF.md, no .claude/handoffs/* file was written",
+        "PROJECT_STATE.md was NOT created or modified"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "pipeline-parallel",
+      "category": "capability",
+      "prompt": "Audit JWT auth for the clock-skew bug AND the rate-limiting on the login endpoint at the same time. They are independent \u2014 different files (`src/auth/middleware.ts` vs `src/middleware/rate-limit.ts`). Then plan how to fix both.\n\nUse PIPELINE mode. Surface your decomposition + routing plan in your chat response before dispatching anything. Then dispatch the subagents. After they return, synthesize one combined plan and write it to `combined-plan.md` in the working directory. Do not actually edit the source files (they don't exist in this eval).",
+      "files": [],
+      "assertions": [
+        "Chat response contains an explicit 'Pipeline plan:' (or equivalent header) preamble before dispatching",
+        "Two subagents were dispatched as one parallel stage (not sequential)",
+        "Each subagent's brief is 30 lines or fewer (per the chat-response transcript)",
+        "Subagent briefs do NOT inline PROJECT_STATE.md",
+        "Subagent briefs cover distinct file scopes (no path overlap)",
+        "After parallel stage, orchestrator dispatched a synthesis stage (planner) sequentially",
+        "combined-plan.md exists and is ONE unified plan (not two stapled reports)"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "pipeline-sequential",
+      "category": "capability",
+      "prompt": "Run a 3-stage sequential pipeline: (1) research how `jose`'s leeway option works (research only \u2014 produce findings as a `research.md` file), (2) plan how to integrate it into our middleware (produce `plan.md`), (3) implement the change as a unified diff (produce `change.diff`). Each stage's brief must reference the prior stage's output by pointer \u2014 not inline content.\n\nDispatch via PIPELINE mode. Write all three artifacts in the working directory.",
+      "files": [],
+      "assertions": [
+        "Three subagents were dispatched serially (not all in parallel)",
+        "Subagent 2's brief contains the string 'inputs from prior stage' (case-insensitive)",
+        "Subagent 3's brief contains the string 'inputs from prior stage' (case-insensitive)",
+        "No subagent brief contains verbatim copy of a prior subagent's response body",
+        "All three subagent briefs are 30 lines or fewer",
+        "research.md, plan.md, and change.diff all exist in the working directory",
+        "Orchestrator response names the synthesis act (e.g., 'Combining stage outputs:' or similar)"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "pipeline-synthesis-discipline",
+      "category": "capability",
+      "prompt": "Run three parallel reviews on a hypothetical diff at src/auth/middleware.ts (which doesn't actually exist \u2014 produce mock reports based on plausible findings): security review, performance review, correctness review. Each subagent's brief must scope to exactly one domain. Combine the findings into ONE structured report with a unified severity scale. Save as `combined-review.md` in the working directory.",
+      "files": [],
+      "assertions": [
+        "Three parallel subagents were dispatched",
+        "Each subagent's brief names exactly one domain (security / performance / correctness)",
+        "combined-review.md exists",
+        "combined-review.md uses ONE severity scale (not three separate scales)",
+        "Chat response names the synthesis act explicitly (e.g., 'combining', 'merging', 'synthesizing')",
+        "Subagent briefs do NOT inline PROJECT_STATE.md"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "pipeline-abort-trivial",
+      "category": "capability",
+      "prompt": "Rename the variable `expirCheck` to `expiryCheck` in `src/auth/middleware.ts`. (The file doesn't exist \u2014 just describe what you would do, do not actually edit.)",
+      "files": [],
+      "assertions": [
+        "Zero Agent tool invocations (no subagent was dispatched)",
+        "Chat response does NOT contain 'Pipeline plan:' or any pipeline preamble",
+        "Chat response describes the rename as a single inline action",
+        "No file was written under .claude/ or .claude/pipelines/"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "pipeline-anti-self-grade",
+      "category": "capability",
+      "prompt": "Run a pipeline with a generator and an evaluator. The generator writes a short markdown explainer about JWT clock-skew (save to `explainer.md`). The evaluator scores the explainer on 4 axes (accuracy, clarity, completeness, brevity) on a 1-5 scale and writes the result to `eval-report.md`. The evaluator MUST be a separate subagent with fresh context \u2014 it must NOT see the generator's transcript, only the contract you negotiated upfront and the resulting explainer.md file. Negotiate the sprint contract (scope + success criteria) before dispatching the generator, and persist it as `contract.md`.",
+      "files": [],
+      "assertions": [
+        "contract.md exists (sprint contract was created before generator dispatch)",
+        "explainer.md exists (generator output)",
+        "eval-report.md exists (evaluator output)",
+        "Evaluator subagent was a separate Agent invocation from the generator",
+        "Evaluator brief contained contract.md + explainer.md only, NOT the generator's transcript",
+        "Evaluator scored on the 4 contracted axes (not invented different axes)",
+        "Generator and evaluator are different subagent roles (no self-grading)"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "pipeline-gan-loop",
+      "category": "capability",
+      "prompt": "Run a GAN-inspired iteration loop on a subjective task: write a one-paragraph hook for a blog post titled 'Why your /compact is making things worse'. The evaluator scores on (a) interest hook, (b) accuracy, (c) brevity, each 1-5; threshold = \u22654 on all three. Loop up to 3 iterations. Save each iteration's artifact as `hook-iter-N.md` and each evaluation as `score-iter-N.md`. The final accepted artifact goes to `hook-final.md`. If the loop hits 3 iterations without converging, surface that to me and save the last artifact as `hook-final.md` anyway.",
+      "files": [],
+      "assertions": [
+        "At least one hook-iter-N.md and score-iter-N.md exist (1 \u2264 N \u2264 3)",
+        "hook-final.md exists",
+        "Generator and evaluator were separate Agent invocations on each iteration",
+        "If loop completed before 3 iterations, the final score-iter-N.md shows all axes \u22654",
+        "Each iteration's evaluator critique was specific and actionable (not generic praise)",
+        "If loop reached 3 iterations without converging, orchestrator surfaced the stall to user"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "fresh-session-resumes-from-brief",
+      "category": "capability",
+      "prompt": "You are starting a fresh Claude Code session in this project. A handoff brief exists at .claude/handoffs/catalyst-dogfood-build.md. The user just pasted the Resume prompt asking you to read it and continue.\n\nFollow the handoff skill's READ mode procedure EXACTLY:\n1. Read .claude/handoffs/catalyst-dogfood-build.md end to end.\n2. Read files listed under 'Files to read first' IF they are referenced in your immediate next action (just list them; don't actually read everything since most don't exist in this eval fixture).\n3. Do NOT auto-read .claude/PROJECT_STATE.md \u2014 the brief says it's historical only.\n4. Confirm back: (a) the next acceptance check verbatim, (b) the top 3 decisions still in force from the State packet, (c) one rejected path you must not re-litigate, (d) the first 3 actions in the dogfood plan.\n\nWrite your full response to `resume_response.md` in the current working directory.",
+      "files": [
+        {
+          "path": ".claude/handoffs/catalyst-dogfood-build.md",
+          "content": "# Handoff \u2014 2026-05-24T13:35:00Z\n# Key: catalyst-dogfood-build\n\n## Resume prompt\n> read .claude/handoffs/catalyst-dogfood-build.md and continue. next acceptance check: build Catalyst Tier 2 (evaluator-library + failure-pattern-detector + pipeline-templates) using Catalyst's own skills as the harness.\n\n## Re-entry instructions\n- Resume by: launching a fresh session, invoking `catalyst:handoff resume`, then starting Tier 2 implementation via `catalyst:pipeline` orchestration of the plan.\n- Done when: Tier 2 v0.5 released (auto-bump tag visible at github.com/adrijshikhar/catalyst/releases), all 3 skills' evals at pass@3 \u2265 0.90, handoff v0.3 + Tier 1 evals still pass in regression.\n- Read `.claude/PROJECT_STATE.md` ONLY if you need session-by-session history. The brief below is the entry point.\n\n## State packet\n- **Branch:** main (no feature branches; Catalyst ships from main, auto-release on push)\n- **Working tree:** clean\n- **Latest release:** [v0.1.13](https://github.com/adrijshikhar/catalyst/releases/tag/v0.1.13) (2026-05-24T13:27:27Z)\n- **Latest commit:** `59fe8a9` \u2014 docs: ship full Catalyst roadmap + Tier 2/3/4 design specs\n- **Tests run this session:** verify-gate hook smoke-tests (block/allow/stale), 4 lifecycle hook smoke-tests, installer smoke-test, lint after every task \u2014 ALL PASSED. No eval workflow runs against Catalyst's own skills yet (the skills evaluate themselves in user projects, not within this repo).\n- **Commands that mattered:** `gh release list`, `git pull --rebase`, `bash scripts/install-hooks.sh install <event> <hook>`, `python3 scripts/lint.py`, `gh run list -R adrijshikhar/catalyst`\n- **Decisions affecting next session:**\n  - **Tier 1 is SHIPPED** as v0.4 (live as v0.1.13). Skills: handoff (v0.3), verify-gate (v0.4), hook-builder (v0.4). All 4 commands work (`/handoff`, `/pipeline`, `/verify-gate`, `/hook-builder`).\n  - **Next build target: Tier 2** per [docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md](../../docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md). 3 skills: `evaluator-library` (6 domain rubrics), `failure-pattern-detector` (Stop hook + 6 OpenDev patterns), `pipeline-templates` (`/pipeline run <name>` + 3 bundled templates).\n  - **Build Catalyst with Catalyst.** Dogfood the just-shipped skills:\n    - Use `catalyst:handoff` PIPELINE mode to orchestrate Tier 2 implementation\n    - Use `catalyst:verify-gate` to enforce evidence-first writes during the build\n    - Use `catalyst:hook-builder install --all` to wire ambient mode for the build sessions\n  - **EDD ordering** per CLAUDE.md: evals BEFORE SKILL.md BEFORE hooks. T2/T3/T6 of Tier 1 plan codify this pattern; mirror for Tier 2.\n  - **POSIX bash + jq only for hooks** (no Python deps). Established in Tier 1.\n  - **Version policy:** auto-bumps to patch on every push. For Tier 2 milestone, manually edit `.claude-plugin/plugin.json` to `0.5.0` before the push that ships Tier 2.\n  - **Anti-self-grade is hard rule.** Evaluator subagent in `evaluator-library` MUST NEVER see the generator's transcript. Test for this in every eval.\n- **Rejected paths:**\n  - Tool-output compactor \u2014 rtk + caveman cover this layer. Removed from Tier 1 scope mid-session (commit `c79e5b3` rationale).\n  - Catalyst as Company Brain competitor \u2014 saturated ecosystem (gbrain, brAIn, ContextBrain, etc.). Bridge via Tier 3 `brain-bridge` instead.\n  - Generic harness scaffolder \u2014 Harness Engineer plugin already ships init/doctor/gc/onboard. Don't compete.\n  - Autonomous-loop / `/goal` replacement \u2014 Claude Code platform owns this; wrong shape for Catalyst's collaborative-first positioning.\n  - Skipping evals \u2014 every Tier 1 skill has evals committed BEFORE the SKILL.md per EDD. Tier 2 must follow same rule.\n- **Open risks:**\n  - Tier 2's `failure-pattern-detector` overlaps with Tier 3's `session-degradation-watch` on repeated-tool-call + stale-read signals. Decision documented (Tier 2 = end-of-session retrospection via Stop hook, Tier 3 = real-time via UserPromptSubmit). Verify the boundary holds in implementation.\n  - Plugin marketplace risk: ClawHavoc (Jan 2026, 1200 malicious skills in OpenClaw) \u2014 `skill-supply-chain-audit` (Tier 4) hasn't shipped. Catalyst is itself a plugin \u2014 could be a vector. Mitigate by keeping the surface small, no MCP servers, no network calls in hooks. Verified via Tier 1 audit (manual).\n  - Hook portability: macOS `date -j` vs Linux `date -d` handled in verify-gate hook. Windows native not supported (POSIX bash only). Document in README on next Tier 1 follow-up if needed.\n  - Auto-bump pipeline depends on GitHub Actions firing on push. Has glitched once this session (commit `ecc3408`, see #v0.1.7 episode); manual `gh workflow run` is the escape hatch.\n- **Next acceptance check:** Tier 2 v0.5 shipped with all 3 skills passing pass@3 \u2265 0.90 + handoff v0.3 / Tier 1 regression at pass^3 = 1.00.\n\n## Files to read first\n- [docs/ROADMAP.md](../../docs/ROADMAP.md) \u2014 10-skill roadmap, status of each tier, design principles, what-NOT-to-build\n- [docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md](../../docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md) \u2014 Tier 2 spec (what to build next)\n- [CLAUDE.md](../../CLAUDE.md) \u2014 repo conventions (commit format, EDD ordering, skill layout, hook authoring rules)\n- [docs/superpowers/plans/2026-05-24-tier-1-harness-primitives.md](../../docs/superpowers/plans/2026-05-24-tier-1-harness-primitives.md) \u2014 Tier 1 plan as the template for Tier 2 plan structure\n- [skills/handoff/SKILL.md](../../skills/handoff/SKILL.md) \u2014 handoff v0.3 (4 modes + PIPELINE) \u2014 the skill you're about to invoke\n- [skills/verify-gate/SKILL.md](../../skills/verify-gate/SKILL.md) \u2014 verify-gate skill \u2014 install it before Tier 2 build to enforce evidence discipline\n- [skills/hook-builder/SKILL.md](../../skills/hook-builder/SKILL.md) \u2014 hook-builder skill \u2014 install `--all` lifecycle hooks for the Tier 2 build sessions\n\n## Files to NOT load by default\n- `.claude/PROJECT_STATE.md` \u2014 historical narrative; this brief names the binding decisions\n- `docs/superpowers/specs/2026-05-24-tier-3-knowledge-integration-design.md` \u2014 Tier 3 spec; not relevant for Tier 2 build\n- `docs/superpowers/specs/2026-05-24-tier-4-safety-coordination-design.md` \u2014 Tier 4 spec; not relevant for Tier 2 build\n- `docs/superpowers/specs/2026-05-24-pipeline-skill-design.md` \u2014 SUPERSEDED by handoff v0.3 spec; do not implement from it\n- `skills/handoff-workspace/`, `skills/verify-gate/evals/fixtures/`, `skills/hook-builder/evals/fixtures/` \u2014 eval scratch; gitignored, won't have content on fresh clone\n\n## Dogfood plan for next session\n\n1. `catalyst:handoff resume` \u2014 load this brief\n2. `catalyst:hook-builder install --all` \u2014 wire ambient mode for the build session\n3. `catalyst:verify-gate install` \u2014 enforce evidence-first writes during Tier 2 implementation\n4. `superpowers:writing-plans` \u2014 expand Tier 2 spec into per-task plan\n5. `superpowers:subagent-driven-development` \u2014 execute Tier 2 plan task-by-task with two-stage reviews\n6. After all tasks: bump `plugin.json` to 0.5.0, push, verify v0.5.0 release on GitHub\n7. `catalyst:handoff` (no arg) \u2014 write a new brief for Tier 3 work\n\nThis is THE canonical use case for Catalyst \u2014 multi-week feature with explicit per-stage checks, generated by the very tools being shipped. Document the experience in PROJECT_STATE.md after the build.\n"
+        }
+      ],
+      "assertions": [
+        "resume_response.md exists",
+        "resume_response.md contains 'Tier 2' (next acceptance check surfaced)",
+        "resume_response.md contains 'evaluator-library' (next acceptance check detail)",
+        "resume_response.md contains at least one of: 'POSIX bash', 'jq', 'EDD', 'anti-self-grade' (decisions surfaced)",
+        "resume_response.md contains at least one rejected path: 'tool-output' OR 'rtk' OR 'caveman' OR 'Company Brain' OR 'autonomous'",
+        "resume_response.md mentions catalyst:handoff resume (dogfood plan step 1)",
+        "resume_response.md mentions hook-builder install (dogfood plan step 2)",
+        "resume_response.md mentions verify-gate install (dogfood plan step 3)",
+        "PROJECT_STATE.md was NOT created or read (file does NOT exist in working dir after eval)"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "regression-v0.2-legacy-mode",
+      "category": "regression",
+      "prompt": "Same as eval 0 (write-tier-2-branch) but run against the v0.2 snapshot SKILL.md instead of the v0.3 SKILL.md. Confirm v0.2 still produces a working brief (will be at .claude/HANDOFF.md \u2014 that's correct for v0.2). This validates we haven't broken the legacy-mode path.",
+      "files": [],
+      "assertions": [
+        "Brief was written to .claude/HANDOFF.md (v0.2 only knew the single-slot path)",
+        "Brief contains the v0.2 state packet structure (branch, diff, tests, decisions, rejected, risks, next acceptance)",
+        "PROJECT_STATE.md was created or appended",
+        "Brief is under 200 lines"
+      ]
+    }
+  ]
+}

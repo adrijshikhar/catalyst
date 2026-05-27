@@ -1,0 +1,86 @@
+{
+  "skill_name": "brain-bridge",
+  "version": "0.6",
+  "evals": [
+    {
+      "id": 0,
+      "name": "adapter-normalizes-output",
+      "category": "capability",
+      "prompt": "Run each of the 3 brain-bridge adapters against its matching fixture and save the normalized output. (a) gbrain.sh < fixtures/gbrain-mock.json → save to gbrain-out.json. (b) brain.sh < fixtures/brain-mock.json → save to brain-out.json. (c) codebase-memory-mcp.sh < fixtures/codebase-memory-mcp-mock.json → save to cmm-out.json. Each output must conform to the normalized shape: {query, results: [{type, ...}], token_budget_remaining}. Each result entry must have a 'type' field (one of: file, decision, convention, symbol) plus type-appropriate fields.",
+      "files": [],
+      "assertions": [
+        "gbrain-out.json exists",
+        "gbrain-out.json contains key 'results' with at least 1 entry of type 'file'",
+        "brain-out.json exists",
+        "brain-out.json contains key 'results' with at least 1 entry of type 'decision'",
+        "cmm-out.json exists",
+        "cmm-out.json contains key 'results' with at least 1 entry of type 'symbol'"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "brief-adds-pointers-not-content",
+      "category": "regression",
+      "prompt": "Render a handoff PIPELINE BRIEF that includes brain-bridge results. Use the gbrain adapter against fixtures/gbrain-mock.json. Save the rendered brief to brief-with-brain.md. The brief MUST contain a `## Brain pointers` section listing file paths + line ranges + relevance scores. The brief MUST NOT contain any actual file content (e.g., no JWT-verify implementation code, no function bodies — only the pointer line `src/auth/middleware.ts:42-78`).",
+      "files": [],
+      "assertions": [
+        "brief-with-brain.md exists",
+        "brief-with-brain.md contains '## Brain pointers'",
+        "brief-with-brain.md contains 'src/auth/middleware.ts:42-78' OR 'src/auth/middleware.ts:42'",
+        "brief-with-brain.md does NOT contain the literal string 'function verifyJwt' (no inlined function body)",
+        "brief-with-brain.md does NOT contain '```ts' OR '```typescript' (no code blocks; only pointer references)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "token-budget-respected",
+      "category": "capability",
+      "prompt": "Run the gbrain adapter against fixtures/gbrain-mock.json with `query_token_budget=20` (very small). Save the output to gbrain-budgeted.json. The result must drop the lowest-relevance pointers first to fit the budget, AND the response must include a non-negative `token_budget_remaining` field reflecting what's left.",
+      "files": [],
+      "assertions": [
+        "gbrain-budgeted.json exists",
+        "gbrain-budgeted.json results array length is strictly less than 3 (budget forced a drop)",
+        "gbrain-budgeted.json contains key 'token_budget_remaining' with a value >= 0",
+        "gbrain-budgeted.json results do NOT contain the lowest-score pointer 'src/utils/crypto.ts' (relevance 0.41 was dropped first)"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "relevance-threshold-filters",
+      "category": "capability",
+      "prompt": "Run the brain.sh adapter against fixtures/brain-mock.json with `relevance_threshold=0.5`. Save output to brain-filtered.json. Pointers below threshold (the 0.30 draft-2025-old entry) MUST be excluded from results.",
+      "files": [],
+      "assertions": [
+        "brain-filtered.json exists",
+        "brain-filtered.json results array length is exactly 2 (the 0.30 entry was filtered out)",
+        "brain-filtered.json does NOT contain the string 'draft-2025-old'"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "backend-missing-fail-open",
+      "category": "capability",
+      "prompt": "Invoke the brain-bridge dispatch for a backend that does NOT exist (e.g., 'nonexistent-backend'). Save the stdout to bb-missing.json AND stderr to bb-missing.err. The adapter must exit with non-zero code AND print empty normalized results JSON on stdout (so a calling PIPELINE BRIEF can still render without the Brain pointers section).",
+      "files": [],
+      "assertions": [
+        "bb-missing.json exists",
+        "bb-missing.json contains 'results' key with empty array",
+        "bb-missing.err contains 'ERROR' OR 'backend' (clean error message logged)"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "pipeline-brief-integration",
+      "category": "capability",
+      "prompt": "Render a handoff PIPELINE BRIEF that uses brain-bridge auto-query (config: auto_query_in_pipeline_brief=true). Save to brief-integrated.md. The Brain pointers section MUST appear between `## Files to read first` and `## Files to NOT load by default` — that's the documented section ordering.",
+      "files": [],
+      "assertions": [
+        "brief-integrated.md exists",
+        "brief-integrated.md contains '## Files to read first'",
+        "brief-integrated.md contains '## Brain pointers'",
+        "brief-integrated.md contains '## Files to NOT load by default'",
+        "the line number of '## Brain pointers' is greater than the line number of '## Files to read first' AND less than the line number of '## Files to NOT load by default' (correct section ordering)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "skill_name": "evaluator-library",
+  "version": "0.5",
+  "evals": [
+    {
+      "id": 0,
+      "name": "evaluator-dispatches-fresh-context",
+      "category": "capability",
+      "prompt": "Run `bash scripts/dispatch-evaluator.sh code-quality /tmp/sample-diff.patch` against the Catalyst repo. The dispatcher prints a brief on stdout. Capture it to `brief.md` in your working dir. Verify the brief contains an explicit Forbidden section with the anti-self-grade rule.\n\nSample artifact `sample-diff.patch` is provided.",
+      "files": [
+        {"path": "sample-diff.patch", "content": "diff --git a/src/foo.ts b/src/foo.ts\n+export function add(a: number, b: number) { return a + b; }\n"}
+      ],
+      "assertions": [
+        "brief.md exists",
+        "brief.md contains the literal string 'Forbidden'",
+        "brief.md contains the phrase 'generator's transcript'",
+        "brief.md references the artifact path `sample-diff.patch`",
+        "brief.md contains a `## Rubric` section",
+        "brief.md does NOT contain the literal string 'export function add' (artifact content must be referenced, not inlined)"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "evaluator-returns-structured-report",
+      "category": "capability",
+      "prompt": "A pre-supplied evaluator brief lives at `fixtures/sample-brief.md`. Follow its instructions strictly: Read the artifact at `sample-diff.patch`, score it against the brief's rubric, and write a report at `eval-report.md` with per-axis scores + a VERDICT line. Do NOT run dispatch-evaluator.sh — the brief is already provided. This tests the evaluator subagent's compliance with the brief contract, not the dispatcher.",
+      "files": [
+        {"path": "sample-diff.patch", "content": "diff --git a/src/foo.ts b/src/foo.ts\n+export function add(a: number, b: number) { return a + b; }\n+export function divide(a: number, b: number) { return a / b; }\n"},
+        {"path": "fixtures/sample-brief.md", "content": "FIXTURE_PLACEHOLDER_REPLACED_BY_SEPARATE_FILE"}
+      ],
+      "assertions": [
+        "eval-report.md exists",
+        "eval-report.md contains the literal string 'VERDICT:'",
+        "eval-report.md contains the literal string 'correctness'",
+        "eval-report.md contains the literal string 'readability'",
+        "eval-report.md contains the literal string 'maintainability'",
+        "eval-report.md contains the literal string 'test_coverage'",
+        "eval-report.md contains at least one digit 1-5 on a line that also contains an axis name"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "evaluator-respects-readonly",
+      "category": "capability",
+      "prompt": "Dispatch the evaluator-library `code-quality` rubric against the sample diff. Verify the brief contains the literal phrase 'Modifying any file' in the Forbidden list.\n\nCapture the brief to `brief.md`.",
+      "files": [
+        {"path": "sample-diff.patch", "content": "diff --git a/x b/x\n+1\n"}
+      ],
+      "assertions": [
+        "brief.md exists",
+        "brief.md contains the literal string 'Modifying any file'",
+        "brief.md contains the literal string 'Read-only access'"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "evaluator-rubric-domain-distinct",
+      "category": "capability",
+      "prompt": "Run dispatch-evaluator.sh twice on the same artifact, once with `code-quality` and once with `ui-design`. Save both briefs to `brief-code.md` and `brief-ui.md`. Verify the rubric content differs substantively (different axes, different anchors).",
+      "files": [
+        {"path": "sample.html", "content": "<button onclick=\"go()\">Go</button>\n"}
+      ],
+      "assertions": [
+        "brief-code.md exists",
+        "brief-ui.md exists",
+        "brief-code.md contains 'correctness' OR 'maintainability'",
+        "brief-ui.md contains 'coherence' OR 'craft'",
+        "diff between brief-code.md and brief-ui.md is more than 200 chars (rubrics are meaningfully different)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "evaluator-threshold-configurable",
+      "category": "capability",
+      "prompt": "Create `.claude/evaluator-library.json` with `{\"pass_threshold\": 5}`. Then run dispatch-evaluator.sh on `code-quality`. Capture the brief to `brief.md` in your working dir. Verify the brief's pass threshold line reads 'All axes >= 5'.",
+      "files": [
+        {"path": ".claude/evaluator-library.json", "content": "{\n  \"pass_threshold\": 5\n}\n"},
+        {"path": "sample-diff.patch", "content": "diff --git a/x b/x\n+1\n"}
+      ],
+      "assertions": [
+        "brief.md exists",
+        "brief.md contains the literal string 'All axes >= 5'"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "regression-dispatcher-stateless-anti-self-grade",
+      "category": "regression",
+      "prompt": "Run dispatch-evaluator.sh 3 times in sequence against the same domain (`code-quality`) and same artifact. Capture each brief to brief-1.md, brief-2.md, brief-3.md respectively. The dispatcher must be stateless: every invocation must independently include the anti-self-grade Forbidden rule. Also verify none of the briefs leak a session_id, transcript_path, or .jsonl reference (those would indicate state contamination from a prior call).",
+      "files": [
+        {"path": "sample-diff.patch", "content": "diff --git a/x b/x\n+1\n"}
+      ],
+      "assertions": [
+        "brief-1.md exists",
+        "brief-2.md exists",
+        "brief-3.md exists",
+        "brief-1.md contains the literal string 'generator's transcript'",
+        "brief-2.md contains the literal string 'generator's transcript'",
+        "brief-3.md contains the literal string 'generator's transcript'",
+        "brief-1.md does NOT contain 'session_id'",
+        "brief-1.md does NOT contain 'transcript_path'",
+        "brief-1.md does NOT contain '.jsonl'"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "user-rubric-overrides-bundled",
+      "category": "capability",
+      "prompt": "Create a user rubric override at `.claude/evaluator-library/evaluators/code-quality.md` containing the marker string `MARKER-USER-RUBRIC` followed by some rubric content. Then run dispatch-evaluator.sh on `code-quality` against the sample artifact. Capture the brief to `brief.md`. The brief's `## Rubric` section must contain `MARKER-USER-RUBRIC` (proving the user override won over the bundled plugin rubric).",
+      "files": [
+        {"path": ".claude/evaluator-library/evaluators/code-quality.md", "content": "MARKER-USER-RUBRIC\n\n### Axes\n| Axis | Description |\n|------|-------------|\n| custom_axis | User-defined rubric override for testing |\n"},
+        {"path": "sample-diff.patch", "content": "diff --git a/x b/x\n+1\n"}
+      ],
+      "assertions": [
+        "brief.md exists",
+        "brief.md contains the literal string 'MARKER-USER-RUBRIC'",
+        "brief.md contains the literal string 'custom_axis' (proving the user rubric was inlined, not the bundled one)"
+      ]
+    }
+  ]
+}
