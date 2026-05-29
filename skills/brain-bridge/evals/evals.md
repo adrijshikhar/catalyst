@@ -19,11 +19,12 @@ Binding contract for brain-bridge v0.6. Evals defined before SKILL.md or adapter
 | 4 | backend-missing-fail-open | Adapter invoked for an unconfigured/missing backend exits non-zero with a clean error AND prints empty results JSON (caller can render brief without `## Brain pointers` section) |
 | 5 | pipeline-brief-integration | When the SKILL.md `## Brain pointers` template is rendered into a handoff PIPELINE BRIEF, the section appears between `## Files to read first` and `## Files to NOT load by default`, contains pointers only (NOT content) |
 
-## Regression evals (1)
+## Regression evals (2)
 
 | ID | Name | What it protects |
 |----|------|------------------|
 | 1 | brief-adds-pointers-not-content | A rendered BRIEF that includes brain results contains pointers (file:line, decision IDs, doc tags) but NEVER the actual file content. Anti-bleed rule preserved. Catches future regressions where someone inlines content into the brief. |
+| 6 | brief-preserves-all-pointers | Every adapter-emitted file:line pointer must appear in the rendered BRIEF — no pointer silently dropped. Verified via `scripts/check-fidelity.py` (load-bearing invariant preservation). Complements eval 1: eval 1 guards against *adding* content, eval 6 guards against *dropping* pointers. |
 
 ---
 
