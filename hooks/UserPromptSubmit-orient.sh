@@ -19,13 +19,23 @@ if [ -z "$SESSION_ID" ]; then
   exit 0
 fi
 
+# Sanitize session_id before it touches the filesystem — it's external input
+# and flows into a path. Strip anything outside [A-Za-z0-9_-] (no traversal).
+SESSION_ID=$(printf '%s' "$SESSION_ID" | tr -cd 'A-Za-z0-9_-')
+if [ -z "$SESSION_ID" ]; then
+  exit 0
+fi
+
+# Prune stale markers (>7 days) so .claude/ doesn't accumulate forever.
+find "$PROJECT_DIR/.claude" -maxdepth 1 -name '.catalyst-oriented-*' -type f -mtime +7 -delete 2>/dev/null || true
+
 # Per-session marker
 MARKER_PATH="$MARKER-$SESSION_ID"
 if [ -f "$MARKER_PATH" ]; then
   exit 0  # Already oriented this session
 fi
 
-if [ ! -d "$PROJECT_DIR/.git" ]; then
+if ! git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
   exit 0
 fi
 

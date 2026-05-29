@@ -84,6 +84,12 @@ if [ -f "$TRANSCRIPT_PATH" ]; then
         EVIDENCE_FOUND="$required"
         break
       fi
+      # Normalize fractional seconds (transcripts emit ...:00.123Z) which the
+      # macOS strptime format below cannot parse — without this the parse fails
+      # and the gate falls through to fail-OPEN. Strip the fraction, keep the Z.
+      case "$READ_TS" in
+        *.*) READ_TS="${READ_TS%.*}Z" ;;
+      esac
       # Parse ISO 8601 timestamp (works on macOS + Linux)
       if date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$READ_TS" "+%s" >/dev/null 2>&1; then
         READ_EPOCH=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "$READ_TS" "+%s")

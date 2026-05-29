@@ -13,14 +13,19 @@ _spec.loader.exec_module(fid)
 
 class TestExtractInvariants(unittest.TestCase):
     def test_extracts_file_line_pointers(self):
-        inv = fid.extract_invariants("see src/auth/middleware.ts:42-78 and x.py:10")
+        inv = fid.extract_invariants("see src/auth/middleware.ts:42-78 and lib/x.py:10")
         self.assertIn("src/auth/middleware.ts:42-78", inv["pointers"])
-        self.assertIn("x.py:10", inv["pointers"])
+        self.assertIn("lib/x.py:10", inv["pointers"])
 
     def test_extracts_urls_and_adr(self):
         inv = fid.extract_invariants("ADR-007 at https://example.com/x")
         self.assertIn("ADR-007", inv["ids"])
         self.assertIn("https://example.com/x", inv["urls"])
+
+    def test_pointer_regex_ignores_version_and_hostport(self):
+        # Over-match guard: version strings + host:port must NOT be pointers.
+        inv = fid.extract_invariants("release v1.2.3:45 on host example.com:8080 done")
+        self.assertEqual(inv["pointers"], [])
 
 
 class TestCheckFidelity(unittest.TestCase):

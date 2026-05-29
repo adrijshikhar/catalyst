@@ -35,6 +35,14 @@ if echo "$LAST_COMMIT_SUBJECT" | grep -qF "[skip ci]"; then
 fi
 
 bump_and_push() {
+  # Defensive identity: release.yml configures github-actions[bot], but ensure
+  # a committer is set if this is ever run in a bare environment. The bot
+  # identity also satisfies the release workflow's committer-based loop guard.
+  if ! git config user.email >/dev/null 2>&1; then
+    git config user.name "github-actions[bot]"
+    git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+  fi
+
   git fetch origin "$BRANCH"
   git reset --hard "origin/$BRANCH"
 
@@ -62,6 +70,9 @@ bump_and_push() {
   git commit -m "chore: bump version to ${NEW_VERSION} [skip ci]"
   git tag -a "$TAG" -m "Release ${NEW_VERSION}"
 
+  # --no-verify: the CI runner has no local git hooks; skips an unnecessary
+  # hook-load step. Do NOT copy this into a dev environment where pre-push
+  # hooks are meaningful.
   git push origin "HEAD:${BRANCH}" --no-verify
   git push origin "$TAG" --no-verify
 

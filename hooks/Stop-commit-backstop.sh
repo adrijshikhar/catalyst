@@ -9,7 +9,7 @@ set -euo pipefail
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
-if [ ! -d "$PROJECT_DIR/.git" ]; then
+if ! git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
   exit 0
 fi
 

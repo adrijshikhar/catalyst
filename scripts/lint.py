@@ -116,7 +116,7 @@ def check_description_scalar(path: Path, errors: list[str]) -> None:
             return
 
 
-_PERSONAL_PATH_RE = re.compile(r"/Users/([A-Za-z][\w.-]*)|[A-Z]:\\Users\\([A-Za-z][\w.-]*)")
+_PERSONAL_PATH_RE = re.compile(r"/Users/([A-Za-z][\w.-]*)|[A-Za-z]:\\Users\\([A-Za-z][\w.-]*)")
 _PATH_ALLOWLIST = {"example", "you", "user", "me", "yourname", "username"}
 
 
@@ -186,6 +186,11 @@ def filter_gitignored(paths: list[Path], errors: list[str]) -> list[Path]:
             text=True,
         )
     except OSError:
+        return paths
+    # git check-ignore: exit 0 = some ignored, 1 = none ignored, >=2 = error
+    # (e.g. not a git checkout). Fail-open on error so an exported tarball
+    # doesn't start scanning what would normally be gitignored scratch.
+    if result.returncode >= 2:
         return paths
     ignored = set(result.stdout.splitlines())
     return [p for p, rel in zip(paths, rels) if rel not in ignored]
