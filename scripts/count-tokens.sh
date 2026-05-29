@@ -15,6 +15,24 @@ else
   INPUT_TEXT="$(cat)"
 fi
 
+# Real-usage fast path: if arg is a file with assistant `usage` objects (a
+# session transcript), sum the actual token counts. Exact + free. Falls through
+# to the heuristics below when no usage data is present.
+if [ $# -ge 1 ] && [ -f "$1" ] && command -v jq >/dev/null 2>&1; then
+  USAGE_SUM=$(jq -s '
+    [ .[]
+      | (.message.usage // .usage)
+      | select(. != null)
+      | ((.input_tokens // 0) + (.output_tokens // 0)
+         + (.cache_read_input_tokens // 0) + (.cache_creation_input_tokens // 0))
+    ] | add // 0
+  ' "$1" 2>/dev/null || echo 0)
+  if [ -n "$USAGE_SUM" ] && [ "$USAGE_SUM" -gt 0 ] 2>/dev/null; then
+    echo "$USAGE_SUM"
+    exit 0
+  fi
+fi
+
 # Tiktoken mode if CATALYST_TIKTOKEN=1
 if [ "${CATALYST_TIKTOKEN:-0}" = "1" ]; then
   if command -v python3 >/dev/null 2>&1 && python3 -c "import tiktoken" 2>/dev/null; then
