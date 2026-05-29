@@ -271,6 +271,24 @@ When adding new eval artifacts, decide explicitly: regression-trace-durable (com
 
 Lint failures block the release. Fix lint locally with `python3 scripts/lint.py` before pushing.
 
+`scripts/lint.py` also runs deterministic breadth checks: invisible-unicode / ASCII-smuggling scan, `description:` block-scalar guard, no-personal-paths, settings.json hook-schema validation, markdown file-ref resolution (`.md` only, code-stripped, gitignore-aware), and a catalog/drift gate (README skill-count + marketplace name consistency).
+
+## CI evaluation — two lanes
+
+Catalyst CI runs in two lanes (see the CI+eval/perf infra design spec, archived in the private `projects` repo):
+
+- **Lane A — PR-blocking, deterministic, free.** `scripts/lint.py` (structure + breadth checks above), `python3 -m unittest discover tests`, `scripts/eval-grade.py` (grades committed snapshots), and the hook functional smoke (`tests/sh/test_hook_smoke.sh`). No model, no `ANTHROPIC_API_KEY`.
+- **Lane B — local-generate / CI-grade.** `scripts/eval-run.py` runs each skill's `evals.json` prompts through the developer's authenticated `claude` CLI and commits transcripts + `skills/<name>/evals/snapshots/results.json`. Regenerate locally when SKILL.md changes; CI only grades, never generates.
+
+| Rule | Detail |
+|------|--------|
+| No model in CI | `eval-run.py` is local-only. CI runs `eval-grade.py` against committed snapshots; missing snapshots WARN (not fail). |
+| Snapshot metadata | Every `results.json` pins `generated_at` (via `--now`), commit SHA, SKILL.md sha256, CLI version, model. |
+| Determinism at the leaf | Every graded assertion bottoms out in exists/contains — never model narration. |
+| Reporting | Eval reports show median/min/max/stdev, never mean alone. |
+| `--now` | `eval-run.py` takes the timestamp as an argument (shell-provided); no in-script clock calls. |
+| Hook smoke | Runs each hook in a throwaway temp git repo so `Stop-commit-backstop` never touches the real tree. |
+
 ## Skills vs repo conventions
 
 Hard rule about scope:
