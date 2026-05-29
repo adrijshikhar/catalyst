@@ -49,14 +49,18 @@ case "$ACTION" in
     chmod +x "$HOOKS_DEST_DIR/$HOOK_FILE"
 
     CMD="bash \$CLAUDE_PROJECT_DIR/.claude/hooks/$HOOK_FILE"
-    if [ -n "$MATCHER" ]; then
-      NEW_ENTRY=$(jq -n --arg cmd "$CMD" --arg matcher "$MATCHER" '{matcher: $matcher, command: $cmd}')
-    else
-      NEW_ENTRY=$(jq -n --arg cmd "$CMD" '{command: $cmd}')
-    fi
+    # Claude Code settings.json hook schema:
+    #   .hooks.<Event> = [{matcher, hooks: [{type: "command", command}]}]
+    # Matcher is "" for non-tool events (PreCompact, SessionStart, Stop,
+    # UserPromptSubmit) and a tool-name regex for PreToolUse/PostToolUse.
+    NEW_ENTRY=$(jq -n --arg cmd "$CMD" --arg matcher "$MATCHER" \
+      '{matcher: $matcher, hooks: [{type: "command", command: $cmd}]}')
 
-    # Idempotency: if an entry with the same command already exists, skip
-    EXISTS=$(jq --arg cmd "$CMD" --arg event "$EVENT" '(.hooks[$event] // []) | map(select(.command == $cmd)) | length' "$SETTINGS_FILE")
+    # Idempotency: if any matcher-group for this event already contains a
+    # hook with the same command, skip.
+    EXISTS=$(jq --arg cmd "$CMD" --arg event "$EVENT" \
+      '[(.hooks[$event] // [])[] | (.hooks // [])[] | select(.command == $cmd)] | length' \
+      "$SETTINGS_FILE")
     if [ "$EXISTS" -gt 0 ]; then
       echo "Hook already installed for $EVENT — no change."
       exit 0
@@ -77,9 +81,14 @@ case "$ACTION" in
       rm "$HOOKS_DEST_DIR/$HOOK_FILE"
     fi
     CMD="bash \$CLAUDE_PROJECT_DIR/.claude/hooks/$HOOK_FILE"
+    # Remove matching command from every matcher-group's inner hooks array,
+    # then drop matcher-groups that became empty.
     jq --arg cmd "$CMD" --arg event "$EVENT" '
       .hooks[$event] //= [] |
-      .hooks[$event] |= map(select(.command != $cmd))
+      .hooks[$event] |= (
+        map(.hooks |= map(select(.command != $cmd)))
+        | map(select((.hooks // []) | length > 0))
+      )
     ' "$SETTINGS_FILE" > "$SETTINGS_FILE.tmp"
     mv "$SETTINGS_FILE.tmp" "$SETTINGS_FILE"
 
