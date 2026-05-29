@@ -53,6 +53,14 @@ Catalyst is its own one-plugin marketplace. From inside Claude Code:
 
 That registers the marketplace and installs the `catalyst` plugin. Skills become available immediately.
 
+**Rollback:** every release is a git tag (`vX.Y.Z`). To pin or roll back to an earlier version, reinstall at that tag:
+
+```
+/plugin install catalyst@catalyst@<version>
+```
+
+Releases are listed at [github.com/adrijshikhar/catalyst/releases](https://github.com/adrijshikhar/catalyst/releases).
+
 ## Usage
 
 After install, invoke skills explicitly or let Claude auto-trigger them:
