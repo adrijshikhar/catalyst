@@ -9,7 +9,10 @@ set -euo pipefail
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
 BRANCH=""
-if [ -d "$PROJECT_DIR/.git" ]; then
+# Worktree-safe repo detection: in a linked worktree `.git` is a FILE, so
+# `[ -d .git ]` is false and branch detection would be skipped, wrongly
+# surfacing the legacy slot instead of the branch-keyed brief. Use git itself.
+if git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
   BRANCH=$(git -C "$PROJECT_DIR" branch --show-current 2>/dev/null || true)
 fi
 

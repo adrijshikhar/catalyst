@@ -30,6 +30,10 @@ WRITE / READ / RECOVER determine the **key** for the brief in this order:
 | 2 | `git branch --show-current` (sanitized: `/` → `-`, length-cap 80, special chars dropped) | `.claude/handoffs/<branch>.md` | Default. Branch = feature in modern git flow. Zero ceremony. |
 | 3 | Not in a git repo, or detached HEAD | `.claude/HANDOFF.md` | Legacy single-slot fallback. Backwards compatible with v0.2. |
 
+**Repo detection (worktree-safe):** decide "in a git repo?" with `git rev-parse --git-dir` succeeding — NOT `[ -d .git ]`. In a linked git worktree `.git` is a *file*, so the dir test wrongly reports "no repo" and drops you to the tier-3 legacy slot. `git branch --show-current` already works correctly inside a worktree (returns that worktree's branch).
+
+**Path anchoring + worktrees:** the `.claude/handoffs/` path is relative to the **project root** (`$CLAUDE_PROJECT_DIR`), not the current working directory. Each git worktree is its own project root with its own `.claude/`, so handoffs are **per-worktree** — which is the intended behavior: a worktree is a parallel feature, and its branch key keeps its brief isolated from other worktrees. Resume inside the same worktree finds it; the main checkout won't see a worktree's brief (and shouldn't).
+
 **Sticky session key:** once a WRITE picks a key, subsequent WRITEs / RECOVERs in the same session use the same key. If the user switches branches mid-session, surface the change: "Branch switched. Future handoffs will target `<new-key>.md`. Confirm?"
 
 BRIEF and PIPELINE modes do not persist, so they don't resolve a key — they may *reference* a key when telling a subagent which feature's narrative slice is relevant.
