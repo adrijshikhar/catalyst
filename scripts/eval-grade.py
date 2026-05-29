@@ -28,15 +28,22 @@ def grade_assertion(assertion: str, transcript_text: str) -> bool:
     """Deterministic subset: 'X exists' and contains-'literal' checks.
 
     Conservative: an assertion we cannot grade deterministically returns False
-    and should be tagged grader:model upstream (none today)."""
-    low = assertion.lower()
-    if " exists" in low:
-        target = assertion.split(" exists")[0].strip().strip("`")
+    and should be tagged grader:model upstream (none today).
+
+    NOTE: this transcript-grep grader is being superseded by the artifact-aware
+    grader (see eval-grader-redesign spec). The fixes here are the mechanical
+    ones flagged in review: anchor the 'exists' check to the end of the
+    assertion, and require ALL quoted needles to be present (not just the
+    first)."""
+    stripped = assertion.rstrip().rstrip(".")
+    # Anchored 'exists': the assertion must END with 'exists' so phrases like
+    # "the file already exists in the repo" don't false-trigger.
+    if stripped.lower().endswith(" exists"):
+        target = stripped[: -len(" exists")].strip().strip("`")
         return target in transcript_text
-    m = _CONTAINS_RE.search(assertion)
-    if m:
-        needle = m.group(1) or m.group(2)
-        return needle in transcript_text
+    needles = [m.group(1) or m.group(2) for m in _CONTAINS_RE.finditer(assertion)]
+    if needles:
+        return all(n in transcript_text for n in needles)
     return False
 
 

@@ -12,10 +12,15 @@ jobs:
   release:
     name: Bump version and tag
     runs-on: ubuntu-latest
-    # Don't run on the CI's own bump commits.
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    # Loop prevention, two independent layers:
+    #  1. Skip the CI's own bump commits by committer identity (not spoofable by
+    #     commit-message text — the bump is authored by github-actions[bot]).
+    #  2. Belt-and-suspenders: also skip on the literal [skip ci] marker.
+    if: >-
+      github.event.head_commit.author.email != '41898282+github-actions[bot]@users.noreply.github.com'
+      && !contains(github.event.head_commit.message, '[skip ci]')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
           # Prefer RELEASE_PAT (admin-owned classic PAT with `repo` scope, or

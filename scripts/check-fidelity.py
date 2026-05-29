@@ -17,7 +17,9 @@ import re
 import sys
 from pathlib import Path
 
-_POINTER_RE = re.compile(r"\b[\w./-]+\.[A-Za-z0-9]+:\d+(?:-\d+)?")
+# Require a path separator before the file, so version strings (v1.2.3:45) and
+# host:port (example.com:8080) are NOT treated as file:line pointers.
+_POINTER_RE = re.compile(r"\b[\w.-]+/[\w./-]*[\w-]\.[A-Za-z0-9]+:\d+(?:-\d+)?")
 _URL_RE = re.compile(r"https?://[^\s)\]]+")
 _ID_RE = re.compile(r"\bADR-\d+\b")
 _FENCE_RE = re.compile(r"```[\w-]*\n.*?\n```", re.DOTALL)

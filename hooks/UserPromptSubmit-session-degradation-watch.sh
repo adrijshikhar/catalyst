@@ -82,21 +82,20 @@ if [ -n "$RECENT_TOOL_USES" ]; then
 fi
 
 # === Signal 3: stale read ===
-STALE_FILE=""
-LAST_EDIT_LINE=$(jq -c 'select(.type=="tool_use" and .name=="Edit")' "$TRANSCRIPT_PATH" 2>/dev/null | tail -1)
-if [ -n "$LAST_EDIT_LINE" ]; then
-  EDIT_FILE=$(echo "$LAST_EDIT_LINE" | jq -r '.input.file_path // empty')
-  EDIT_TURN=$(echo "$LAST_EDIT_LINE" | jq -r '.turn // 0')
-  if [ -n "$EDIT_FILE" ]; then
-    LAST_READ_TURN=$(jq -r --arg f "$EDIT_FILE" 'select(.type=="tool_use" and .name=="Read" and .input.file_path==$f) | .turn' "$TRANSCRIPT_PATH" 2>/dev/null | tail -1 || echo "0")
-    if [ -n "$LAST_READ_TURN" ] && [ "$LAST_READ_TURN" -gt 0 ]; then
-      GAP=$(( EDIT_TURN - LAST_READ_TURN ))
-      if [ "$GAP" -gt "$STALE_TURNS" ]; then
-        STALE_FILE="$EDIT_FILE"
-      fi
-    fi
-  fi
-fi
+# Standard transcripts carry no `.turn` field, so derive an ordinal from each
+# tool_use event's position. "Gap" = number of tool-use events between the last
+# Read of a file and a later Edit of it; flag when that exceeds STALE_TURNS.
+STALE_FILE=$(jq -rs --argjson stale "$STALE_TURNS" '
+  [ .[] | select(.type=="tool_use") ] | to_entries
+  | (map(select(.value.name=="Edit" and ((.value.input.file_path // "") != ""))) | last) as $edit
+  | if $edit == null then empty
+    else ($edit.value.input.file_path) as $f
+      | (map(select(.value.name=="Read"
+            and ((.value.input.file_path // "") == $f)
+            and (.key < $edit.key))) | last) as $read
+      | if ($read != null) and (($edit.key - $read.key) > $stale) then $f else empty end
+    end
+' "$TRANSCRIPT_PATH" 2>/dev/null | tail -1 || echo "")
 
 # === Signal 4: contradiction with PROJECT_STATE.md ===
 CONTRADICTION_TEXT=""
@@ -104,10 +103,19 @@ PROJECT_STATE="$PROJECT_DIR/.claude/PROJECT_STATE.md"
 if [ "$CHECK_CONTRADICTION" = "1" ] && [ -f "$PROJECT_STATE" ]; then
   LAST_ASSISTANT=$(jq -r 'select(.type=="assistant") | .content // empty' "$TRANSCRIPT_PATH" 2>/dev/null | tail -1)
   while IFS= read -r decision; do
-    NOT_PART=$(echo "$decision" | sed -n 's/.*\bnot\s\+\([a-zA-Z][a-zA-Z _]*\).*/\1/p' | head -1 | tr -d '\n')
-    USE_PART=$(echo "$decision" | sed -n 's/.*\buse\s\+\([a-zA-Z][a-zA-Z _]*\)\s\+not.*/\1/p' | head -1 | tr -d '\n')
+    # POSIX char classes (BSD/macOS sed has no \b or \s). Extract "use X not Y".
+    NOT_PART=$(echo "$decision" | sed -n 's/.*[[:<:]]not[[:space:]]\{1,\}\([a-zA-Z][a-zA-Z _]*\).*/\1/p' 2>/dev/null | head -1 | tr -d '\n')
+    if [ -z "$NOT_PART" ]; then
+      # GNU fallback (BSD word-boundary syntax [[:<:]] differs on GNU sed).
+      NOT_PART=$(echo "$decision" | sed -n 's/.*\bnot[[:space:]]\{1,\}\([a-zA-Z][a-zA-Z _]*\).*/\1/p' 2>/dev/null | head -1 | tr -d '\n')
+    fi
+    USE_PART=$(echo "$decision" | sed -n 's/.*[[:<:]]use[[:space:]]\{1,\}\([a-zA-Z][a-zA-Z _]*\)[[:space:]]\{1,\}not.*/\1/p' 2>/dev/null | head -1 | tr -d '\n')
+    if [ -z "$USE_PART" ]; then
+      USE_PART=$(echo "$decision" | sed -n 's/.*\buse[[:space:]]\{1,\}\([a-zA-Z][a-zA-Z _]*\)[[:space:]]\{1,\}not.*/\1/p' 2>/dev/null | head -1 | tr -d '\n')
+    fi
     if [ -n "$NOT_PART" ] && [ -n "$USE_PART" ]; then
-      if echo "$LAST_ASSISTANT" | grep -qi "$NOT_PART" && ! echo "$LAST_ASSISTANT" | grep -qi "$USE_PART"; then
+      # Fixed-string (-F) so decision text metacharacters aren't regex.
+      if echo "$LAST_ASSISTANT" | grep -qiF "$NOT_PART" && ! echo "$LAST_ASSISTANT" | grep -qiF "$USE_PART"; then
         CONTRADICTION_TEXT="contradicts PROJECT_STATE decision: '$decision' (chat mentions '$NOT_PART', should be '$USE_PART')"
         break
       fi

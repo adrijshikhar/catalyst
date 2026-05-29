@@ -43,7 +43,22 @@ def run_eval(prompt: str, max_turns: int = 12) -> str:
          "--dangerously-skip-permissions", "--max-turns", str(max_turns), "--verbose"],
         capture_output=True, text=True, cwd=ROOT,
     )
+    if proc.returncode != 0:
+        print(
+            f"ERROR: `claude -p` exited {proc.returncode}. stderr:\n{proc.stderr.strip()}",
+            file=sys.stderr,
+        )
+        sys.exit(5)
     return proc.stdout
+
+
+def looks_unauthenticated(transcript: str) -> bool:
+    """Detect the headless auth wall: `claude -p` returns a 'Please run /login'
+    notice with zero token usage instead of doing the work. Seeding against this
+    silently produces garbage snapshots (observed 2026-05-29)."""
+    login_wall = "Please run /login" in transcript
+    zero_usage = '"total_cost_usd":0' in transcript and '"output_tokens":0' in transcript
+    return login_wall and zero_usage
 
 
 def main(argv: list[str]) -> int:
@@ -78,10 +93,25 @@ def main(argv: list[str]) -> int:
         },
         "evals": {},
     }
+    first_run = True
     for ev in spec.get("evals", []):
         runs = []
         for k in range(args.runs):
             transcript = run_eval(ev["prompt"])
+            # Auth-wall guard: after the very first run, abort before spending
+            # the rest if the child `claude` is unauthenticated — otherwise we
+            # snapshot dozens of garbage login-wall transcripts.
+            if first_run:
+                first_run = False
+                if looks_unauthenticated(transcript):
+                    print(
+                        "ERROR: child `claude` CLI is not authenticated "
+                        "(hit the 'Please run /login' wall, zero token usage). "
+                        "Set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY in the "
+                        "environment eval-run.py runs in, then retry.",
+                        file=sys.stderr,
+                    )
+                    return 4
             raw_path = snap_dir / f"{ev['id']}-run{k}.jsonl"
             raw_path.write_text(transcript, encoding="utf-8")
             runs.append({"run": k, "transcript_text": transcript})
