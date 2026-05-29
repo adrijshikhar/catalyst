@@ -26,3 +26,9 @@ jobs:
 
       - name: Run unit tests
         run: python3 -m unittest discover -s tests -v
+
+      - name: Grade committed eval snapshots
+        run: python3 scripts/eval-grade.py
+
+      - name: Hook functional smoke
+        run: bash tests/sh/test_hook_smoke.sh
