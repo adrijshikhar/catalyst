@@ -23,3 +23,5 @@ skills/*-workspace/
 # repo, never in the public repo. Keep them local-only here.
 docs/superpowers/
 docs/ROADMAP.md
+__pycache__/
+*.pyc

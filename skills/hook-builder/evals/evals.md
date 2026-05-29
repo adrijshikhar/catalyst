@@ -2,7 +2,7 @@
 
 **Skill:** `hook-builder` (Catalyst v0.4)
 **Defined:** 2026-05-24 (pre-implementation — EDD)
-**Spec:** [docs/superpowers/specs/2026-05-24-tier-1-harness-primitives-design.md](../../../docs/superpowers/specs/2026-05-24-tier-1-harness-primitives-design.md)
+**Spec:** `docs/superpowers/specs/2026-05-24-tier-1-harness-primitives-design.md`
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Skill:** `verify-gate` (Catalyst v0.4)
 **Defined:** 2026-05-24 (pre-implementation — EDD)
-**Spec:** [docs/superpowers/specs/2026-05-24-tier-1-harness-primitives-design.md](../../../docs/superpowers/specs/2026-05-24-tier-1-harness-primitives-design.md)
+**Spec:** `docs/superpowers/specs/2026-05-24-tier-1-harness-primitives-design.md`
 **Test prompts + assertions:** [evals.json](./evals.json)
 
 Binding contract for verify-gate v0.4. Evals defined before SKILL.md or hook ships.

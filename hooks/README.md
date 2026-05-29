@@ -42,6 +42,6 @@ A failing matcher should exit 0. A matcher hit + policy violation should exit 2 
 
 ## See also
 
-- [Catalyst Tier 1 spec](../docs/superpowers/specs/2026-05-24-tier-1-harness-primitives-design.md)
+- `Catalyst Tier 1 spec`
 - [Claude Code hooks docs](https://code.claude.com/docs/en/agent-sdk/hooks.md)
 - [Anthropic CWC pattern (reference impl)](https://github.com/anthropics/cwc-long-running-agents)

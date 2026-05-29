@@ -80,7 +80,7 @@
       "id": 5,
       "name": "regression-handoff-v03-write-still-works",
       "category": "regression",
-      "prompt": "With verify-gate hook installed, simulate the handoff v0.3 WRITE flow. Set up: branch is 'feat/jwt-expiry' (via .git-HEAD), no prior brief exists. The session has a Read on a fixture 'test-output.log' (legitimate evidence). Now invoke handoff WRITE — it must produce .claude/handoffs/feat-jwt-expiry.md and .claude/PROJECT_STATE.md without being blocked by verify-gate.\n\nThis is a regression check: verify-gate must NOT false-positive-block handoff's writes to .claude/ paths.\n\nUse the v0.3 handoff SKILL.md at /Users/nemesis/Projects/my-projects/catalyst/skills/handoff/SKILL.md.",
+      "prompt": "With verify-gate hook installed, simulate the handoff v0.3 WRITE flow. Set up: branch is 'feat/jwt-expiry' (via .git-HEAD), no prior brief exists. The session has a Read on a fixture 'test-output.log' (legitimate evidence). Now invoke handoff WRITE — it must produce .claude/handoffs/feat-jwt-expiry.md and .claude/PROJECT_STATE.md without being blocked by verify-gate.\n\nThis is a regression check: verify-gate must NOT false-positive-block handoff's writes to .claude/ paths.\n\nUse the v0.3 handoff SKILL.md at /path/to/catalyst/skills/handoff/SKILL.md.",
       "files": [
         {"path": ".git-HEAD", "content": "feat/jwt-expiry\n"},
         {"path": "test-output.log", "content": "PASS auth.spec.ts 6/6\n"}

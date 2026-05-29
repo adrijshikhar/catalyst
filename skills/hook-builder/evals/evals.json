@@ -6,7 +6,7 @@
       "id": 0,
       "name": "install-single-precompact",
       "category": "capability",
-      "prompt": "Run `/hook-builder install PreCompact` against a fresh project (empty .claude/settings.json). The install must (a) copy hooks/PreCompact-handoff-write.sh to .claude/hooks/, and (b) add a PreCompact entry to settings.json pointing at the copied hook. Use the shared installer at scripts/install-hooks.sh from the Catalyst repo at /Users/nemesis/Projects/my-projects/catalyst.\n\nWorking dir is fresh — no .claude/ exists. After install, save the resulting settings.json content to `final-settings.json` and list .claude/hooks/ contents to `installed-hooks.txt`.",
+      "prompt": "Run `/hook-builder install PreCompact` against a fresh project (empty .claude/settings.json). The install must (a) copy hooks/PreCompact-handoff-write.sh to .claude/hooks/, and (b) add a PreCompact entry to settings.json pointing at the copied hook. Use the shared installer at scripts/install-hooks.sh from the Catalyst repo at /path/to/catalyst.\n\nWorking dir is fresh — no .claude/ exists. After install, save the resulting settings.json content to `final-settings.json` and list .claude/hooks/ contents to `installed-hooks.txt`.",
       "files": [],
       "assertions": [
         ".claude/hooks/PreCompact-handoff-write.sh exists",

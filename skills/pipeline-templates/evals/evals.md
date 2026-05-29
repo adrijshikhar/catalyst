@@ -2,7 +2,7 @@
 
 **Skill:** `pipeline-templates` (Catalyst v0.5)
 **Defined:** 2026-05-24 (pre-implementation — EDD)
-**Spec:** [docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md](../../../docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md)
+**Spec:** `docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md`
 **Test prompts + assertions:** [evals.json](./evals.json)
 
 Binding contract for pipeline-templates v0.5. Evals defined before SKILL.md or template runtime ships.
