@@ -191,6 +191,57 @@ def filter_gitignored(paths: list[Path], errors: list[str]) -> list[Path]:
     return [p for p, rel in zip(paths, rels) if rel not in ignored]
 
 
+# --- Catalog / drift gate (Task 2) -------------------------------------------
+
+# README skill-table rows look like:  | [`skill-name`](./skills/...) | ... |
+_README_SKILL_ROW_RE = re.compile(r"^\|\s*\[`[^`]+`\]\(\./skills/", re.MULTILINE)
+
+
+def count_skills(root: Path) -> int:
+    return sum(1 for _ in (root / "skills").glob("*/SKILL.md"))
+
+
+def count_commands(root: Path) -> int:
+    d = root / "commands"
+    return sum(1 for _ in d.glob("*.md")) if d.is_dir() else 0
+
+
+def check_catalog_counts(root: Path, errors: list[str]) -> None:
+    readme = root / "README.md"
+    if not readme.exists():
+        return
+    text = readme.read_text(encoding="utf-8")
+    rows = len(_README_SKILL_ROW_RE.findall(text))
+    skills = count_skills(root)
+    if rows != skills:
+        fail(
+            f"README.md: skills-table has {rows} rows but {skills} SKILL.md files exist — "
+            "update the table",
+            errors,
+        )
+
+
+def check_marketplace_consistency(root: Path, errors: list[str]) -> None:
+    mp = root / ".claude-plugin" / "marketplace.json"
+    pj = root / ".claude-plugin" / "plugin.json"
+    if not (mp.exists() and pj.exists()):
+        return
+    try:
+        mp_data = json.loads(mp.read_text())
+        pj_data = json.loads(pj.read_text())
+    except json.JSONDecodeError:
+        return  # JSON validity already checked elsewhere
+    pj_name = pj_data.get("name")
+    plugins = mp_data.get("plugins", [])
+    names = [p.get("name") for p in plugins if isinstance(p, dict)]
+    if pj_name not in names:
+        fail(
+            f".claude-plugin/marketplace.json: no plugin entry named '{pj_name}' "
+            "(must match plugin.json name)",
+            errors,
+        )
+
+
 def check_json(path: Path, required: list[str], errors: list[str]) -> None:
     if not path.exists():
         fail(f"{path.relative_to(ROOT)}: missing", errors)
@@ -330,6 +381,10 @@ def main() -> int:
             )
         except json.JSONDecodeError:
             fail(".claude/settings.json: invalid JSON", errors)
+
+    # Catalog / drift gate (Task 2)
+    check_catalog_counts(ROOT, errors)
+    check_marketplace_consistency(ROOT, errors)
 
     if errors:
         print("Catalyst lint: FAILED", file=sys.stderr)
