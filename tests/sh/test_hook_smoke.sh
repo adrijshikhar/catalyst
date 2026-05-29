@@ -5,7 +5,7 @@
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "${TMP:?}"' EXIT
 fail=0
 
 cd "$TMP"
@@ -42,7 +42,7 @@ if printf '%s' "$out" | jq -e '.hookSpecificOutput.additionalContext | contains(
 else
   echo "FAIL PreCompact no-branch: expected legacy-slot JSON, got: $out"; fail=1
 fi
-rm -rf "$NOGIT"
+rm -rf "${NOGIT:?}"
 
 # Regression: the verify-gate fractional-second timestamp normalization must
 # yield a parseable timestamp on THIS host (macOS BSD date or GNU date).

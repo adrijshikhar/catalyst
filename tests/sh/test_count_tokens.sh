@@ -3,7 +3,7 @@
 set -euo pipefail
 SCRIPT="$(cd "$(dirname "$0")/../.." && pwd)/scripts/count-tokens.sh"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "${TMP:?}"' EXIT
 fail=0
 
 # 1. Transcript with usage objects → sums real tokens (10 + 20 + 5 = 35).
