@@ -2,7 +2,7 @@
 
 **Skill:** `brain-bridge` (Catalyst v0.6)
 **Defined:** 2026-05-25 (pre-implementation — EDD)
-**Spec:** [docs/superpowers/specs/2026-05-24-tier-3-knowledge-integration-design.md](../../../docs/superpowers/specs/2026-05-24-tier-3-knowledge-integration-design.md)
+**Spec:** `docs/superpowers/specs/2026-05-24-tier-3-knowledge-integration-design.md`
 **Test prompts + assertions:** [evals.json](./evals.json)
 
 Binding contract for brain-bridge v0.6. Evals defined before SKILL.md or adapter shims ship.

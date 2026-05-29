@@ -2,7 +2,7 @@
 
 **Skill:** `handoff` (Catalyst v0.3)
 **Defined:** 2026-05-24 (pre-implementation — eval-driven development)
-**Spec:** [docs/superpowers/specs/2026-05-24-handoff-v0.3-feature-keying-design.md](../../../docs/superpowers/specs/2026-05-24-handoff-v0.3-feature-keying-design.md)
+**Spec:** `docs/superpowers/specs/2026-05-24-handoff-v0.3-feature-keying-design.md`
 **Test prompts + assertions:** [evals.json](./evals.json)
 
 Binding contract for v0.3 before any SKILL.md change ships. Evals defined before implementation per EDD.

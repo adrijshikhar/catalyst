@@ -52,6 +52,145 @@ def parse_frontmatter(path: Path) -> dict[str, str] | None:
     return result
 
 
+# --- Deterministic validators (Task 1) ---------------------------------------
+
+# Dangerous invisible / smuggling code points. Tag block U+E0000-E007F is the
+# ASCII-smuggling prompt-injection vector. Allow ©®™ (handled by not listing them).
+_DANGEROUS_CODEPOINTS = (
+    (0x200B, 0x200D),  # zero-width space/non-joiner/joiner
+    (0xFEFF, 0xFEFF),  # BOM / zero-width no-break space
+    (0x202A, 0x202E),  # bidi embedding/override
+    (0x2066, 0x2069),  # bidi isolates
+    (0x2061, 0x2064),  # invisible math operators
+    (0xFE00, 0xFE0F),  # variation selectors
+    (0xE0000, 0xE007F),  # Unicode Tag block (ASCII smuggling)
+    (0x180E, 0x180E),  # Mongolian vowel separator
+    (0x115F, 0x1160),  # Hangul fillers
+    (0x3164, 0x3164),  # Hangul filler
+)
+
+TEXT_SUFFIXES = {".md", ".sh", ".py", ".json", ".txt", ".yml", ".yaml"}
+
+
+def _is_dangerous_codepoint(cp: int) -> bool:
+    return any(lo <= cp <= hi for lo, hi in _DANGEROUS_CODEPOINTS)
+
+
+def scan_invisible_unicode(path: Path, errors: list[str]) -> None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        return
+    for idx, ch in enumerate(text):
+        cp = ord(ch)
+        if _is_dangerous_codepoint(cp):
+            line = text.count("\n", 0, idx) + 1
+            rel = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+            fail(f"{rel}:{line}: invisible/dangerous code point U+{cp:04X}", errors)
+            return  # one finding per file is enough to fail
+
+
+_BLOCK_SCALAR_RE = re.compile(r"^[|>][+-]?\d*\s*$")
+
+
+def check_description_scalar(path: Path, errors: list[str]) -> None:
+    """Fail if frontmatter `description:` uses a literal/folded block scalar."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return
+    match = FRONTMATTER_RE.match(text)
+    if not match:
+        return
+    for line in match.group(1).splitlines():
+        stripped = line.strip()
+        if stripped.startswith("description:"):
+            value = stripped.partition(":")[2].strip()
+            if _BLOCK_SCALAR_RE.match(value):
+                rel = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+                fail(
+                    f"{rel}: description uses block scalar '{value}' — "
+                    "use an inline or folded '>' string (breaks catalog tables)",
+                    errors,
+                )
+            return
+
+
+_PERSONAL_PATH_RE = re.compile(r"/Users/([A-Za-z][\w.-]*)|[A-Z]:\\Users\\([A-Za-z][\w.-]*)")
+_PATH_ALLOWLIST = {"example", "you", "user", "me", "yourname", "username"}
+
+
+def scan_personal_paths_text(label: str, text: str, errors: list[str]) -> None:
+    for m in _PERSONAL_PATH_RE.finditer(text):
+        name = m.group(1) or m.group(2) or ""
+        if name.lower() in _PATH_ALLOWLIST:
+            continue
+        fail(f"{label}: leaked personal path '{m.group(0)}'", errors)
+        return
+
+
+def validate_hook_settings_obj(data: dict, label: str, errors: list[str]) -> None:
+    """Validate settings.json hooks use the matcher + hooks[] schema."""
+    hooks = data.get("hooks")
+    if not isinstance(hooks, dict):
+        return
+    for event, entries in hooks.items():
+        if not isinstance(entries, list):
+            fail(f"{label}: hooks.{event} must be an array", errors)
+            continue
+        for i, entry in enumerate(entries):
+            inner = entry.get("hooks") if isinstance(entry, dict) else None
+            if not isinstance(inner, list):
+                fail(
+                    f"{label}: hooks.{event}.{i}.hooks must be an array "
+                    "(legacy {command} shape is invalid)",
+                    errors,
+                )
+                continue
+            for j, h in enumerate(inner):
+                if not isinstance(h, dict) or "command" not in h:
+                    fail(f"{label}: hooks.{event}.{i}.hooks.{j} missing command", errors)
+
+
+# Markdown link targets only: [text](./path) or [text](../path). Bare paths in
+# prose / code fences / JSON data are intentionally NOT matched (too noisy).
+_FILE_REF_RE = re.compile(r"\]\((\.{1,2}/[\w./-]+\.(?:md|sh|py|json))(?:#[\w-]+)?\)")
+_FENCE_STRIP_RE = re.compile(r"```.*?```", re.DOTALL)
+_INLINE_CODE_STRIP_RE = re.compile(r"`[^`]*`")
+
+
+def check_file_refs_text(label: str, text: str, base: Path, errors: list[str]) -> None:
+    # Strip fenced + inline code so illustrative example links inside code
+    # spans are not treated as real navigable references.
+    stripped = _FENCE_STRIP_RE.sub("", text)
+    stripped = _INLINE_CODE_STRIP_RE.sub("", stripped)
+    for m in _FILE_REF_RE.finditer(stripped):
+        ref = m.group(1)
+        target = (base / ref).resolve()
+        if not target.exists():
+            fail(f"{label}: unresolved file reference '{ref}'", errors)
+
+
+def filter_gitignored(paths: list[Path], errors: list[str]) -> list[Path]:
+    """Drop paths git would ignore (e.g., skills/*-workspace/, .claude/).
+
+    Fail-open: if git is unavailable, return paths unchanged."""
+    if shutil.which("git") is None or not paths:
+        return paths
+    rels = [str(p.relative_to(ROOT)) for p in paths]
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(ROOT), "check-ignore", "--stdin"],
+            input="\n".join(rels),
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return paths
+    ignored = set(result.stdout.splitlines())
+    return [p for p, rel in zip(paths, rels) if rel not in ignored]
+
+
 def check_json(path: Path, required: list[str], errors: list[str]) -> None:
     if not path.exists():
         fail(f"{path.relative_to(ROOT)}: missing", errors)
@@ -150,6 +289,47 @@ def main() -> int:
     check_skills(errors)
     check_commands(errors)
     check_hooks(errors)
+
+    # Deterministic breadth (Task 1)
+    scan_targets = []
+    for sub in ("skills", "commands", "hooks"):
+        d = ROOT / sub
+        if d.is_dir():
+            for p in d.rglob("*"):
+                if p.is_file() and p.suffix in TEXT_SUFFIXES:
+                    scan_targets.append(p)
+    for doc in ("README.md", "CLAUDE.md"):
+        p = ROOT / doc
+        if p.exists():
+            scan_targets.append(p)
+
+    scan_targets = filter_gitignored(scan_targets, errors)
+
+    for p in scan_targets:
+        scan_invisible_unicode(p, errors)
+        try:
+            text = p.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        scan_personal_paths_text(str(p.relative_to(ROOT)), text, errors)
+        # File-ref resolution only on markdown docs — .json/.sh/.py contain data
+        # paths and embedded-fixture links, not navigable doc references.
+        if p.suffix == ".md":
+            check_file_refs_text(str(p.relative_to(ROOT)), text, p.parent, errors)
+
+    for skill_md in (ROOT / "skills").glob("*/SKILL.md"):
+        check_description_scalar(skill_md, errors)
+    for cmd_md in (ROOT / "commands").glob("*.md"):
+        check_description_scalar(cmd_md, errors)
+
+    settings = ROOT / ".claude" / "settings.json"
+    if settings.exists():
+        try:
+            validate_hook_settings_obj(
+                json.loads(settings.read_text()), ".claude/settings.json", errors
+            )
+        except json.JSONDecodeError:
+            fail(".claude/settings.json: invalid JSON", errors)
 
     if errors:
         print("Catalyst lint: FAILED", file=sys.stderr)
