@@ -53,6 +53,14 @@ if [ -f "$CONFIG_FILE" ]; then
   STALE_TURNS=$(jq -r '.stale_read_max_turns // 15' "$CONFIG_FILE")
   CHECK_CONTRADICTION=$(jq -r '.check_contradiction_with_project_state // true | if . then 1 else 0 end' "$CONFIG_FILE")
   LOG_PATH=$(jq -r ".log_path // \"$PROJECT_DIR/.claude/session-degradation.log\"" "$CONFIG_FILE")
+  # Clamp the config-supplied log path inside PROJECT_DIR — a hook must never
+  # write outside the project dir (Catalyst hook convention). Reject absolute
+  # escapes and ../ traversal; fall back to the default slot.
+  case "$LOG_PATH" in
+    *..*) LOG_PATH="$PROJECT_DIR/.claude/session-degradation.log" ;;
+    "$PROJECT_DIR"/*) : ;;
+    *) LOG_PATH="$PROJECT_DIR/.claude/session-degradation.log" ;;
+  esac
 fi
 
 # === Signal 1: context % ===
