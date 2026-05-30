@@ -45,7 +45,7 @@
 #
 #   Per-turn signal detectors (UserPromptSubmit):
 #     sh_detect_repeated_tool <transcript> <count> <window>
-#       → echo "KEY:COUNT" if detected, else empty
+#       → echo "KEY COUNT" if detected, else empty
 #     sh_detect_stale_read <transcript> <stale_turns>
 #       → echo "<file_path>" if detected, else empty
 #     sh_detect_contradiction <transcript> <project_state_file>
@@ -54,7 +54,7 @@
 #   Session-end pattern matchers (Stop) — each returns 0 if pattern found,
 #   non-zero if not; detail echoed on stdout:
 #     sh_pattern_repeated_tool <transcript> <count> <window>
-#       → echo "CMD:COUNT" on match
+#       → echo "CMD COUNT" on match
 #     sh_pattern_edit_mismatch <transcript> <mismatch_count>
 #       → echo "<detail>" on match
 #     sh_pattern_stale_read_stop <transcript>
@@ -71,25 +71,28 @@
 # ── Internal: read effective-window config from env ───────────────────────────
 
 _sh_advertised_tokens() {
-  echo "${CATALYST_SH_ADVERTISED_TOKENS:-200000}"
+  local adv="${CATALYST_SH_ADVERTISED_TOKENS:-200000}"
+  # Guard: treat 0 or non-numeric values as the default 200000.
+  [ "${adv:-0}" -le 0 ] 2>/dev/null && adv=200000
+  echo "$adv"
 }
 
 _sh_effective_frac_pct() {
   # Returns integer percentage (0-100) to avoid floating point in POSIX sh.
   # CATALYST_SH_EFFECTIVE_FRAC is a decimal like "0.70"; convert to int pct.
   local frac="${CATALYST_SH_EFFECTIVE_FRAC:-0.70}"
-  # Multiply by 100 via awk to get an integer percentage.
-  awk "BEGIN { printf \"%d\", $frac * 100 }"
+  # Multiply by 100 via awk using -v to prevent shell injection.
+  awk -v f="$frac" 'BEGIN { printf "%d", f * 100 }'
 }
 
 _sh_warn_frac_pct() {
   local frac="${CATALYST_SH_WARN_FRAC:-0.50}"
-  awk "BEGIN { printf \"%d\", $frac * 100 }"
+  awk -v f="$frac" 'BEGIN { printf "%d", f * 100 }'
 }
 
 _sh_strong_frac_pct() {
   local frac="${CATALYST_SH_STRONG_FRAC:-0.70}"
-  awk "BEGIN { printf \"%d\", $frac * 100 }"
+  awk -v f="$frac" 'BEGIN { printf "%d", f * 100 }'
 }
 
 # ── Token counting ────────────────────────────────────────────────────────────
@@ -100,6 +103,7 @@ _sh_strong_frac_pct() {
 # UserPromptSubmit-session-degradation-watch.sh v0.6).
 sh_count_tokens() {
   local transcript_file="$1"
+  [ -f "$transcript_file" ] || { echo "0"; return 0; }
   if [ "${CATALYST_TIKTOKEN:-0}" = "1" ] && python3 -c "import tiktoken" 2>/dev/null; then
     python3 -c "
 import tiktoken, sys, os
