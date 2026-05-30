@@ -56,4 +56,21 @@ else
   echo "FAIL verify-gate: normalized timestamp '$READ_TS' still unparseable on this host"; fail=1
 fi
 
+# Regression: handoff-dir.sh resolves the CENTRALIZED store from a linked worktree.
+CWT_MAIN="$(mktemp -d)"
+CWT_MAIN_R="$(cd "$CWT_MAIN" && pwd -P 2>/dev/null || pwd)"
+(cd "$CWT_MAIN_R" && git init -q && git config user.email t@e.st && git config user.name t && echo x>f && git add -A && git commit -qm init)
+CWT_PARENT="$(mktemp -d)"
+CWT_LINK="$CWT_PARENT/wt"
+git -C "$CWT_MAIN_R" worktree add -q "$CWT_LINK" -b wt-store-test >/dev/null 2>&1
+got=$(bash "$REPO_ROOT/scripts/handoff-dir.sh" "$CWT_LINK")
+want="$CWT_MAIN_R/.claude/handoffs"
+if [ "$got" = "$want" ]; then
+  echo "PASS centralized-store from worktree"
+else
+  echo "FAIL centralized-store: got $got want $want"; fail=1
+fi
+git -C "$CWT_MAIN_R" worktree remove --force "$CWT_LINK" 2>/dev/null || true
+rm -rf "${CWT_MAIN_R:?}" "${CWT_PARENT:?}"
+
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }

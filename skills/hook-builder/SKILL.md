@@ -12,7 +12,7 @@ The skill that wires Catalyst into Claude Code's lifecycle. Without hook-builder
 | Hook | Event | What it triggers |
 |------|-------|------------------|
 | `PreCompact-handoff-write.sh` | About to `/compact` | Surfaces context asking Claude to invoke handoff WRITE before compaction destroys state |
-| `SessionStart-handoff-read.sh` | New session opens | Detects `.claude/handoffs/<branch>.md`, prompts Claude to invoke handoff READ |
+| `SessionStart-handoff-read.sh` | New session opens | Detects `<branch>.json` in the centralized handoffs store (worktree-aware), prompts Claude to invoke handoff READ |
 | `Stop-commit-backstop.sh` | Session ending | Flags any uncommitted git changes via additionalContext so next session can pick up |
 | `UserPromptSubmit-orient.sh` | First user prompt of a session | Injects branch + last 5 commits as orientation context (only once per session) |
 
