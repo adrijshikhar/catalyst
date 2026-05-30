@@ -26,9 +26,16 @@
 
 ---
 
-In chemistry, a **catalyst** facilitates a reaction — it makes the process happen faster and more reliably, without being consumed by it. This plugin does the same for **human–AI collaboration**. It sits between you and Claude and facilitates the work: carrying context across sessions, blocking premature "it's done" claims, keeping subagents on-scope, surfacing trouble before it compounds. It smooths the friction in how you and the model work together, then steps back out of the way.
+**Catalyst takes its name from chemistry.** A catalyst facilitates a reaction — makes it faster and more reliable — without being consumed by it.
 
-Concretely, Catalyst is a Claude Code plugin grounded in **[harness engineering](https://www.anthropic.com/engineering/harness-design-long-running-apps)** — the architectural patterns Anthropic itself uses to ship reliable agentic applications. The plugin treats Claude not as a single chat but as a system that needs scaffolding for context resets, structured artifact handoffs, multi-agent orchestration, and explicit evaluator/generator separation.
+This plugin is a catalyst for **human–AI collaboration**. It sits between you and Claude and smooths how you work together, then steps out of the way. In practice, it:
+
+- **carries context across sessions** — so nothing gets re-explained after a `/compact`
+- **blocks premature "it's done" claims** — no success without evidence
+- **keeps subagents on-scope** — the right minimum context, no bleed
+- **surfaces trouble before it compounds** — degradation and failure patterns, flagged early
+
+Under the hood, Catalyst is grounded in **[harness engineering](https://www.anthropic.com/engineering/harness-design-long-running-apps)** — the architectural patterns Anthropic itself uses to ship reliable agentic applications. It treats Claude not as a single chat but as a system that needs scaffolding for context resets, structured artifact handoffs, multi-agent orchestration, and explicit evaluator/generator separation.
 
 Every component of every skill encodes an assumption about what the current model can't do reliably on its own. Those assumptions get stress-tested with each new flagship model — scaffolding that no longer earns its complexity gets stripped. The plugin grows opinionated about *when* to add complexity, not just *what* complexity to add.
 
