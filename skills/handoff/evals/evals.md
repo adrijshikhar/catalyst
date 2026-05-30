@@ -7,31 +7,36 @@
 
 Binding contract for v0.3 before any SKILL.md change ships. Evals defined before implementation per EDD.
 
+**Brief format:** All briefs are typed JSON validated against `skills/handoff/brief.schema.json`.
+The legacy `.md` format was dropped pre-1.0. Tier-2 briefs are stored at `<store>/<key>.json`;
+tier-3 (no-git fallback) uses `<store>/HANDOFF.json`. READ renders via `python3 scripts/handoff-render.py <key>`.
+
 ---
 
 ## Capability evals (13)
 
 | ID | Name | What it proves |
 |----|------|----------------|
-| 0 | write-tier-2-branch | Tier-2 resolution writes to `.claude/handoffs/<branch>.md`, with Resume prompt and feature-keyed narrative entry |
-| 1 | write-tier-3-legacy-fallback | No-git fallback writes to legacy `.claude/HANDOFF.md` (backwards compatible) |
-| 2 | read-multi-brief | Multiple briefs present → skill surfaces all, defaults to branch match, never silently picks |
-| 3 | read-legacy-fallback | Legacy v0.2-shaped brief is consumed cleanly (no Resume prompt section is fine) |
-| 4 | recover-degraded | RECOVER overwrites the resolved key's brief but does NOT prepend to narrative |
-| 5 | brief-subagent-mode | BRIEF produces ≤30 lines inline, no PROJECT_STATE.md inlined, no disk writes |
+| 0 | write-tier-2-branch | Tier-2 resolution writes to `<store>/feat-jwt-expiry.json` (typed JSON, validated by `handoff-validate.py`), resume prompt in state + render output, feature-keyed narrative entry |
+| 1 | write-tier-3-legacy-fallback | No-git fallback writes to `<store>/HANDOFF.json` (typed JSON, tier-3 key); backwards compatible |
+| 2 | read-multi-brief | Multiple `.json` briefs present → skill surfaces all, defaults to branch match, never silently picks |
+| 3 | read-legacy-fallback | Single-slot `HANDOFF.json` brief is consumed cleanly via `handoff-render.py --file` |
+| 4 | recover-degraded | RECOVER overwrites `<key>.json` (passes validate gate), does NOT prepend to narrative; resume via render output |
+| 5 | brief-subagent-mode | BRIEF produces ≤30 lines inline, no PROJECT_STATE.md inlined, no `.json` disk writes |
 | 6 | pipeline-parallel | Two-concern task → one parallel stage + one synthesis stage |
 | 7 | pipeline-sequential | research → plan → implement, structured inter-stage references, no inlined prior output |
 | 8 | pipeline-synthesis-discipline | Parallel reviewers' findings merged into one report, unified severity scale |
 | 9 | pipeline-abort-trivial | Trivial task → zero subagents, no pipeline preamble |
 | 10 | pipeline-anti-self-grade | Generator and evaluator are SEPARATE subagents; evaluator gets contract + artifact only (no generator transcript) |
 | 11 | pipeline-gan-loop | GAN-inspired iteration loop with bounded iterations + scoring threshold + stall surfacing |
-| 13 | fresh-session-resumes-from-brief | Real-world dogfood: subagent given the catalyst-dogfood-build brief Reads it first, quotes the next acceptance check, surfaces locked decisions + a rejected path, and lists the dogfood plan steps in order. Anti-context-bleed check: PROJECT_STATE.md is NOT auto-read. |
+| 13 | fresh-session-resumes-from-brief | Real-world dogfood: subagent reads `catalyst-dogfood-build.json` via `handoff-render.py`, quotes the next acceptance check, surfaces locked decisions + a rejected path, and lists the dogfood plan steps in order. Anti-context-bleed check: PROJECT_STATE.md is NOT auto-read. |
+| — | typed-brief-validates | A WRITE-produced `<key>.json` passes `python3 scripts/handoff-validate.py <key>.json` exit-0 (required fields incl. worktree provenance). Asserted inline in evals 0, 1, 4. |
 
 ## Regression evals (1)
 
 | ID | Name | Baseline |
 |----|------|----------|
-| 12 | regression-v0.2-legacy-mode | v0.2 SKILL.md snapshot in `skills/handoff-workspace/v0.2-snapshot/` — v0.2 must still produce a working brief at `.claude/HANDOFF.md` in legacy mode |
+| 12 | regression-v0.2-legacy-mode | v0.2 SKILL.md snapshot in `skills/handoff-workspace/v0.2-snapshot/` — v0.2 must still produce a working brief at `.claude/HANDOFF.md` in legacy mode (markdown format; this regression eval is the ONLY place `.md` brief paths appear — they are intentionally preserved to confirm the v0.2 path still works) |
 
 ---
 
@@ -51,7 +56,7 @@ pass@3 = at least one of three independent dispatches satisfies all assertions f
 
 | Type | Used for | Example |
 |------|----------|---------|
-| Code (deterministic) | File existence, path checks, line counts, regex matches, byte-for-byte equality, Agent tool invocation counts, path-overlap analysis | "Brief was written to `.claude/handoffs/feat-jwt-expiry.md`" |
+| Code (deterministic) | File existence, path checks, line counts, regex matches, byte-for-byte equality, Agent tool invocation counts, path-overlap analysis | "Brief was written to `.claude/handoffs/feat-jwt-expiry.json` and `handoff-validate.py` exits 0" |
 | Model (LLM-as-judge) | Synthesis quality, duplicate-merging, unified severity scales, brief filtering correctness, "is this one plan or two stapled reports?", evaluator-was-separate-subagent | "combined-plan.md is ONE unified plan, not two stapled reports" |
 | Human (manual) | Brief-schema round-trip — verify a BRIEF-mode brief can be promoted to a WRITE brief without field renaming (one-time per release) | n/a — interactive |
 
@@ -82,11 +87,13 @@ catalyst/                       (workspace, gitignored)
 
 ## Anti-patterns caught by grading
 
-- Brief written to `.claude/HANDOFF.md` when a feature key was resolvable → `write-tier-2-branch` catches via path assertion
+- Brief written to `<store>/HANDOFF.json` when a feature key was resolvable → `write-tier-2-branch` catches via path assertion
+- Brief written as `.md` instead of validated `.json` → `write-tier-2-branch` and `write-tier-3-legacy-fallback` catch via `handoff-validate.py` exit-0 assertion
 - BRIEF mode inlining PROJECT_STATE.md → `brief-subagent-mode` catches via substring check
 - PIPELINE mode running for a trivial task → `pipeline-abort-trivial` catches via Agent invocation count = 0
 - READ silently choosing a brief without surfacing alternatives → `read-multi-brief` catches via chat-response assertion
 - RECOVER mutating PROJECT_STATE.md → `recover-degraded` catches via byte-for-byte equality
+- RECOVER not re-validating the reconstructed brief → `recover-degraded` catches via `handoff-validate.py` exit-0 assertion
 - Synthesis-by-concatenation in pipelines → `pipeline-synthesis-discipline` catches via LLM-as-judge
 - Generator self-grading → `pipeline-anti-self-grade` catches by verifying separate Agent invocations
 - GAN loop running on binary-pass-fail task → not directly tested in v0.3; relies on PIPELINE's "abort on trivial" heuristic
