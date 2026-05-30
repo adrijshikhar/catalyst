@@ -22,6 +22,21 @@ _hp = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_hp)
 
 
+def _git_root(p: str) -> str:
+    """Normalize a git dir to its SHARED common dir for repo comparison.
+
+    A linked worktree's private git dir is `<common>/.git/worktrees/<name>`;
+    the shared common dir is `<common>/.git`. Collapse the `/worktrees/<name>`
+    suffix so a brief that recorded either form still matches the resuming
+    session's `git rev-parse --git-common-dir`. Defense-in-depth: WRITE is
+    instructed to store the shared common dir, but tolerate the worktree form.
+    """
+    norm = os.path.normpath(str(p))
+    marker = os.sep + "worktrees" + os.sep
+    idx = norm.find(marker)
+    return norm[:idx] if idx != -1 else norm
+
+
 def _bullets(label: str, items: list | None) -> str:
     items = items or []
     if not items:
@@ -37,8 +52,7 @@ def render(obj: dict, current_branch: str | None, current_common_dir: str | None
     wt = state.get("worktree", {})
     done_when = resume.get("done_when", "?")
     prompt = resume.get("prompt") or (
-        f"resume handoff '{key}': run `python3 scripts/handoff-render.py {key}` "
-        f"(or /catalyst:handoff resume), then continue. "
+        f"resume handoff '{key}': run `/catalyst:handoff resume` (READ mode), then continue. "
         f"next acceptance check: {state.get('next_acceptance_check', '?')}."
     )
 
@@ -52,7 +66,7 @@ def render(obj: dict, current_branch: str | None, current_common_dir: str | None
     if rec_common and not Path(rec_common).is_absolute():
         rec_common = os.path.join(wt.get("root", ""), rec_common)
     if current_common_dir and rec_common and \
-       os.path.normpath(str(current_common_dir)) != os.path.normpath(str(rec_common)):
+       _git_root(current_common_dir) != _git_root(rec_common):
         out.append(
             f"!! REPO MISMATCH: this brief belongs to a different repo ({rec_common}); not resuming."
         )
