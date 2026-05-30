@@ -51,6 +51,12 @@ class TestHandoffsDir(unittest.TestCase):
                                     capture_output=True, text=True, check=True).stdout.strip()
                 self.assertEqual(Path(py).resolve(), Path(sh).resolve(), f"parity mismatch at {loc}")
 
+    def test_load_schema(self):
+        schema = hp.load_schema()
+        self.assertIsInstance(schema, dict)
+        self.assertIn("$schema", schema)
+        self.assertEqual(schema["properties"]["schema_version"]["const"], "1")
+
 
 if __name__ == "__main__":
     unittest.main()

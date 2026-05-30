@@ -18,8 +18,8 @@ SCHEMA_PATH = ROOT / "skills" / "handoff" / "brief.schema.json"
 
 def _git(args: list[str], cwd: Path) -> str | None:
     try:
-        r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
-    except OSError:
+        r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
         return None
     return r.stdout.strip() if r.returncode == 0 else None
 
@@ -43,7 +43,6 @@ def load_schema() -> dict:
 
 if __name__ == "__main__":
     import sys
-    if len(sys.argv) > 1 and sys.argv[1] == "--dir":
-        print(handoffs_dir())
-    else:
-        print(handoffs_dir())
+    # Optional path arg mirrors handoff-dir.sh's $1; default to cwd.
+    _args = [a for a in sys.argv[1:] if a != "--dir"]
+    print(handoffs_dir(_args[0] if _args else None))
