@@ -1,0 +1,29 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Catalyst">
+  <defs>
+    <linearGradient id="cat2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F8CFF"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+  <!-- converging reactant paths -->
+  <g fill="none" stroke="url(#cat2)" stroke-width="3" stroke-linecap="round" opacity="0.85">
+    <path d="M50 12 V34"/>
+    <path d="M88 50 H66"/>
+    <path d="M50 88 V66"/>
+    <path d="M12 50 H34"/>
+    <path d="M23 23 L38 38"/>
+    <path d="M77 23 L62 38"/>
+    <path d="M77 77 L62 62"/>
+    <path d="M23 77 L38 62"/>
+  </g>
+  <!-- reactant nodes -->
+  <g fill="url(#cat2)">
+    <circle cx="50" cy="12" r="4"/>
+    <circle cx="88" cy="50" r="4"/>
+    <circle cx="50" cy="88" r="4"/>
+    <circle cx="12" cy="50" r="4"/>
+  </g>
+  <!-- catalyst core (unconsumed center) -->
+  <circle cx="50" cy="50" r="13" fill="url(#cat2)"/>
+  <circle cx="50" cy="50" r="5.5" fill="#fff"/>
+</svg>
