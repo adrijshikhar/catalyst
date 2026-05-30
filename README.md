@@ -1,46 +1,111 @@
-# Catalyst
+<h1 align="center">Catalyst</h1>
 
-> Harness engineering for Claude Code — skills that turn the model into a long-running, reliable system.
+<p align="center">
+  <strong>Harness engineering for Claude Code — skills that turn the model into a long-running, reliable system.</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/adrijshikhar/catalyst/releases"><img src="https://img.shields.io/github/v/release/adrijshikhar/catalyst?style=flat&color=blue" alt="Release"></a>
+  <a href="https://github.com/adrijshikhar/catalyst/actions/workflows/ci.yml"><img src="https://github.com/adrijshikhar/catalyst/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/adrijshikhar/catalyst?style=flat" alt="License"></a>
+  <a href="https://github.com/adrijshikhar/catalyst/stargazers"><img src="https://img.shields.io/github/stars/adrijshikhar/catalyst?style=flat&color=yellow" alt="Stars"></a>
+  <a href="https://github.com/adrijshikhar/catalyst/commits/main"><img src="https://img.shields.io/github/last-commit/adrijshikhar/catalyst?style=flat" alt="Last commit"></a>
+</p>
+
+<p align="center">
+  <a href="#how-it-works">How it works</a> •
+  <a href="#what-a-handoff-looks-like">Demo</a> •
+  <a href="#skills">Skills</a> •
+  <a href="#install">Install</a> •
+  <a href="#design-principles">Principles</a>
+</p>
+
+---
 
 Catalyst is a Claude Code plugin grounded in **[harness engineering](https://www.anthropic.com/engineering/harness-design-long-running-apps)** — the architectural patterns Anthropic itself uses to ship reliable agentic applications. The plugin treats Claude not as a single chat but as a system that needs scaffolding for context resets, structured artifact handoffs, multi-agent orchestration, and explicit evaluator/generator separation.
 
-Every component of every skill in Catalyst encodes an assumption about what the current model can't do reliably on its own. Those assumptions get stress-tested with each new flagship model — scaffolding that no longer earns its complexity gets stripped. The plugin grows opinionated about *when* to add complexity, not just *what* complexity to add.
+Every component of every skill encodes an assumption about what the current model can't do reliably on its own. Those assumptions get stress-tested with each new flagship model — scaffolding that no longer earns its complexity gets stripped. The plugin grows opinionated about *when* to add complexity, not just *what* complexity to add.
+
+## How it works
+
+A long Claude session accumulates state that `/compact` quietly destroys: which decisions were made and why, which paths were tried and rejected, what "done" means, what the next concrete check is. Start a fresh session and that context is gone — you re-explain, or the model guesses.
+
+Catalyst closes that gap. When you approach a context limit, end a session, or brief a subagent, the **`handoff`** skill writes a **strongly-typed JSON brief** — a small, schema-validated state packet — and prepends the *why* to a durable project narrative. The next session reads the brief back and resumes from exactly where you left off, no re-explanation. The same brief shape powers subagent task descriptions and pipeline-stage contracts, so one schema serves every boundary.
+
+Around that core, the other skills make the harness *ambient*: lifecycle hooks fire the right `handoff` mode automatically, an evidence gate blocks premature "it works" claims, evaluator rubrics enforce generator≠evaluator separation, and end-of-session detectors surface failure patterns before they compound. The skills trigger themselves — you don't manage them.
+
+## What a handoff looks like
+
+WRITE produces a typed, validated brief (rejected if fields are missing or mistyped — that's the point):
+
+```json
+{
+  "schema_version": "1",
+  "key": "feat-jwt-expiry",
+  "timestamp": "2026-05-30T10:00:00Z",
+  "mode": "WRITE",
+  "resume": { "done_when": "pnpm test auth.spec.ts 6/6",
+              "resume_by": "re-read middleware, finish expiry check" },
+  "state": {
+    "branch": "feat/jwt-expiry",
+    "next_acceptance_check": "expiry uses <= not <",
+    "worktree": { "root": "/repo", "is_linked": false, "git_common_dir": "/repo/.git" },
+    "tests": [{ "cmd": "pnpm test", "result": "fail" }]
+  }
+}
+```
+
+READ renders it back into a resume prompt the next session acts on directly — with guards that refuse to resume a brief from a different branch or repo:
+
+```
+# Resume — feat-jwt-expiry
+
+## Resume prompt
+> resume handoff 'feat-jwt-expiry': … next acceptance check: expiry uses <= not <.
+
+## Summary
+- Branch: feat/jwt-expiry
+- Done when: pnpm test auth.spec.ts 6/6
+- Next acceptance check: expiry uses <= not <
+```
+
+Briefs are stored once per feature key in the **main worktree** (`<main>/.claude/handoffs/<key>.json`), so every linked worktree shares one store keyed by branch — resume any feature from any worktree.
 
 ## Skills
 
-| Skill | Status | Purpose |
-|-------|--------|---------|
-| [`handoff`](./skills/handoff/SKILL.md) | v0.3 | Structured context transfer for sessions, subagents, and pipelines. Four modes (WRITE / READ / RECOVER / BRIEF) plus PIPELINE orchestration. Feature-keyed, paste-and-go resume prompts, anti-self-grade guardrails. |
-| [`verify-gate`](./skills/verify-gate/SKILL.md) | v0.4 | PreToolUse hook + skill that blocks "claim success" writes (test-results, build-status, deployment artifacts) unless evidence file was Read first. Port of Anthropic's `verify-gate.sh` pattern from `cwc-long-running-agents`. Solves optimistic completion bias. |
-| [`hook-builder`](./skills/hook-builder/SKILL.md) | v0.4 | Pre-built lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) that wire `handoff` into the session lifecycle. Turns Catalyst from explicit to ambient. Plus authoring helper for new hooks. |
-| [`evaluator-library`](./skills/evaluator-library/SKILL.md) | v0.5 | 6 bundled domain rubrics (code-quality, ui-design, prose, security, performance, accessibility) dispatched via a shared brief builder that enforces anti-self-grade. Composes with handoff PIPELINE mode evaluator stages. |
-| [`failure-pattern-detector`](./skills/failure-pattern-detector/SKILL.md) | v0.5 | Stop hook + skill that scans the session transcript at end-of-session for 6 OpenDev failure patterns (instruction-fade, edit-mismatch, stale-read, repeated-tool-call, recovery-spiral, context-drowning) and surfaces each with a specific recovery recipe. |
-| [`pipeline-templates`](./skills/pipeline-templates/SKILL.md) | v0.5 | 3 bundled executable pipeline templates (audit-then-fix, research-plan-implement-review, parallel-review-synthesize) + `/pipeline run / list / save / --dry-run` extension. Closes the loop on handoff v0.3's save-as-template step. |
-| [`brain-bridge`](./skills/brain-bridge/SKILL.md) | v0.6 | MCP adapter wrapper that pulls Company Brain (gbrain / brAIn / codebase-memory-mcp) context into handoff PIPELINE BRIEFs as pointers — never inlined content. 3 bundled adapters. Configurable token budget + relevance threshold. Catalyst becomes the connective tissue between the knowledge layer and the harness. |
-| [`session-degradation-watch`](./skills/session-degradation-watch/SKILL.md) | v0.6 | UserPromptSubmit hook + skill that monitors 4 signals (context %, repeated tool call, stale read, contradiction with PROJECT_STATE) every turn and surfaces the most urgent alert as additionalContext. Closes the auto-trigger gap that handoff v0.3 left open. Composes with Tier 1's orient hook. |
+| Skill | Purpose |
+|-------|---------|
+| [`handoff`](./skills/handoff/SKILL.md) | Structured context transfer for sessions, subagents, and pipelines. Four modes (WRITE / READ / RECOVER / BRIEF) plus PIPELINE orchestration. Typed JSON brief validated against a JSON Schema, feature-keyed via a three-tier ladder, centralized worktree-aware store, render-on-read resume, anti-self-grade guardrails. |
+| [`verify-gate`](./skills/verify-gate/SKILL.md) | PreToolUse hook + skill that blocks "claim success" writes (test-results, build-status, deployment artifacts) unless the evidence file was Read first. Port of Anthropic's `verify-gate.sh` pattern. Solves optimistic completion bias. |
+| [`hook-builder`](./skills/hook-builder/SKILL.md) | Pre-built lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) that wire `handoff` into the session lifecycle. Turns Catalyst from explicit to ambient. Plus an authoring helper for new hooks. |
+| [`evaluator-library`](./skills/evaluator-library/SKILL.md) | 6 bundled domain rubrics (code-quality, ui-design, prose, security, performance, accessibility) dispatched via a shared brief builder that enforces anti-self-grade. Composes with handoff PIPELINE evaluator stages. |
+| [`failure-pattern-detector`](./skills/failure-pattern-detector/SKILL.md) | Stop hook + skill that scans the session at end-of-session for 6 failure patterns (instruction-fade, edit-mismatch, stale-read, repeated-tool-call, recovery-spiral, context-drowning) and surfaces each with a specific recovery recipe. |
+| [`pipeline-templates`](./skills/pipeline-templates/SKILL.md) | 3 bundled executable pipeline templates (audit-then-fix, research-plan-implement-review, parallel-review-synthesize) + `/pipeline run / list / save / --dry-run`. |
+| [`brain-bridge`](./skills/brain-bridge/SKILL.md) | MCP adapter wrapper that pulls Company Brain context into handoff PIPELINE briefs as pointers — never inlined content. 3 bundled adapters. Configurable token budget + relevance threshold. |
+| [`session-degradation-watch`](./skills/session-degradation-watch/SKILL.md) | UserPromptSubmit hook + skill that monitors 4 signals (context %, repeated tool call, stale read, contradiction with PROJECT_STATE) every turn and surfaces the most urgent alert. Composes additively with the orient hook. |
 
-More skills land here as the harness matures. Roadmap focuses on patterns the Anthropic framework names: sprint contracts, GAN-style iterate loops, evaluator-generator separation, live application testing (Playwright MCP integration), context-budget watchers.
+More skills land here as the harness matures. Roadmap focuses on patterns the Anthropic framework names: sprint contracts, GAN-style iterate loops, evaluator-generator separation, live application testing, context-budget watchers.
 
 ## What's in the harness
 
-Catalyst's first skill maps to Anthropic's primitives:
+Catalyst maps directly to Anthropic's primitives:
 
 | Anthropic primitive | Where Catalyst implements it |
 |---------------------|------------------------------|
-| Context resets > compaction | `handoff` WRITE/READ modes — fresh-agent bootstrap from `.claude/handoffs/<key>.md` |
-| Structured artifact handoff (file-based, not conversational) | brief schema, shared across all four modes |
+| Context resets > compaction | `handoff` WRITE/READ — fresh-agent bootstrap from `<main>/.claude/handoffs/<key>.json` |
+| Structured artifact handoff (file-based, not conversational) | typed JSON brief schema, shared across all four modes |
 | Specialized multi-agent (planner / generator / evaluator) | PIPELINE mode canonical role triad |
 | Sprint contracts (pre-coding done agreement) | PIPELINE mode contract negotiation step |
-| Anti-self-grade (separate evaluator subagent) | PIPELINE mode rule + anti-pattern entry |
+| Anti-self-grade (separate evaluator subagent) | PIPELINE mode rule + `evaluator-library` dispatch guard |
 | GAN-inspired iterate loops for subjective domains | PIPELINE mode optional loop pattern |
-| Gradable rubrics for subjective domains | eval-harness contract at `skills/handoff/evals/evals.md` |
-| Evidence-first writes (verify-gate.sh) | `verify-gate` skill (Tier 1) |
-| Lifecycle hooks (PreCompact / SessionStart / Stop) | `hook-builder` skill (Tier 1) |
-| Pre-built evaluator rubrics (code/ui/prose/security/perf/a11y) | `evaluator-library` skill (Tier 2) |
-| End-of-session failure-pattern surfacing (OpenDev paper patterns) | `failure-pattern-detector` skill (Tier 2) |
-| Executable saved pipeline templates | `pipeline-templates` skill (Tier 2) |
-| Brain / knowledge-layer context injection (MCP) | `brain-bridge` skill (Tier 3) |
-| Real-time degradation surfacing (issue #58373 / #60248) | `session-degradation-watch` skill (Tier 3) |
+| Gradable rubrics for subjective domains | `evaluator-library` + eval-harness contracts at `skills/*/evals/` |
+| Evidence-first writes (verify-gate.sh) | `verify-gate` skill |
+| Lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) | `hook-builder` skill |
+| Pre-built evaluator rubrics (code/ui/prose/security/perf/a11y) | `evaluator-library` skill |
+| End-of-session failure-pattern surfacing | `failure-pattern-detector` skill |
+| Executable saved pipeline templates | `pipeline-templates` skill |
+| Brain / knowledge-layer context injection (MCP) | `brain-bridge` skill |
+| Real-time degradation surfacing | `session-degradation-watch` skill |
 
 ## Install
 
@@ -53,7 +118,7 @@ Catalyst is its own one-plugin marketplace. From inside Claude Code:
 
 That registers the marketplace and installs the `catalyst` plugin. Skills become available immediately.
 
-**Rollback:** every release is a git tag (`vX.Y.Z`). To pin or roll back to an earlier version, reinstall at that tag:
+**Rollback:** every release is a git tag (`vX.Y.Z`). To pin or roll back, reinstall at that tag:
 
 ```
 /plugin install catalyst@catalyst@<version>
@@ -66,13 +131,13 @@ Releases are listed at [github.com/adrijshikhar/catalyst/releases](https://githu
 After install, invoke skills explicitly or let Claude auto-trigger them:
 
 - **Explicit:** `/handoff` to write a feature-keyed brief, `/handoff resume` to load one, `/pipeline` to orchestrate multi-stage work
-- **Auto:** When you end a session, switch context, approach context limits, brief a subagent, or describe a multi-stage task, Claude triggers the right mode of `handoff`
+- **Auto:** when you end a session, switch context, approach context limits, brief a subagent, or describe a multi-stage task, Claude triggers the right mode of `handoff`
 
-See each skill's `SKILL.md` for full trigger conditions and behavior.
+Install the lifecycle hooks (`/hook-builder install --all`) to make all of this ambient — the hooks fire the right mode without you asking. See each skill's `SKILL.md` for full trigger conditions and behavior.
 
 ## Design principles
 
-1. **One brief schema, many surfaces.** A session-handoff, a subagent task description, and a pipeline-stage contract are the same shape. Catalyst defines that shape once.
+1. **One brief schema, many surfaces.** A session-handoff, a subagent task description, and a pipeline-stage contract are the same shape. Catalyst defines that shape once — and validates it.
 2. **Context isolation is cheap; context bleed is expensive.** Briefs cap at 30 lines for subagents. Project narrative is referenced by pointer, never inlined.
 3. **Generator ≠ evaluator.** Self-evaluation bias is measured and severe. Catalyst enforces separation as a primary anti-pattern in PIPELINE mode.
 4. **Pre-coding sprint contracts.** Generator + evaluator negotiate "done" before any work happens. Acceptance checks are explicit, verifiable, and locked.
@@ -84,13 +149,12 @@ A catalyst accelerates a reaction without being consumed. These skills accelerat
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md). Skill proposals welcome via GitHub issues using the `new-skill` template. Proposals should ground themselves in a specific harness-engineering pattern from the [Anthropic article](https://www.anthropic.com/engineering/harness-design-long-running-apps) or call out the assumption about model limitations they encode.
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Skill proposals welcome via GitHub issues using the `new-skill` template. Proposals should ground themselves in a specific harness-engineering pattern from the [Anthropic article](https://www.anthropic.com/engineering/harness-design-long-running-apps) or call out the model-limitation assumption they encode.
 
 ## References
 
 - [Harness Engineering for Long-Running Agentic Applications](https://www.anthropic.com/engineering/harness-design-long-running-apps) — Anthropic's framework that grounds Catalyst's design
-- [Claude Code subagent docs](https://code.claude.com/docs/en/sub-agents.md) — context isolation primitives Catalyst builds on
-- Reddit thread on first-class handoffs in Claude workflows — the community pattern Catalyst codifies in the `handoff` skill
+- [Claude Code subagent docs](https://code.claude.com/docs/en/sub-agents.md) — the context-isolation primitives Catalyst builds on
 
 ## License
 
