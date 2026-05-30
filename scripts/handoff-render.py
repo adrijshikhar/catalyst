@@ -4,8 +4,10 @@
 Deterministic. Prints the resume prompt + a compact summary + the originating
 worktree + branch/repo-mismatch warnings.
 
-CLI: handoff-render.py <key>            (resolve centralized dir)
-     handoff-render.py --file <path>    (explicit path)
+CLI: handoff-render.py <key>                    (resolve centralized dir)
+     handoff-render.py --file <path>            (explicit path)
+     handoff-render.py --reground <key>         (compact read-only re-grounding)
+     handoff-render.py --reground --file <path>
 """
 from __future__ import annotations
 
@@ -102,6 +104,48 @@ def render(obj: dict, current_branch: str | None, current_common_dir: str | None
     return "\n".join(out) + "\n"
 
 
+def render_reground(obj: dict) -> str:
+    """Compact, read-only mid-session re-grounding brief.
+
+    Emits ONLY the load-bearing fields needed to counter lost-in-the-middle
+    recall degradation: goal (done_when + next_acceptance_check), locked
+    decisions, and files to keep in view.  No summary scaffold, no worktree
+    lines, no branch/repo-mismatch blocks.
+    """
+    resume = obj.get("resume", {})
+    state = obj.get("state", {})
+    key = obj.get("key", "session")
+
+    out: list[str] = [f"# Reground — {key}"]
+
+    # Goal block
+    goal_lines: list[str] = []
+    done_when = resume.get("done_when")
+    if done_when:
+        goal_lines.append(f"  - Done when: {done_when}")
+    nac = state.get("next_acceptance_check")
+    if nac:
+        goal_lines.append(f"  - Next acceptance check: {nac}")
+    if goal_lines:
+        out.append("\n## Goal")
+        out.extend(goal_lines)
+
+    # Locked decisions
+    decisions_block = _bullets("Locked decisions", state.get("decisions"))
+    if decisions_block:
+        out.append("\n## Locked decisions")
+        out.append(decisions_block.rstrip())
+
+    # Files to keep in view
+    ffr = obj.get("files_read_first") or []
+    if ffr:
+        out.append("\n## Files to keep in view")
+        for f in ffr:
+            out.append(f"  - {f.get('path')} — {f.get('why')}")
+
+    return "\n".join(out) + "\n"
+
+
 def _current(cwd: Path) -> tuple[str | None, str | None]:
     def g(a: list[str]) -> str | None:
         try:
@@ -132,20 +176,32 @@ def _key_path(key: str) -> Path | None:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) >= 3 and argv[1] == "--file":
-        path = Path(argv[2])
-    elif len(argv) == 2:
-        path = _key_path(argv[1])
+    # Detect --reground flag; it may appear as the first or second argument.
+    if "--reground" in argv[1:]:
+        reground = True
+        rest = [a for a in argv[1:] if a != "--reground"]
+    else:
+        reground = False
+        rest = argv[1:]
+
+    if len(rest) >= 2 and rest[0] == "--file":
+        path: Path | None = Path(rest[1])
+    elif len(rest) == 1:
+        path = _key_path(rest[0])
         if path is None:
-            print(f"handoff-render: key '{argv[1]}' escapes the handoffs store", file=sys.stderr)
+            print(f"handoff-render: key '{rest[0]}' escapes the handoffs store", file=sys.stderr)
             return 1
     else:
-        print("usage: handoff-render.py <key> | --file <path>", file=sys.stderr)
+        print("usage: handoff-render.py [--reground] <key> | --file <path>", file=sys.stderr)
         return 2
-    if not path.exists():
+
+    if path is None or not path.exists():
         print(f"handoff-render: no brief at {path}", file=sys.stderr)
         return 1
     obj = json.loads(path.read_text(encoding="utf-8"))
+    if reground:
+        print(render_reground(obj))
+        return 0
     cwd = Path.cwd()
     branch, common = _current(cwd)
     if common and not Path(common).is_absolute():
