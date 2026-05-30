@@ -12,6 +12,24 @@ set -euo pipefail
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
+# Resolve the centralized handoffs store — anchored at the MAIN worktree
+# (parent of the shared .git). Inlined (not calling scripts/handoff-dir.sh)
+# because installed hooks ship standalone in .claude/hooks/ without scripts/.
+# Mirrors scripts/handoff-dir.sh + handoff_paths.py (parity test guards those).
+resolve_store() {
+  local dir="$1" common
+  common=$(git -C "$dir" rev-parse --git-common-dir 2>/dev/null || true)
+  if [ -n "$common" ]; then
+    case "$common" in /*) : ;; *) common="$dir/$common" ;; esac
+    common=$(cd "$common" 2>/dev/null && pwd || echo "$common")
+    if [ "$(basename "$common")" = ".git" ]; then
+      echo "$(dirname "$common")/.claude/handoffs"
+      return
+    fi
+  fi
+  echo "$dir/.claude/handoffs"
+}
+
 # Resolve key (mirror handoff's tier ladder: explicit > branch > legacy)
 BRANCH=""
 KEY=""
@@ -23,7 +41,7 @@ if [ -n "$BRANCH" ]; then
   KEY=$(echo "$BRANCH" | sed 's|/|-|g' | cut -c1-80)
 fi
 
-STORE=$(bash "$PROJECT_DIR/scripts/handoff-dir.sh" "$PROJECT_DIR" 2>/dev/null || echo "$PROJECT_DIR/.claude/handoffs")
+STORE=$(resolve_store "$PROJECT_DIR")
 if [ -n "$KEY" ]; then
   PATH_HINT="$STORE/$KEY.json"
 else
