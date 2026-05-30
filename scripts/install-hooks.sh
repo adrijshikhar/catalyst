@@ -84,6 +84,11 @@ case "$ACTION" in
     if [ -f "$HOOKS_DEST_DIR/$HOOK_FILE" ]; then
       rm "$HOOKS_DEST_DIR/$HOOK_FILE"
     fi
+    # Reap the shared signal lib once no session-health hooks remain (else it's
+    # orphaned dead weight). Only the session-health hooks source it.
+    if [ -d "$HOOKS_DEST_DIR/lib" ] && ! ls "$HOOKS_DEST_DIR"/*session-health*.sh >/dev/null 2>&1; then
+      rm -rf "$HOOKS_DEST_DIR/lib"
+    fi
     CMD="bash \$CLAUDE_PROJECT_DIR/.claude/hooks/$HOOK_FILE"
     # Remove matching command from every matcher-group's inner hooks array,
     # then drop matcher-groups that became empty.
