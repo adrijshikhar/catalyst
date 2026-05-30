@@ -1,0 +1,13 @@
+{
+  "schema_version": "1",
+  "key": "feat-jwt-expiry",
+  "timestamp": "2026-05-30T10:00:00Z",
+  "mode": "WRITE",
+  "resume": {"done_when": "pnpm test auth.spec.ts 6/6", "resume_by": "re-read middleware, finish expiry check"},
+  "state": {
+    "branch": "feat/jwt-expiry",
+    "next_acceptance_check": "expiry uses <= not <",
+    "worktree": {"root": "/repo", "is_linked": false, "git_common_dir": "/repo/.git"},
+    "tests": [{"cmd": "pnpm test", "result": "fail"}]
+  }
+}
