@@ -43,6 +43,7 @@ BRIEF and PIPELINE modes do not persist, so they don't resolve a key — they ma
 | **WRITE** | Ending session, hitting context limit, before `/clear` or `/compact`, end of pipeline stage, user says "handoff" / `/handoff` | Disk: `<store>/<key>.json` (validated JSON) + prepend `PROJECT_STATE.md` | Next session |
 | **READ** | Fresh session with brief(s) present, user wants to resume | None (loads into current context) | Current session |
 | **RECOVER** | Context degraded mid-session — re-reads, contradictions, forgotten decisions | Disk: overwrites brief for current key; does NOT prepend narrative | Current session, post-`/clear` |
+| **REGROUND** | Mid-session, recall degrading / decisions slipping into the middle | None (read-only re-injection) | Current session |
 | **BRIEF** | About to dispatch a subagent and want it to start with the right minimum context | In-memory string passed to Agent tool task description; no disk | Subagent |
 
 The schema for the brief is shared across all four modes. Only persistence and consumer differ.
@@ -196,6 +197,39 @@ The current session is degraded. Symptoms: agent forgets what it was doing, re-r
 5. Reconstruct the typed object from git/transcript, validate it (`python3 "$SCR/handoff-validate.py" <tmp>.json`), and overwrite `<store>/<key>.json`.
 6. Do **not** prepend to PROJECT_STATE.md — recovery is re-assembly, not fresh signal.
 7. Tell the user: "Recovery brief written at `<store>/<key>.json`. Run `/clear`, then paste this Resume prompt OR run `/catalyst:handoff resume`:" — and ALWAYS print the literal Resume prompt verbatim right below (the Resume prompt comes from `handoff-render.py` output — paste-and-go, not a pointer).
+
+---
+
+## Mode: REGROUND
+
+The current session is still intact but recall is degrading — decisions slip into the low-recall "middle" of the context window, key acceptance checks are being re-derived instead of repeated verbatim, or files-to-keep are being re-read unnecessarily.
+
+REGROUND is a **read-only mid-session re-injection**: it renders only the load-bearing fields of the brief (goal, locked decisions, files to keep in view) as a compact block, then returns. No disk write, no PROJECT_STATE update.
+
+### When to use
+
+- The `session-degradation-watch` hook emits a signal and recommends reground as the per-turn recovery recipe.
+- You notice yourself re-reading a file you already have notes on.
+- A decision you made earlier is being re-litigated without new information.
+- The next acceptance check has drifted from the brief's verbatim wording.
+
+### How to run
+
+```bash
+python3 "$SCR/handoff-render.py" --reground <key>
+# or with an explicit file path:
+python3 "$SCR/handoff-render.py" --reground --file <path>
+```
+
+Read the output aloud into the working context, then continue. No branch or repo context is needed — REGROUND is read-only and does not perform any mismatch checks.
+
+### What it emits
+
+- **Goal** — `resume.done_when` + `state.next_acceptance_check`
+- **Locked decisions** — `state.decisions` (first five, bulleted)
+- **Files to keep in view** — `files_read_first` paths with their `why`
+
+It deliberately omits: `## Summary`, `Written in worktree`, BRANCH MISMATCH, REPO MISMATCH, rejected paths, open risks, diff summary, and the resume prompt. Those belong to READ/RECOVER, not to a mid-session re-grounding.
 
 ---
 
