@@ -4,8 +4,10 @@
 Deterministic. Prints the resume prompt + a compact summary + the originating
 worktree + branch/repo-mismatch warnings.
 
-CLI: handoff-render.py <key>            (resolve centralized dir)
-     handoff-render.py --file <path>    (explicit path)
+CLI: handoff-render.py <key>                    (resolve centralized dir)
+     handoff-render.py --file <path>            (explicit path)
+     handoff-render.py --reground <key>         (compact read-only re-grounding)
+     handoff-render.py --reground --file <path>
 """
 from __future__ import annotations
 
