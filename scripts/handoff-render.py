@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -42,8 +43,11 @@ def render(obj: dict, current_branch: str | None, current_common_dir: str | None
 
     out = []
     rec_common = wt.get("git_common_dir")
+    # Normalize both sides (trailing slash, ., relative segments) so a match
+    # isn't missed when one side is recorded relative — the WRITE path may
+    # store a relative git-common-dir.
     if current_common_dir and rec_common and \
-       str(current_common_dir).rstrip("/") != str(rec_common).rstrip("/"):
+       os.path.normpath(str(current_common_dir)) != os.path.normpath(str(rec_common)):
         out.append(
             f"!! REPO MISMATCH: this brief belongs to a different repo ({rec_common}); not resuming."
         )

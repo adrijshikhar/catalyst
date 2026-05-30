@@ -44,7 +44,15 @@ class TestRender(unittest.TestCase):
 
     def test_shows_originating_worktree(self):
         out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
-        self.assertIn("/repo", out)
+        self.assertIn("Written in worktree: /repo", out)
+
+    def test_no_warnings_when_branch_and_repo_match(self):
+        out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertNotIn("MISMATCH", out)
+
+    def test_repo_match_with_trailing_slash(self):
+        out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git/")
+        self.assertNotIn("REPO MISMATCH", out)
 
 
 if __name__ == "__main__":
