@@ -44,9 +44,13 @@ def render(obj: dict, current_branch: str | None, current_common_dir: str | None
 
     out = []
     rec_common = wt.get("git_common_dir")
-    # Normalize both sides (trailing slash, ., relative segments) so a match
-    # isn't missed when one side is recorded relative — the WRITE path may
-    # store a relative git-common-dir.
+    # The WRITE path may store a relative git-common-dir (`git rev-parse
+    # --git-common-dir` returns ".git" in a MAIN checkout). The current side is
+    # already absolute (resolved in main()), so resolve a relative stored value
+    # against the recorded worktree root before comparing — otherwise a brief
+    # written AND resumed in the same main checkout would falsely mismatch.
+    if rec_common and not Path(rec_common).is_absolute():
+        rec_common = os.path.join(wt.get("root", ""), rec_common)
     if current_common_dir and rec_common and \
        os.path.normpath(str(current_common_dir)) != os.path.normpath(str(rec_common)):
         out.append(

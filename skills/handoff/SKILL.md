@@ -67,7 +67,7 @@ The brief is a typed JSON document validated against `skills/handoff/brief.schem
               "prompt": "<optional override>", "history_pointer": "<optional>" },
   "state": {
     "branch": "<branch>", "next_acceptance_check": "<next concrete check>",
-    "worktree": { "root": "<$CLAUDE_PROJECT_DIR>", "is_linked": false, "git_common_dir": "<shared .git>" },
+    "worktree": { "root": "<$CLAUDE_PROJECT_DIR>", "is_linked": false, "git_common_dir": "<absolute shared .git — git rev-parse --absolute-git-dir>" },
     "diff_summary": "<optional>", "tests": [{"cmd": "...", "result": "pass"}],
     "commands": [], "decisions": [], "rejected_paths": [], "open_risks": []
   },
@@ -95,7 +95,10 @@ git branch --show-current
 git status --short
 git diff --stat
 git log --oneline -10
+git rev-parse --absolute-git-dir   # state.worktree.git_common_dir — MUST be absolute
 ```
+
+Record `state.worktree.git_common_dir` as the **absolute** path (`--absolute-git-dir`, Git ≥ 2.13). The READ renderer resolves a relative value against `worktree.root` as a fallback, but storing absolute avoids any ambiguity.
 
 From the session transcript, also note: tests run (pass/fail), commands that materially advanced the work, decisions that affect what the next session should do (not every decision — history belongs in the narrative), paths tried and rejected, open risks, the next concrete acceptance check.
 
