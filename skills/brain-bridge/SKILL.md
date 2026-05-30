@@ -117,7 +117,7 @@ The subagent treats Brain pointers as "skim if relevant" — they're not the pri
 
 - `handoff` PIPELINE mode is the consumer — brain-bridge plugs into step 5 of the protocol.
 - `evaluator-library` is unaffected — evaluators score the artifact, brain context is for generators.
-- `session-degradation-watch` is unaffected — brain pointers are part of the BRIEF, not the running transcript.
+- `session-health` is unaffected — brain pointers are part of the BRIEF, not the running transcript.
 
 ## Model evolution
 

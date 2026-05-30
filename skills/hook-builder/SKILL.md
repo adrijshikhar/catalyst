@@ -16,6 +16,14 @@ The skill that wires Catalyst into Claude Code's lifecycle. Without hook-builder
 | `Stop-commit-backstop.sh` | Session ending | Flags any uncommitted git changes via additionalContext so next session can pick up |
 | `UserPromptSubmit-orient.sh` | First user prompt of a session | Injects branch + last 5 commits as orientation context (only once per session) |
 
+The `session-health` skill adds two more hooks (opt-in via `/session-health install`):
+
+| Hook | Event | What it does |
+|------|-------|--------------|
+| `UserPromptSubmit-session-health.sh` | Every user prompt | Runs 4 per-turn degradation signals; emits one alert at the most urgent level |
+| `Stop-session-health.sh` | Session ending | Scans transcript for 6 named failure patterns; logs each with a recovery recipe |
+| `lib/session-health-signals.sh` | *(shared library)* | Sourced by both session-health hooks; contains all signal + pattern matchers |
+
 All four are POSIX bash + jq. They fail-open on infrastructure errors (missing jq, no git repo, etc.) — Claude Code proceeds normally.
 
 ## Setup
@@ -24,7 +32,9 @@ All four are POSIX bash + jq. They fail-open on infrastructure errors (missing j
 /hook-builder install --all
 ```
 
-Installs all four hooks idempotently. Existing settings.json hook entries are preserved (additive merge). Subsequent installs of the same hook are no-ops.
+Installs the four Tier-1 lifecycle hooks idempotently. Existing settings.json hook entries are preserved (additive merge). Subsequent installs of the same hook are no-ops.
+
+The `session-health` hooks (UserPromptSubmit + Stop + lib/) are NOT included in `--all` — use `/session-health install` for those.
 
 Or install one at a time:
 

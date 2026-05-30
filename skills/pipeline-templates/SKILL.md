@@ -84,7 +84,7 @@ User templates override bundled ones with the same name — that's the customiza
 
 - `handoff` PIPELINE mode is the runtime — pipeline-templates is the catalog.
 - `evaluator-library` is referenced by template evaluator stages. The dispatcher enforces fresh context.
-- `failure-pattern-detector` may flag a `recovery-spiral` if a template fails to converge — that's a signal the template needs review.
+- `session-health` may flag a `recovery-spiral` at session end if a template fails to converge — that's a signal the template needs review.
 
 ## Model evolution
 

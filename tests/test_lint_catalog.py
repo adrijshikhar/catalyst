@@ -14,7 +14,7 @@ _spec.loader.exec_module(lint)
 class TestCatalogCounts(unittest.TestCase):
     def test_count_skills_matches_dirs_with_skill_md(self):
         n = lint.count_skills(ROOT)
-        self.assertGreaterEqual(n, 8)  # current shipped skill count
+        self.assertGreaterEqual(n, 7)  # current shipped skill count (8→7 after session-health merge)
 
     def test_count_commands_matches_md(self):
         n = lint.count_commands(ROOT)
