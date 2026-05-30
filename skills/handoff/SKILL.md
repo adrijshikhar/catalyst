@@ -15,7 +15,7 @@ One file cannot be both a concise re-entry prompt and a detailed project history
 
 | File | Purpose | Lifetime | Loaded |
 |------|---------|----------|--------|
-| `.claude/handoffs/<key>.md` (or `.claude/HANDOFF.md` in legacy mode) | **Ephemeral brief** — minimum payload to resume. Points at durable artifacts. | Overwritten on every WRITE for that key. | At the start of the next session for that key. |
+| `<store>/<key>.json` (or `<store>/HANDOFF.json` legacy slot) | **Ephemeral brief** — minimum payload to resume. Points at durable artifacts. | Overwritten on every WRITE for that key. | At the start of the next session for that key. |
 | `.claude/PROJECT_STATE.md` | **Persistent narrative** — accreting log of decisions, why, rejected paths, surprises. Project memory. | Prepended forever (newest first). Repo-level — single file. | On demand only — when a brief points the agent at it. |
 
 The brief survives one session boundary per key. The narrative survives the project. PROJECT_STATE.md is intentionally NOT split per feature — cross-feature decisions matter for future features and must be co-located.
@@ -26,15 +26,13 @@ WRITE / READ / RECOVER determine the **key** for the brief in this order:
 
 | Priority | Source | Resolved path | When |
 |----------|--------|---------------|------|
-| 1 | User passes `/handoff <name>` or says "handoff for <feature>" | `.claude/handoffs/<name>.md` | Explicit override. Feature spans branches, branch name is garbage, or parallel spikes need separate slots. |
-| 2 | `git branch --show-current` (sanitized: `/` → `-`, length-cap 80, special chars dropped) | `.claude/handoffs/<branch>.md` | Default. Branch = feature in modern git flow. Zero ceremony. |
-| 3 | Not in a git repo, or detached HEAD | `.claude/HANDOFF.md` | Legacy single-slot fallback. Backwards compatible with v0.2. |
+| 1 | `/handoff <name>` | `<store>/<name>.json` | Explicit override. |
+| 2 | `git branch --show-current` (sanitized `/`→`-`, cap 80) | `<store>/<branch>.json` | Default. |
+| 3 | Not in a git repo, or detached HEAD | `<store>/HANDOFF.json` | Legacy single-slot fallback. |
 
-**Repo detection (worktree-safe):** decide "in a git repo?" with `git rev-parse --git-dir` succeeding — NOT `[ -d .git ]`. In a linked git worktree `.git` is a *file*, so the dir test wrongly reports "no repo" and drops you to the tier-3 legacy slot. `git branch --show-current` already works correctly inside a worktree (returns that worktree's branch).
+`<store>` is the **centralized handoffs dir** printed by `bash scripts/handoff-dir.sh` (or `python3 scripts/handoff_paths.py`): anchored at the MAIN worktree (parent of `git rev-parse --git-common-dir`). Every linked worktree shares ONE store keyed by branch — resume any feature from any worktree. Detect "in a repo?" with `git rev-parse --git-dir` succeeding, never `[ -d .git ]` (`.git` is a file in a worktree). This **supersedes** the earlier per-worktree behavior.
 
-**Path anchoring + worktrees:** the `.claude/handoffs/` path is relative to the **project root** (`$CLAUDE_PROJECT_DIR`), not the current working directory. Each git worktree is its own project root with its own `.claude/`, so handoffs are **per-worktree** — which is the intended behavior: a worktree is a parallel feature, and its branch key keeps its brief isolated from other worktrees. Resume inside the same worktree finds it; the main checkout won't see a worktree's brief (and shouldn't).
-
-**Sticky session key:** once a WRITE picks a key, subsequent WRITEs / RECOVERs in the same session use the same key. If the user switches branches mid-session, surface the change: "Branch switched. Future handoffs will target `<new-key>.md`. Confirm?"
+**Sticky session key:** once a WRITE picks a key, subsequent WRITEs / RECOVERs in the same session use the same key. If the user switches branches mid-session, surface the change: "Branch switched. Future handoffs will target `<new-key>.json`. Confirm?"
 
 BRIEF and PIPELINE modes do not persist, so they don't resolve a key — they may *reference* a key when telling a subagent which feature's narrative slice is relevant.
 
@@ -42,7 +40,7 @@ BRIEF and PIPELINE modes do not persist, so they don't resolve a key — they ma
 
 | Mode | Trigger | Persists? | Consumer |
 |------|---------|-----------|----------|
-| **WRITE** | Ending session, hitting context limit, before `/clear` or `/compact`, end of pipeline stage, user says "handoff" / `/handoff` | Disk: `.claude/handoffs/<key>.md` + prepend `PROJECT_STATE.md` | Next session |
+| **WRITE** | Ending session, hitting context limit, before `/clear` or `/compact`, end of pipeline stage, user says "handoff" / `/handoff` | Disk: `<store>/<key>.json` (validated JSON) + prepend `PROJECT_STATE.md` | Next session |
 | **READ** | Fresh session with brief(s) present, user wants to resume | None (loads into current context) | Current session |
 | **RECOVER** | Context degraded mid-session — re-reads, contradictions, forgotten decisions | Disk: overwrites brief for current key; does NOT prepend narrative | Current session, post-`/clear` |
 | **BRIEF** | About to dispatch a subagent and want it to start with the right minimum context | In-memory string passed to Agent tool task description; no disk | Subagent |
@@ -55,40 +53,30 @@ Do NOT invoke for trivial sessions or one-step subtasks. Three-turn debug doesn'
 
 ---
 
-## Brief schema (shared)
+## Brief schema (shared, typed)
 
-Every brief follows this shape. Fields that have nothing to say are omitted, not filled with "none" — an absent field is cleaner than a noise field.
+The brief is a typed JSON document validated against `skills/handoff/brief.schema.json`. WRITE builds it and passes it through `scripts/handoff-validate.py` (rejects incomplete/mistyped briefs); READ renders it via `scripts/handoff-render.py`. Required fields cannot be omitted — that is the point.
 
-```markdown
-# Handoff — <ISO timestamp>
-# Key: <resolved-key>          (omit in BRIEF mode — subagents don't persist by key)
-
-## Resume prompt                (include in WRITE/READ/RECOVER; omit in BRIEF)
-> read .claude/handoffs/<key>.md and continue. next acceptance check: <quoted>.
-
-## Re-entry instructions        (in BRIEF mode this becomes "## Task")
-- Resume by: <one sentence>.
-- Done when: <one verifiable acceptance check>.
-- Read `.claude/PROJECT_STATE.md` ONLY if you need historical context.
-
-## State packet
-- **Branch:** <branch-name>
-- **Diff summary:** <e.g., "3 files, +120/-45 in src/auth/">
-- **Tests run:** <list with pass/fail>
-- **Commands that mattered:** <short list>
-- **Decisions affecting next session:** <bullets — what's locked in>
-- **Rejected paths:** <bullets — don't redo>
-- **Open risks:** <bullets>
-- **Next acceptance check:** <one concrete check>
-
-## Files to read first
-- <path1> — <why>
-
-## Files to NOT load by default
-- <path> — <why safe to skip>
+```json
+{
+  "schema_version": "1",
+  "key": "<resolved-key>",
+  "timestamp": "<ISO-8601, shell-provided>",
+  "mode": "WRITE",
+  "resume": { "done_when": "<one verifiable check>", "resume_by": "<one sentence>",
+              "prompt": "<optional override>", "history_pointer": "<optional>" },
+  "state": {
+    "branch": "<branch>", "next_acceptance_check": "<next concrete check>",
+    "worktree": { "root": "<$CLAUDE_PROJECT_DIR>", "is_linked": false, "git_common_dir": "<shared .git>" },
+    "diff_summary": "<optional>", "tests": [{"cmd": "...", "result": "pass"}],
+    "commands": [], "decisions": [], "rejected_paths": [], "open_risks": []
+  },
+  "files_read_first": [{"path": "...", "why": "..."}],
+  "files_skip": [{"path": "...", "why": "..."}]
+}
 ```
 
-The **Resume prompt** is a single-line directive a fresh session can paste verbatim. For tier-3 (legacy) handoffs, it reads `read .claude/HANDOFF.md and continue. next acceptance check: <quoted>`. For BRIEF mode (subagent), there is no Resume prompt — the brief itself IS the task description.
+Optional fields with nothing to say are **omitted**, never null/`"none"`. Unknown fields are rejected by the validator (catches typos). `mode` is `WRITE` or `RECOVER` (the persisted modes); BRIEF renders the same shape in-memory without a file.
 
 ---
 
@@ -117,7 +105,7 @@ Use the schema above. Include the Resume prompt section with paste-and-go text m
 
 ### Step 4 — Write to disk
 
-Write the brief to `.claude/handoffs/<key>.md` (or `.claude/HANDOFF.md` for tier 3). Then prepend a new entry to `.claude/PROJECT_STATE.md` (create the file with its header if it doesn't exist). Entry title includes the feature key: `## <ISO date> — [<key>] <short title>`.
+Build the typed object. Write it to a temp file and run `python3 scripts/handoff-validate.py <tmp>.json`; fix every reported field and re-run until it prints `handoff-validate: OK`. Then move it to `<store>/<key>.json` (`<store>` from `scripts/handoff-dir.sh`). Then prepend a narrative entry to `.claude/PROJECT_STATE.md` (unchanged — still markdown).
 
 If `PROJECT_STATE.md` doesn't exist, create with this header:
 
@@ -125,7 +113,7 @@ If `PROJECT_STATE.md` doesn't exist, create with this header:
 # Project state — narrative log
 
 Accretes over the life of the project. Each handoff prepends a new dated section above earlier entries.
-Read sections selectively. The brief at `.claude/handoffs/<key>.md` is the entry point; this file is the reference.
+Read sections selectively. The brief at `<store>/<key>.json` is the entry point; this file is the reference.
 ```
 
 Prepend (NOT append) above any existing entries:
@@ -152,12 +140,12 @@ ALWAYS print the Resume prompt verbatim at the end of the confirmation. The user
 
 ```
 Handoff written (key: <key>, tier: <1|2|3>):
-  .claude/handoffs/<key>.md  (<n> lines)
+  <store>/<key>.json         (validated JSON)
   .claude/PROJECT_STATE.md   (+<n> lines prepended)
 
 Next session — paste this Resume prompt OR run `/catalyst:handoff resume`:
 
-> read .claude/handoffs/<key>.md and continue. next acceptance check: <one-line check verbatim from the brief>.
+> run python3 scripts/handoff-render.py <key> and continue. next acceptance check: <one-line check verbatim from the brief>.
 ```
 
 Both options work. The slash command (`/catalyst:handoff resume`) is faster if the user is in a Catalyst-enabled session; the literal paste works in any Claude Code session even before plugins load.
@@ -168,21 +156,19 @@ Both options work. The slash command (`/catalyst:handoff resume`) is faster if t
 
 A new session has loaded with one or more briefs present, and the user wants to resume.
 
-1. Look for `.claude/handoffs/`. If empty / missing, fall back to legacy `.claude/HANDOFF.md`.
+1. Resolve `<store>` via `bash scripts/handoff-dir.sh`. List `<store>/*.json` (fall back to `<store>/HANDOFF.json` if no keyed files exist).
 2. If multiple briefs exist:
    - Detect current branch.
    - Surface ALL briefs. If one matches the current branch (tier-2 match), name it as the primary suggestion.
-   - List the others with mtime + first non-header line as preview.
+   - List the others with mtime + key as preview.
    - Wait for the user to confirm. Do NOT silently choose.
-3. Read the selected brief end to end.
-4. Read files listed under "Files to read first" — load-bearing.
+3. To resume a key, run `python3 scripts/handoff-render.py <key>` and follow its output. Heed any `!! BRANCH MISMATCH` / `!! REPO MISMATCH` warning before continuing.
+4. Read files listed under `files_read_first` — load-bearing.
 5. Do **not** read `.claude/PROJECT_STATE.md` by default. Open it only when the brief explicitly says to, or you hit a decision whose rationale you need.
 6. Confirm: "Resumed from `<key>`. Next acceptance check: <quote from brief>. Starting now."
 7. The selected key becomes the sticky session key.
 
 If the brief's timestamp is more than ~24h old, diff against current git state before resuming — the working tree may have moved.
-
-For legacy v0.2-shaped briefs (no `# Key:` line, no Resume prompt section), READ still works — those fields are optional on input.
 
 ---
 
@@ -194,9 +180,9 @@ The current session is degraded. Symptoms: agent forgets what it was doing, re-r
 2. Read existing brief at the resolved path if any.
 3. Read most recent 2-3 entries of `.claude/PROJECT_STATE.md`.
 4. Run `git log --oneline -20` and `git diff` on the working branch.
-5. Reconstruct a fresh brief from those sources using the schema above. Overwrite the file at the resolved key.
+5. Reconstruct the typed object from git/transcript, validate it (`python3 scripts/handoff-validate.py <tmp>.json`), and overwrite `<store>/<key>.json`.
 6. Do **not** prepend to PROJECT_STATE.md — recovery is re-assembly, not fresh signal.
-7. Tell the user: "Recovery brief written at `<resolved-path>`. Run `/clear`, then paste this Resume prompt OR run `/catalyst:handoff resume`:" — and ALWAYS print the literal Resume prompt verbatim right below (same shape as WRITE Step 5 — paste-and-go, not a pointer).
+7. Tell the user: "Recovery brief written at `<store>/<key>.json`. Run `/clear`, then paste this Resume prompt OR run `/catalyst:handoff resume`:" — and ALWAYS print the literal Resume prompt verbatim right below (the Resume prompt comes from `handoff-render.py` output — paste-and-go, not a pointer).
 
 ---
 
@@ -206,10 +192,9 @@ You're about to dispatch a subagent for a bounded subtask. The subagent needs th
 
 1. Identify the subtask. Make it concrete.
 2. Filter the state packet to fields relevant to that subtask. Drop fields with nothing useful to add (no "none" placeholders).
-3. Render the brief inline. Use the same schema, but:
-   - Omit the `# Key:` line (BRIEF doesn't persist).
-   - Omit the `## Resume prompt` section (the brief IS the prompt).
-   - The `## Re-entry instructions` section becomes `## Task` (named for the subagent's perspective).
+3. Render the brief inline. It uses the same typed shape, but since it does not persist:
+   - Omit `key`, `schema_version`, and any file path (no disk write).
+   - The `resume` block becomes `## Task` (named for the subagent's perspective).
 4. Keep under **30 lines**. If you can't, the subtask is too broad — re-decompose before dispatching.
 5. Pass the rendered brief as the Agent tool's task-description string. Do NOT also pass project-wide narrative — point at the narrative by reference (date / section title), don't inline it.
 
@@ -379,28 +364,29 @@ If your own context grows large during the pipeline, invoke WRITE on the current
 ## File layout
 
 ```
-.claude/
-├── HANDOFF.md                 # legacy / no-git fallback (tier 3)
-├── PROJECT_STATE.md           # repo-level narrative
-├── handoffs/                  # per-feature briefs (tiers 1 + 2)
-│   ├── feat-jwt-expiry.md
-│   └── refactor-auth-middleware.md
-└── pipelines/                 # saved pipeline templates
-    └── audit-then-plan.md
+<store>/                       # centralized handoffs dir (scripts/handoff-dir.sh)
+├── HANDOFF.json               # legacy / no-git fallback (tier 3)
+├── feat-jwt-expiry.json
+└── refactor-auth-middleware.json
+
+<project_root>/
+├── .claude/
+│   ├── PROJECT_STATE.md       # repo-level narrative (still markdown)
+│   └── pipelines/             # saved pipeline templates
+│       └── audit-then-plan.md
 ```
 
-All four are gitignored by default. Commit them if the team wants shared state.
+All are gitignored by default. Commit them if the team wants shared state.
 
 ---
 
-## Migration from v0.2
+## Migration from v0.2 / v0.3
 
-No automatic migration. Backwards compatible:
+Legacy `.md` briefs are dropped pre-1.0. No automatic migration:
 
-- v0.2's `.claude/HANDOFF.md` keeps working under tier 3 if no `.claude/handoffs/` dir exists.
-- First v0.3 WRITE lands on a tiered path; legacy file left untouched.
-- READ surfaces both legacy and feature briefs when present, with legacy flagged as such.
-- User can manually `mv .claude/HANDOFF.md .claude/handoffs/<feature>.md` to upgrade.
+- v0.3's `.claude/handoffs/*.md` files are not read by the new tooling. Run `scripts/handoff-dir.sh` to locate the new store.
+- Re-write any brief you want to keep as a typed JSON using the schema above, validate with `scripts/handoff-validate.py`, and place it in `<store>/`.
+- `<store>/HANDOFF.json` is the tier-3 fallback slot (replaces `HANDOFF.md`).
 
 ---
 
@@ -431,49 +417,51 @@ No automatic migration. Backwards compatible:
 
 ## Example — good WRITE brief (tier-2 branch)
 
-**Bad** (vague):
+**Bad** (vague, unvalidated):
 
-```markdown
-# Handoff
-We worked on auth. Some tests failing. Continue tomorrow.
+```json
+{ "key": "feat-jwt-expiry", "notes": "worked on auth, some tests failing, continue tomorrow" }
 ```
 
-**Good** (state packet, immediately actionable):
+**Good** (typed, validated, immediately actionable):
 
-```markdown
-# Handoff — 2026-05-24T01:42:00Z
-# Key: feat-jwt-expiry
-
-## Resume prompt
-> read .claude/handoffs/feat-jwt-expiry.md and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.
-
-## Re-entry instructions
-- Resume by: fixing the JWT expiry check in src/auth/middleware.ts (add leeway parameter).
-- Done when: src/auth/auth.spec.ts:42-78 all pass.
-
-## State packet
-- **Branch:** feat/jwt-expiry
-- **Diff summary:** 2 files, +18/-6 in src/auth/
-- **Tests run:** src/auth/auth.spec.ts — 4 of 6 pass; expiry tests fail
-- **Decisions affecting next session:**
-  - Use `Date.now()` (UTC ms) — not `new Date()` (alloc in hot path)
-  - JWT lib is `jose`, not `jsonwebtoken` (see PROJECT_STATE.md `## 2026-05-20 — [feat-jwt-expiry] JWT library migration`)
-  - Operator is `<=` not `<`
-- **Rejected paths:** `<` (off-by-one); `new Date()` (alloc).
-- **Open risks:** Clock skew not addressed yet.
-- **Next acceptance check:** `pnpm test src/auth/auth.spec.ts` passes 6/6.
-
-## Files to read first
-- src/auth/middleware.ts — file under repair
-- src/auth/auth.spec.ts:42-78 — failing tests
-
-## Files to NOT load by default
-- src/auth/types.ts — stable
-- src/users/* — unrelated
-- PROJECT_STATE.md — historical only; brief above names the binding decisions
+```json
+{
+  "schema_version": "1",
+  "key": "feat-jwt-expiry",
+  "timestamp": "2026-05-24T01:42:00Z",
+  "mode": "WRITE",
+  "resume": {
+    "done_when": "pnpm test src/auth/auth.spec.ts passes 6/6",
+    "resume_by": "fix JWT expiry check in src/auth/middleware.ts — add leeway parameter"
+  },
+  "state": {
+    "branch": "feat/jwt-expiry",
+    "next_acceptance_check": "pnpm test src/auth/auth.spec.ts passes 6/6",
+    "worktree": {"root": "/repo", "is_linked": false, "git_common_dir": "/repo/.git"},
+    "diff_summary": "2 files, +18/-6 in src/auth/",
+    "tests": [{"cmd": "pnpm test src/auth/auth.spec.ts", "result": "fail"}],
+    "decisions": [
+      "Use Date.now() (UTC ms) — not new Date() (alloc in hot path)",
+      "JWT lib is jose, not jsonwebtoken (see PROJECT_STATE.md 2026-05-20 [feat-jwt-expiry])",
+      "Operator is <= not <"
+    ],
+    "rejected_paths": ["< operator (off-by-one)", "new Date() (alloc)"],
+    "open_risks": ["Clock skew not addressed yet"]
+  },
+  "files_read_first": [
+    {"path": "src/auth/middleware.ts", "why": "file under repair"},
+    {"path": "src/auth/auth.spec.ts", "why": "failing tests at lines 42-78"}
+  ],
+  "files_skip": [
+    {"path": "src/auth/types.ts", "why": "stable"},
+    {"path": "src/users/*", "why": "unrelated"},
+    {"path": ".claude/PROJECT_STATE.md", "why": "historical only; decisions above are binding"}
+  ]
+}
 ```
 
-The good version answers "what do I do first, what is success, what should I not redo" in under 30 lines.
+The good version answers "what do I do first, what is success, what should I not redo" — and `handoff-validate.py` confirms it is complete before it reaches disk.
 
 ---
 

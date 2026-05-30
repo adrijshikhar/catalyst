@@ -37,7 +37,8 @@ def render(obj: dict, current_branch: str | None, current_common_dir: str | None
     wt = state.get("worktree", {})
     done_when = resume.get("done_when", "?")
     prompt = resume.get("prompt") or (
-        f"read .claude/handoffs/{key}.json and continue. "
+        f"resume handoff '{key}': run `python3 scripts/handoff-render.py {key}` "
+        f"(or /catalyst:handoff resume), then continue. "
         f"next acceptance check: {state.get('next_acceptance_check', '?')}."
     )
 

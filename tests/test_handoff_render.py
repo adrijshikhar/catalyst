@@ -26,7 +26,9 @@ class TestRender(unittest.TestCase):
 
     def test_derives_resume_prompt_when_absent(self):
         out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
-        self.assertIn("feat-jwt-expiry.json", out)
+        # derived prompt references the key via the render command (no hardcoded store path)
+        self.assertIn("handoff-render.py feat-jwt-expiry", out)
+        self.assertIn("expiry uses <= not <", out)
 
     def test_uses_stored_prompt_when_present(self):
         obj = _valid(); obj["resume"]["prompt"] = "CUSTOM-RESUME-LINE"
