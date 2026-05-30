@@ -56,6 +56,16 @@ class TestRender(unittest.TestCase):
         out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git/")
         self.assertNotIn("REPO MISMATCH", out)
 
+    def test_repo_match_with_relative_stored_common_dir(self):
+        # Brief written in a MAIN checkout stores the relative ".git" that
+        # `git rev-parse --git-common-dir` returns; resuming there must NOT
+        # falsely fire REPO MISMATCH (relative is resolved against root).
+        obj = _valid()
+        obj["state"]["worktree"]["root"] = "/repo"
+        obj["state"]["worktree"]["git_common_dir"] = ".git"
+        out = hr.render(obj, current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertNotIn("REPO MISMATCH", out)
+
 
 if __name__ == "__main__":
     unittest.main()
