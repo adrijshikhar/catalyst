@@ -101,11 +101,30 @@ def _current(cwd: Path) -> tuple[str | None, str | None]:
     return g(["branch", "--show-current"]), g(["rev-parse", "--git-common-dir"])
 
 
+def _key_path(key: str) -> Path | None:
+    """Resolve <key> to <store>/<key>.json, refusing keys that escape the store.
+
+    The key is branch/user-derived; a value like '../../etc/passwd' would
+    otherwise let the renderer read arbitrary files. The --file override is the
+    sanctioned escape hatch for explicit paths — this guard is key-only.
+    """
+    store = _hp.handoffs_dir().resolve()
+    path = (store / f"{key}.json").resolve()
+    try:
+        path.relative_to(store)
+    except ValueError:
+        return None
+    return path
+
+
 def main(argv: list[str]) -> int:
     if len(argv) >= 3 and argv[1] == "--file":
         path = Path(argv[2])
     elif len(argv) == 2:
-        path = _hp.handoffs_dir() / f"{argv[1]}.json"
+        path = _key_path(argv[1])
+        if path is None:
+            print(f"handoff-render: key '{argv[1]}' escapes the handoffs store", file=sys.stderr)
+            return 1
     else:
         print("usage: handoff-render.py <key> | --file <path>", file=sys.stderr)
         return 2
