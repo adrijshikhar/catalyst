@@ -27,8 +27,10 @@ class TestRender(unittest.TestCase):
 
     def test_derives_resume_prompt_when_absent(self):
         out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
-        # derived prompt references the key via the render command (no hardcoded store path)
-        self.assertIn("handoff-render.py feat-jwt-expiry", out)
+        # derived prompt points at the durable entry point, not a relative script
+        # path that only exists inside the catalyst repo (fails in consumer projects)
+        self.assertIn("/catalyst:handoff resume", out)
+        self.assertNotIn("scripts/handoff-render.py", out)
         self.assertIn("expiry uses <= not <", out)
 
     def test_uses_stored_prompt_when_present(self):
@@ -55,6 +57,16 @@ class TestRender(unittest.TestCase):
 
     def test_repo_match_with_trailing_slash(self):
         out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git/")
+        self.assertNotIn("REPO MISMATCH", out)
+
+    def test_repo_match_when_brief_stored_worktree_private_dir(self):
+        # Real-world: WRITE in a linked worktree recorded the worktree-private
+        # git dir (<common>/.git/worktrees/<name>) instead of the shared common
+        # dir. Resuming compares against `git rev-parse --git-common-dir`
+        # (<common>/.git) — must NOT fire a false REPO MISMATCH.
+        obj = _valid()
+        obj["state"]["worktree"]["git_common_dir"] = "/repo/.git/worktrees/feat-x"
+        out = hr.render(obj, current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
         self.assertNotIn("REPO MISMATCH", out)
 
     def test_repo_match_with_relative_stored_common_dir(self):

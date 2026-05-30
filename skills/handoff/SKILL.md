@@ -30,7 +30,7 @@ WRITE / READ / RECOVER determine the **key** for the brief in this order:
 | 2 | `git branch --show-current` (sanitized `/`→`-`, cap 80) | `<store>/<branch>.json` | Default. |
 | 3 | Not in a git repo, or detached HEAD | `<store>/HANDOFF.json` | Legacy single-slot fallback. |
 
-`<store>` is the **centralized handoffs dir** printed by `bash scripts/handoff-dir.sh` (or `python3 scripts/handoff_paths.py`): anchored at the MAIN worktree (parent of `git rev-parse --git-common-dir`). Every linked worktree shares ONE store keyed by branch — resume any feature from any worktree. Detect "in a repo?" with `git rev-parse --git-dir` succeeding, never `[ -d .git ]` (`.git` is a file in a worktree). This **supersedes** the earlier per-worktree behavior.
+`<store>` is the **centralized handoffs dir** printed by `bash "$SCR/handoff-dir.sh"` (or `python3 "$SCR/handoff_paths.py"`): anchored at the MAIN worktree (parent of `git rev-parse --git-common-dir`). Every linked worktree shares ONE store keyed by branch — resume any feature from any worktree. Detect "in a repo?" with `git rev-parse --git-dir` succeeding, never `[ -d .git ]` (`.git` is a file in a worktree). This **supersedes** the earlier per-worktree behavior.
 
 **Sticky session key:** once a WRITE picks a key, subsequent WRITEs / RECOVERs in the same session use the same key. If the user switches branches mid-session, surface the change: "Branch switched. Future handoffs will target `<new-key>.json`. Confirm?"
 
@@ -55,7 +55,13 @@ Do NOT invoke for trivial sessions or one-step subtasks. Three-turn debug doesn'
 
 ## Brief schema (shared, typed)
 
-The brief is a typed JSON document validated against `skills/handoff/brief.schema.json`. WRITE builds it and passes it through `scripts/handoff-validate.py` (rejects incomplete/mistyped briefs); READ renders it via `scripts/handoff-render.py`. Required fields cannot be omitted — that is the point.
+The brief is a typed JSON document validated against the bundled `brief.schema.json`. WRITE builds it and passes it through `handoff-validate.py` (rejects incomplete/mistyped briefs); READ renders it via `handoff-render.py`. Required fields cannot be omitted — that is the point.
+
+> **Helper-script location (read this first).** The scripts (`handoff-dir.sh`, `handoff-validate.py`, `handoff-render.py`, `handoff_paths.py`) ship **inside the plugin**, NOT in the user's project. Resolve them once at the start of any mode and reuse `$SCR`:
+> ```bash
+> SCR="${CLAUDE_PLUGIN_ROOT:-.}/scripts"   # consumer project: $CLAUDE_PLUGIN_ROOT is set; inside the catalyst repo it's unset → ./scripts
+> ```
+> Then call e.g. `bash "$SCR/handoff-dir.sh"` and `python3 "$SCR/handoff-render.py" <key>`. NEVER write a bare relative `scripts/handoff-render.py` into a resume prompt or run it from the user's repo — that path does not exist there. The durable resume entry point for the next session is the slash command **`/catalyst:handoff resume`**, which re-enters this skill and resolves `$SCR` again.
 
 ```json
 {
@@ -67,7 +73,7 @@ The brief is a typed JSON document validated against `skills/handoff/brief.schem
               "prompt": "<optional override>", "history_pointer": "<optional>" },
   "state": {
     "branch": "<branch>", "next_acceptance_check": "<next concrete check>",
-    "worktree": { "root": "<$CLAUDE_PROJECT_DIR>", "is_linked": false, "git_common_dir": "<absolute shared .git — git rev-parse --absolute-git-dir>" },
+    "worktree": { "root": "<$CLAUDE_PROJECT_DIR>", "is_linked": false, "git_common_dir": "<absolute shared .git — git rev-parse --path-format=absolute --git-common-dir>" },
     "diff_summary": "<optional>", "tests": [{"cmd": "...", "result": "pass"}],
     "commands": [], "decisions": [], "rejected_paths": [], "open_risks": []
   },
@@ -95,10 +101,12 @@ git branch --show-current
 git status --short
 git diff --stat
 git log --oneline -10
-git rev-parse --absolute-git-dir   # state.worktree.git_common_dir — MUST be absolute
+git rev-parse --path-format=absolute --git-common-dir   # state.worktree.git_common_dir
 ```
 
-Record `state.worktree.git_common_dir` as the **absolute** path (`--absolute-git-dir`, Git ≥ 2.13). The READ renderer resolves a relative value against `worktree.root` as a fallback, but storing absolute avoids any ambiguity.
+Record `state.worktree.git_common_dir` as the **absolute SHARED common dir**. The READ renderer compares it against the resuming session's `git rev-parse --git-common-dir`, so they must be the *same* value.
+
+> **Caution:** In a linked worktree, do **not** use `--absolute-git-dir` — it returns the worktree-private dir (`…/.git/worktrees/<name>`), which will NOT match the renderer's `--git-common-dir` and fires a false `REPO MISMATCH`. Use `--path-format=absolute --git-common-dir` (Git ≥ 2.31). Older Git fallback: `cd "$(git rev-parse --git-common-dir)" && pwd`. In the main checkout both resolve to the same `…/.git`.
 
 From the session transcript, also note: tests run (pass/fail), commands that materially advanced the work, decisions that affect what the next session should do (not every decision — history belongs in the narrative), paths tried and rejected, open risks, the next concrete acceptance check.
 
@@ -108,9 +116,9 @@ Use the schema above. Include the Resume prompt section with paste-and-go text m
 
 ### Step 4 — Write to disk
 
-Build the typed object. Write it to a temp file and run `python3 scripts/handoff-validate.py <tmp>.json`; fix every reported field and re-run until it prints `handoff-validate: OK`. Then move it to `<store>/<key>.json` (`<store>` from `scripts/handoff-dir.sh`). Then prepend a narrative entry to `.claude/PROJECT_STATE.md` (unchanged — still markdown).
+Build the typed object. Write it to a temp file and run `python3 "$SCR/handoff-validate.py" <tmp>.json`; fix every reported field and re-run until it prints `handoff-validate: OK`. Then move it to `<store>/<key>.json` (`<store>` from `"$SCR/handoff-dir.sh"`). Then prepend a narrative entry to `.claude/PROJECT_STATE.md` (unchanged — still markdown).
 
-If `PROJECT_STATE.md` doesn't exist, create with this header:
+If `PROJECT_STATE.md` doesn't exist, create it with this header **first**, then add the entry *below* the header:
 
 ```markdown
 # Project state — narrative log
@@ -119,7 +127,9 @@ Accretes over the life of the project. Each handoff prepends a new dated section
 Read sections selectively. The brief at `<store>/<key>.json` is the entry point; this file is the reference.
 ```
 
-Prepend (NOT append) above any existing entries:
+> **Caution:** The header always stays on top. Insert the new entry **immediately after the header block, above existing entries** — never at the absolute top of the file. On a fresh file this means: write the header, then the entry beneath it (not the entry then the header). Verify the first line is still `# Project state` after writing.
+
+Prepend (NOT append) the entry directly below the header, above any existing entries:
 
 ```markdown
 ## <ISO date> — [<key>] <short title>
@@ -146,12 +156,12 @@ Handoff written (key: <key>, tier: <1|2|3>):
   <store>/<key>.json         (validated JSON)
   .claude/PROJECT_STATE.md   (+<n> lines prepended)
 
-Next session — paste this Resume prompt OR run `/catalyst:handoff resume`:
+Next session — run `/catalyst:handoff resume` (or paste the Resume prompt):
 
-> run python3 scripts/handoff-render.py <key> and continue. next acceptance check: <one-line check verbatim from the brief>.
+> resume handoff '<key>': run `/catalyst:handoff resume` (READ mode), then continue. next acceptance check: <one-line check verbatim from the brief>.
 ```
 
-Both options work. The slash command (`/catalyst:handoff resume`) is faster if the user is in a Catalyst-enabled session; the literal paste works in any Claude Code session even before plugins load.
+The resume prompt MUST route through `/catalyst:handoff resume` — never a bare `python3 scripts/handoff-render.py <key>`. The helper scripts live in the plugin, not the user's project, so a relative script path fails everywhere except the Catalyst repo itself. The slash command re-enters this skill, which resolves `$SCR` and renders the brief.
 
 ---
 
@@ -159,13 +169,13 @@ Both options work. The slash command (`/catalyst:handoff resume`) is faster if t
 
 A new session has loaded with one or more briefs present, and the user wants to resume.
 
-1. Resolve `<store>` via `bash scripts/handoff-dir.sh`. List `<store>/*.json` (fall back to `<store>/HANDOFF.json` if no keyed files exist).
+1. Resolve `$SCR` (see Helper-script location), then `<store>` via `bash "$SCR/handoff-dir.sh"`. List `<store>/*.json` (fall back to `<store>/HANDOFF.json` if no keyed files exist).
 2. If multiple briefs exist:
    - Detect current branch.
    - Surface ALL briefs. If one matches the current branch (tier-2 match), name it as the primary suggestion.
    - List the others with mtime + key as preview.
    - Wait for the user to confirm. Do NOT silently choose.
-3. To resume a key, run `python3 scripts/handoff-render.py <key>` and follow its output. Heed any `!! BRANCH MISMATCH` / `!! REPO MISMATCH` warning before continuing.
+3. To resume a key, run `python3 "$SCR/handoff-render.py" <key>` and follow its output. Heed any `!! BRANCH MISMATCH` / `!! REPO MISMATCH` warning before continuing. If the brief was written in a different (linked) worktree — `render` prints `Written in worktree: <root> (linked)` and you're on another branch — tell the user the work lives in `<root>` and offer to `cd` there; don't resume in the wrong tree.
 4. Read files listed under `files_read_first` — load-bearing.
 5. Do **not** read `.claude/PROJECT_STATE.md` by default. Open it only when the brief explicitly says to, or you hit a decision whose rationale you need.
 6. Confirm: "Resumed from `<key>`. Next acceptance check: <quote from brief>. Starting now."
@@ -183,7 +193,7 @@ The current session is degraded. Symptoms: agent forgets what it was doing, re-r
 2. Read existing brief at the resolved path if any.
 3. Read most recent 2-3 entries of `.claude/PROJECT_STATE.md`.
 4. Run `git log --oneline -20` and `git diff` on the working branch.
-5. Reconstruct the typed object from git/transcript, validate it (`python3 scripts/handoff-validate.py <tmp>.json`), and overwrite `<store>/<key>.json`.
+5. Reconstruct the typed object from git/transcript, validate it (`python3 "$SCR/handoff-validate.py" <tmp>.json`), and overwrite `<store>/<key>.json`.
 6. Do **not** prepend to PROJECT_STATE.md — recovery is re-assembly, not fresh signal.
 7. Tell the user: "Recovery brief written at `<store>/<key>.json`. Run `/clear`, then paste this Resume prompt OR run `/catalyst:handoff resume`:" — and ALWAYS print the literal Resume prompt verbatim right below (the Resume prompt comes from `handoff-render.py` output — paste-and-go, not a pointer).
 
@@ -367,7 +377,7 @@ If your own context grows large during the pipeline, invoke WRITE on the current
 ## File layout
 
 ```
-<store>/                       # centralized handoffs dir (scripts/handoff-dir.sh)
+<store>/                       # centralized handoffs dir ("$SCR/handoff-dir.sh")
 ├── HANDOFF.json               # legacy / no-git fallback (tier 3)
 ├── feat-jwt-expiry.json
 └── refactor-auth-middleware.json
@@ -387,8 +397,8 @@ All are gitignored by default. Commit them if the team wants shared state.
 
 Legacy `.md` briefs are dropped pre-1.0. No automatic migration:
 
-- v0.3's `.claude/handoffs/*.md` files are not read by the new tooling. Run `scripts/handoff-dir.sh` to locate the new store.
-- Re-write any brief you want to keep as a typed JSON using the schema above, validate with `scripts/handoff-validate.py`, and place it in `<store>/`.
+- v0.3's `.claude/handoffs/*.md` files are not read by the new tooling. Run `"$SCR/handoff-dir.sh"` to locate the new store.
+- Re-write any brief you want to keep as a typed JSON using the schema above, validate with `"$SCR/handoff-validate.py"`, and place it in `<store>/`.
 - `<store>/HANDOFF.json` is the tier-3 fallback slot (replaces `HANDOFF.md`).
 
 ---

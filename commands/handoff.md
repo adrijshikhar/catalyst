@@ -4,11 +4,17 @@ description: Invoke the handoff skill. With no argument, runs WRITE mode and res
 
 Invoke the `handoff` skill.
 
+The helper scripts ship inside the plugin, NOT the user's project. Resolve them from the plugin root and reuse this as `$SCR` in the skill's commands (`handoff-dir.sh`, `handoff-validate.py`, `handoff-render.py`, `handoff_paths.py`):
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts
+```
+
 If the user passed a single recognized keyword as `$ARGUMENT`, route to that mode:
 
 - `read` or `resume` → READ mode (load existing brief for current branch / key)
 - `recover` or `rebuild` → RECOVER mode (rebuild a degraded brief)
-- any other non-empty value → WRITE mode with `$ARGUMENT` as the tier-1 explicit key (writes to `.claude/handoffs/<argument>.md`)
+- any other non-empty value → WRITE mode with `$ARGUMENT` as the tier-1 explicit key (writes the validated JSON brief to `<store>/<argument>.json`)
 - empty argument → WRITE mode, resolve key via the ladder (branch → legacy)
 
 Then follow the skill's procedure for the selected mode exactly. Confirm to the user which mode + which key was used.
