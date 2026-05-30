@@ -21,9 +21,13 @@ fi
 
 if [ -n "$BRANCH" ]; then
   KEY=$(echo "$BRANCH" | sed 's|/|-|g' | cut -c1-80)
-  PATH_HINT=".claude/handoffs/$KEY.md"
+fi
+
+STORE=$(bash "$PROJECT_DIR/scripts/handoff-dir.sh" "$PROJECT_DIR" 2>/dev/null || echo "$PROJECT_DIR/.claude/handoffs")
+if [ -n "$KEY" ]; then
+  PATH_HINT="$STORE/$KEY.json"
 else
-  PATH_HINT=".claude/HANDOFF.md"
+  PATH_HINT="$STORE/HANDOFF.json"
 fi
 
 if [ -n "$KEY" ]; then

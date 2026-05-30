@@ -16,11 +16,12 @@ if git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
   BRANCH=$(git -C "$PROJECT_DIR" branch --show-current 2>/dev/null || true)
 fi
 
-LEGACY_PATH="$PROJECT_DIR/.claude/HANDOFF.md"
+STORE=$(bash "$PROJECT_DIR/scripts/handoff-dir.sh" "$PROJECT_DIR" 2>/dev/null || echo "$PROJECT_DIR/.claude/handoffs")
+LEGACY_PATH="$STORE/HANDOFF.json"
 KEYED_PATH=""
 if [ -n "$BRANCH" ]; then
   KEY=$(echo "$BRANCH" | sed 's|/|-|g' | cut -c1-80)
-  KEYED_PATH="$PROJECT_DIR/.claude/handoffs/$KEY.md"
+  KEYED_PATH="$STORE/$KEY.json"
 fi
 
 EXISTS_KEYED="no"
@@ -33,9 +34,9 @@ if [ "$EXISTS_KEYED" = "no" ] && [ "$EXISTS_LEGACY" = "no" ]; then
 fi
 
 if [ "$EXISTS_KEYED" = "yes" ]; then
-  CTX="A handoff brief exists for the current branch at $KEYED_PATH. Invoke the handoff skill in READ mode if the user wants to resume."
+  CTX="A handoff brief exists for the current branch at $KEYED_PATH. Invoke the handoff skill in READ mode (renders via scripts/handoff-render.py) if the user wants to resume."
 elif [ "$EXISTS_LEGACY" = "yes" ]; then
-  CTX="A legacy handoff brief exists at $LEGACY_PATH. Invoke the handoff skill in READ mode (legacy / tier-3 fallback) if the user wants to resume."
+  CTX="A legacy handoff brief exists at $LEGACY_PATH. Invoke the handoff skill in READ mode (renders via scripts/handoff-render.py — legacy / tier-3 fallback) if the user wants to resume."
 fi
 
 jq -n --arg ctx "$CTX" '{
