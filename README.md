@@ -49,6 +49,10 @@ Around that core, the other skills make the harness *ambient*: lifecycle hooks f
 
 ## What a handoff looks like
 
+<p align="center">
+  <img src="assets/demo/handoff.gif" alt="A typed handoff brief surviving a /compact: render the brief in a fresh session and resume exactly where you left off" width="860"/>
+</p>
+
 WRITE produces a typed, validated brief (rejected if fields are missing or mistyped — that's the point):
 
 ```json
