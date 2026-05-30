@@ -31,7 +31,7 @@ Binding contract for session-health v0.7. Evals defined before SKILL.md or hooks
 | 8  | detects-edit-mismatch | Transcript with 2 `old_string not found` errors in last 5 turns → `edit-mismatch` detected with recipe pointing at re-Reading the file |
 | 9  | detects-stale-read-stop | Transcript: Read on file F at turn 1, Write to F at turn 10, Edit on F at turn 12 (no re-Read) → `stale-read` detected |
 | 10 | detects-recovery-spiral | 3 consecutive re-Reads of previously-seen files → `recovery-spiral` detected and NOT fired below the threshold |
-| 11 | no-false-positives-on-clean-session | Mock transcript with normal varied tool calls → no patterns detected, `.claude/failure-patterns.log` has no entry for that session |
+| 11 | no-false-positives-on-clean-session | Mock transcript with normal varied tool calls → no patterns detected, `.claude/session-health.log` has no entry for that session |
 
 ---
 
@@ -82,7 +82,7 @@ Eval ID 6 (`reground-recipe`) asserts the literal string `/catalyst:handoff regr
 
 | Type | Used for |
 |------|----------|
-| Code | grep on hook stdout / `.claude/failure-patterns.log`, jq on `hookSpecificOutput.additionalContext`, file existence, string contains, literal OR-lists |
+| Code | grep on hook stdout / `.claude/session-health.log`, jq on `hookSpecificOutput.additionalContext`, file existence, string contains, literal OR-lists |
 
 All leaf assertions bottom out in deterministic code checks (exact string match, file existence, jq parse). No Model grader is used — all assertions are code-gradeable.
 
