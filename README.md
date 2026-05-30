@@ -26,7 +26,9 @@
 
 ---
 
-Catalyst is a Claude Code plugin grounded in **[harness engineering](https://www.anthropic.com/engineering/harness-design-long-running-apps)** — the architectural patterns Anthropic itself uses to ship reliable agentic applications. The plugin treats Claude not as a single chat but as a system that needs scaffolding for context resets, structured artifact handoffs, multi-agent orchestration, and explicit evaluator/generator separation.
+In chemistry, a **catalyst** facilitates a reaction — it makes the process happen faster and more reliably, without being consumed by it. This plugin does the same for **human–AI collaboration**. It sits between you and Claude and facilitates the work: carrying context across sessions, blocking premature "it's done" claims, keeping subagents on-scope, surfacing trouble before it compounds. It smooths the friction in how you and the model work together, then steps back out of the way.
+
+Concretely, Catalyst is a Claude Code plugin grounded in **[harness engineering](https://www.anthropic.com/engineering/harness-design-long-running-apps)** — the architectural patterns Anthropic itself uses to ship reliable agentic applications. The plugin treats Claude not as a single chat but as a system that needs scaffolding for context resets, structured artifact handoffs, multi-agent orchestration, and explicit evaluator/generator separation.
 
 Every component of every skill encodes an assumption about what the current model can't do reliably on its own. Those assumptions get stress-tested with each new flagship model — scaffolding that no longer earns its complexity gets stripped. The plugin grows opinionated about *when* to add complexity, not just *what* complexity to add.
 
@@ -149,7 +151,7 @@ Install the lifecycle hooks (`/hook-builder install --all`) to make all of this 
 
 ## Why "Catalyst"
 
-A catalyst accelerates a reaction without being consumed. These skills accelerate Claude's work without crowding the main context — they activate when needed, do their job, then step out of the way.
+The name says what it does: a catalyst facilitates a process without becoming part of the product. These skills facilitate the work between you and Claude — they activate when needed, smooth the handoff, then step out of the way without crowding the main context.
 
 ## Contributing
 
