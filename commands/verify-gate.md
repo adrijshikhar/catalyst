@@ -14,3 +14,5 @@ Recognized sub-commands:
 - `status` — Read `.claude/verify-gate.json` and print the configured rules. If `$CLAUDE_TRANSCRIPT_PATH` is available, scan recent hook denials and print last 5.
 
 If `$ARGUMENT` is empty or unrecognized, summarize the skill: what verify-gate does, when it fires, how to install. Point at `skills/verify-gate/SKILL.md` for full docs.
+
+**Over-reliance rule:** The hook also supports an opt-in over-reliance caution (default OFF). Enable with `CATALYST_VERIFY_OVERRELIANCE=1`. When on, any Write/Edit of `≥ CATALYST_OVERRELIANCE_MIN_BYTES` bytes (default 4000) with no evidence Read in the freshness window emits a `permissionDecision: "ask"` trust caution — not a hard deny. See `skills/verify-gate/SKILL.md` for the full rule description and examples.

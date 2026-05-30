@@ -72,6 +72,39 @@ If the evidence is stale (Read >10min ago), re-Read it. The freshness window cat
 - **Tasks where the writes don't claim anything** — adding a comment to a doc, renaming a variable. The hook only fires on configured claim paths; everything else passes through.
 - **CI / autonomous runs** — those should use Anthropic's `cwc-long-running-agents` `/goal` + `verify-gate.sh` directly; this Catalyst version is for interactive workflows.
 
+## Over-reliance rule (opt-in)
+
+Motivated by research showing agent-generated code is less durable than human-reviewed code (Anthropic PR-acceptance gap, METR agent slowdown study, insecure-code-with-assistants findings): large volumes of unreviewed output carry elevated risk of silent drift and subtle errors.
+
+| Config | Default | Description |
+|--------|---------|-------------|
+| `CATALYST_VERIFY_OVERRELIANCE` | `0` (off) | Set to `1` to enable the rule |
+| `CATALYST_OVERRELIANCE_MIN_BYTES` | `4000` | Minimum write payload (bytes) to trigger |
+
+**Trigger:** `CATALYST_VERIFY_OVERRELIANCE=1` AND a Write/Edit whose `content` (or `new_string`) is `≥ CATALYST_OVERRELIANCE_MIN_BYTES` AND no file was Read in the freshness window.
+
+**Decision:** `permissionDecision: "ask"` — not a hard deny. The agent is prompted to confirm or read relevant context first. This preserves autonomy for intentional large writes while surfacing a trust prompt for unreviewed bulk output.
+
+**Anti-pattern (bad):**
+```
+# Agent writes 8000 bytes of generated code with no Read in the session.
+# With flag ON → hook surfaces "ask" with over-reliance caution.
+# Agent acknowledges and proceeds — or reads relevant context first.
+```
+
+**Anti-pattern (good):**
+```
+# Agent reads the target file or a test result first, then writes.
+# Hook sees recent Read in-window → over-reliance check is cleared → no caution.
+```
+
+To enable project-wide:
+```bash
+export CATALYST_VERIFY_OVERRELIANCE=1
+# Optionally lower the threshold for tighter review:
+export CATALYST_OVERRELIANCE_MIN_BYTES=2000
+```
+
 ## Anti-patterns
 
 - **Disabling the hook to "unblock" yourself.** If you're hitting blocks, the system is working. Read the evidence.
