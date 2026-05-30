@@ -80,6 +80,34 @@ class TestRender(unittest.TestCase):
         self.assertNotIn("REPO MISMATCH", out)
 
 
+class TestReground(unittest.TestCase):
+    def test_reground_includes_loadbearing_excludes_narrative(self):
+        obj = _valid()
+        # Enrich with optional load-bearing fields so we can assert they appear
+        obj["state"]["decisions"] = ["use <= for expiry boundary check"]
+        obj["files_read_first"] = [{"path": "src/auth/middleware.ts", "why": "contains the expiry logic"}]
+
+        out = hr.render_reground(obj)
+
+        # --- load-bearing inclusions ---
+        # next_acceptance_check from state (fixture value: "expiry uses <= not <")
+        self.assertIn("expiry uses <= not <", out)
+        # done_when from resume (fixture value: "pnpm test auth.spec.ts 6/6")
+        self.assertIn("pnpm test auth.spec.ts 6/6", out)
+        # at least one decisions entry
+        self.assertIn("use <= for expiry boundary check", out)
+        # files_read_first path
+        self.assertIn("src/auth/middleware.ts", out)
+
+        # --- resume-scaffold exclusions ---
+        # reground is NOT a resume — must not contain full resume boilerplate
+        self.assertNotIn("## Summary", out)
+        self.assertNotIn("Written in worktree", out)
+        # must not contain mismatch blocks (no branch/repo context needed for reground)
+        self.assertNotIn("REPO MISMATCH", out)
+        self.assertNotIn("BRANCH MISMATCH", out)
+
+
 class TestKeyPathContainment(unittest.TestCase):
     """_key_path refuses keys that escape the handoffs store (path traversal)."""
 
