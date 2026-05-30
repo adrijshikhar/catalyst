@@ -208,7 +208,7 @@ REGROUND is a **read-only mid-session re-injection**: it renders only the load-b
 
 ### When to use
 
-- The `session-degradation-watch` hook emits a signal and recommends reground as the per-turn recovery recipe.
+- The `session-health` hook emits a per-turn degradation signal and recommends reground as the recovery recipe.
 - You notice yourself re-reading a file you already have notes on.
 - A decision you made earlier is being re-litigated without new information.
 - The next acceptance check has drifted from the brief's verbatim wording.
