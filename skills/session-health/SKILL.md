@@ -27,7 +27,7 @@ The practical fix is harness-layer detection + structured reset. This skill dete
 ## Two-timing model
 
 ```
-UserPromptSubmit hook  ──→  per-turn: 4 signals, single most-urgent alert
+UserPromptSubmit hook  ──→  per-turn: 4 signals (context-pressure at 2 levels), single most-urgent alert
 Stop hook             ──→  session-end: 6 failure patterns, recovery recipes
                             ↓
               hooks/lib/session-health-signals.sh  (shared signal library)

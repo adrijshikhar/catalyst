@@ -38,6 +38,7 @@ Parse `$ARGUMENT` to determine which sub-command to run:
   remove `<pattern>` from `enabled_patterns`, write back. Report the change.
 
 - (no recognized sub-command or empty) — Summarize what session-health does: the two-hook
-  model (per-turn UserPromptSubmit + session-end Stop), the 4 per-turn signals with
-  recalibrated effective-window thresholds, the 6 session-end patterns. Point at
+  model (per-turn UserPromptSubmit + session-end Stop), the 4 per-turn signals
+  (context-pressure at 2 levels) with recalibrated effective-window thresholds,
+  the 6 session-end patterns. Point at
   `skills/session-health/SKILL.md` for full docs.
