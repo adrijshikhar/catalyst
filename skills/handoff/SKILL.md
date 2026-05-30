@@ -32,7 +32,7 @@ WRITE / READ / RECOVER determine the **key** for the brief in this order:
 
 `<store>` is the **centralized handoffs dir** printed by `bash scripts/handoff-dir.sh` (or `python3 scripts/handoff_paths.py`): anchored at the MAIN worktree (parent of `git rev-parse --git-common-dir`). Every linked worktree shares ONE store keyed by branch — resume any feature from any worktree. Detect "in a repo?" with `git rev-parse --git-dir` succeeding, never `[ -d .git ]` (`.git` is a file in a worktree). This **supersedes** the earlier per-worktree behavior.
 
-**Sticky session key:** once a WRITE picks a key, subsequent WRITEs / RECOVERs in the same session use the same key. If the user switches branches mid-session, surface the change: "Branch switched. Future handoffs will target `<new-key>.md`. Confirm?"
+**Sticky session key:** once a WRITE picks a key, subsequent WRITEs / RECOVERs in the same session use the same key. If the user switches branches mid-session, surface the change: "Branch switched. Future handoffs will target `<new-key>.json`. Confirm?"
 
 BRIEF and PIPELINE modes do not persist, so they don't resolve a key — they may *reference* a key when telling a subagent which feature's narrative slice is relevant.
 
@@ -438,8 +438,9 @@ Legacy `.md` briefs are dropped pre-1.0. No automatic migration:
   "state": {
     "branch": "feat/jwt-expiry",
     "next_acceptance_check": "pnpm test src/auth/auth.spec.ts passes 6/6",
+    "worktree": {"root": "/repo", "is_linked": false, "git_common_dir": "/repo/.git"},
     "diff_summary": "2 files, +18/-6 in src/auth/",
-    "tests": [{"cmd": "pnpm test src/auth/auth.spec.ts", "result": "4/6 pass — expiry tests fail"}],
+    "tests": [{"cmd": "pnpm test src/auth/auth.spec.ts", "result": "fail"}],
     "decisions": [
       "Use Date.now() (UTC ms) — not new Date() (alloc in hot path)",
       "JWT lib is jose, not jsonwebtoken (see PROJECT_STATE.md 2026-05-20 [feat-jwt-expiry])",
