@@ -1,0 +1,211 @@
+{
+  "skill_name": "session-health",
+  "version": "0.7",
+  "evals": [
+    {
+      "id": 0,
+      "name": "warns-at-effective-50pct",
+      "source": "new",
+      "category": "capability",
+      "prompt": "Set env CATALYST_SH_ADVERTISED_TOKENS=200000. Invoke hooks/UserPromptSubmit-session-health.sh with input JSON pointing transcript_path to skills/session-health/evals/fixtures/transcript-warn-effective.jsonl and model_effective_fraction=0.70. The fixture contains ~76525 tokens (chars/4), which is above the 0.50×effective WARN threshold (70000 tok) but BELOW the old 0.60×advertised threshold (120000 tok) — proving the recalibration. Save the hook's stdout to hook-out-warn.json. The hook must emit hookSpecificOutput.additionalContext mentioning context pressure and recommending '/catalyst:handoff reground'.",
+      "files": [],
+      "assertions": [
+        "hook-out-warn.json exists",
+        "hook-out-warn.json parsed-with-jq contains hookSpecificOutput.additionalContext",
+        "additionalContext contains '/catalyst:handoff reground' (exact literal — recalibrated recipe)",
+        "additionalContext contains 'context' OR 'window' OR '%' (names the signal)",
+        "NOTE: 76525 tokens < 120000 (old 0.60×advertised threshold) — this fixture WOULD have been silent under the old rule, proving recalibration"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "force-at-effective-70pct",
+      "source": "new",
+      "category": "capability",
+      "prompt": "Set env CATALYST_SH_ADVERTISED_TOKENS=200000. Invoke hooks/UserPromptSubmit-session-health.sh with input JSON pointing transcript_path to skills/session-health/evals/fixtures/transcript-strong-effective.jsonl and model_effective_fraction=0.70. The fixture contains ~109546 tokens (chars/4), which is above the 0.70×effective STRONG threshold (98000 tok). Save stdout to hook-out-force.json. The hook must emit a stronger message with escalated urgency.",
+      "files": [],
+      "assertions": [
+        "hook-out-force.json exists",
+        "hook-out-force.json parsed-with-jq contains hookSpecificOutput.additionalContext",
+        "additionalContext contains '/catalyst:handoff reground'",
+        "additionalContext contains 'NOW' OR 'immediately' OR 'force' OR 'urgently' OR 'critical' (escalated urgency vs warn case)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "repeated-tool-call-detected",
+      "source": "ported-sdw",
+      "category": "capability",
+      "prompt": "Invoke hooks/UserPromptSubmit-session-health.sh with transcript_path = skills/session-health/evals/fixtures/transcript-repeated-bash.jsonl (3 identical 'ls -la' calls in last 5 turns). Save stdout to hook-out-repeated.json. The hook must flag the repeated-tool-call loop.",
+      "files": [],
+      "assertions": [
+        "hook-out-repeated.json exists",
+        "additionalContext contains 'repeated' OR 'loop' OR 'identical' OR 'ls -la' (names the repeat)",
+        "additionalContext contains 'different' OR 'try' OR 'approach' (suggests trying something different)"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "stale-read-detected",
+      "source": "ported-sdw",
+      "category": "capability",
+      "prompt": "Invoke hooks/UserPromptSubmit-session-health.sh with transcript_path = skills/session-health/evals/fixtures/transcript-stale-read.jsonl (Edit on src/a.ts at turn 21, last Read of src/a.ts at turn 2 — 19-turn gap, exceeds 15-turn threshold). Save stdout to hook-out-stale.json. The hook must suggest re-Reading the file.",
+      "files": [],
+      "assertions": [
+        "hook-out-stale.json exists",
+        "additionalContext contains 'stale' OR 're-Read' OR 're-read' OR 'reread'",
+        "additionalContext contains 'src/a.ts' (names the file)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "contradiction-flagged",
+      "source": "ported-sdw",
+      "category": "capability",
+      "prompt": "Create a fixture .claude/PROJECT_STATE.md with the line 'Decision: use JWT not session cookies'. Then invoke hooks/UserPromptSubmit-session-health.sh with a transcript ending in a turn saying 'using session cookies for auth'. The hook must detect the string-level contradiction and flag it in additionalContext.",
+      "files": [
+        {"path": ".claude/PROJECT_STATE.md", "content": "Decision: use JWT not session cookies for auth.\n"},
+        {"path": "transcript-contradiction.jsonl", "content": "{\"type\":\"user\",\"content\":\"start\",\"turn\":1}\n{\"type\":\"assistant\",\"content\":\"using session cookies for auth\",\"turn\":2}\n"}
+      ],
+      "assertions": [
+        "hook-out-contradiction.json exists",
+        "additionalContext contains 'contradiction' OR 'conflict' OR 'PROJECT_STATE'",
+        "additionalContext mentions 'JWT' OR 'session cookies' (names the contradicting concept)"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "approaching-effective-window",
+      "source": "new",
+      "category": "capability",
+      "prompt": "Set env CATALYST_SH_ADVERTISED_TOKENS=200000. Positive run: invoke hooks/UserPromptSubmit-session-health.sh with transcript_path = skills/session-health/evals/fixtures/transcript-warn-effective.jsonl and model_effective_fraction=0.70. The fixture is ~76525 tokens — above the 0.50×effective WARN threshold of 70000 tokens. Save stdout to hook-out-effective-pos.json. Negative run: invoke again with transcript_path = skills/session-health/evals/fixtures/transcript-below-warn.jsonl (~49551 tokens, below 70000 WARN threshold). Save stdout to hook-out-effective-neg.json. This proves threshold is based on effective window (70000 tok), not raw advertised percentage (old threshold would have been 120000 tok).",
+      "files": [],
+      "assertions": [
+        "hook-out-effective-pos.json exists",
+        "hook-out-effective-pos.json additionalContext is non-empty (alert fired at 76525 tok > 70000 warn threshold)",
+        "hook-out-effective-neg.json exists",
+        "hook-out-effective-neg.json does NOT contain additionalContext OR additionalContext is empty (49551 tok < 70000 warn threshold — no alert)"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "reground-recipe",
+      "source": "new",
+      "category": "capability",
+      "prompt": "Set env CATALYST_SH_ADVERTISED_TOKENS=200000. Invoke hooks/UserPromptSubmit-session-health.sh with transcript_path = skills/session-health/evals/fixtures/transcript-warn-effective.jsonl (context-pressure scenario at warn level). Save stdout to hook-out-reground.json. The additionalContext emitted by the hook must contain the literal string '/catalyst:handoff reground' as the recommended next step for context-pressure recovery.",
+      "files": [],
+      "assertions": [
+        "hook-out-reground.json exists",
+        "hook-out-reground.json parsed-with-jq contains hookSpecificOutput.additionalContext",
+        "additionalContext contains '/catalyst:handoff reground' (literal string — exact recovery recipe)"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "detects-repeated-tool-call",
+      "source": "ported-fpd",
+      "category": "capability",
+      "prompt": "Two-step eval. First run the session-health Stop hook against transcript-positive.jsonl (4 identical Bash commands) with session_id=eval-7-pos:\n  echo '{\"transcript_path\":\"./transcript-positive.jsonl\",\"session_id\":\"eval-7-pos\"}' | bash hooks/Stop-session-health.sh\nThen run it AGAIN against transcript-negative.jsonl (only 2 identical Bash commands — below the count threshold of 3) with session_id=eval-7-neg:\n  echo '{\"transcript_path\":\"./transcript-negative.jsonl\",\"session_id\":\"eval-7-neg\"}' | bash hooks/Stop-session-health.sh\nRead .claude/failure-patterns.log and save to log-output.txt.",
+      "files": [
+        {"path": "transcript-positive.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls -la\"},\"turn\":1}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls -la\"},\"turn\":2}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls -la\"},\"turn\":3}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls -la\"},\"turn\":4}\n{\"type\":\"text\",\"content\":\"thinking\",\"turn\":5}\n"},
+        {"path": "transcript-negative.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls -la\"},\"turn\":1}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls -la\"},\"turn\":2}\n{\"type\":\"text\",\"content\":\"done\",\"turn\":3}\n"}
+      ],
+      "assertions": [
+        "log-output.txt exists",
+        "log-output.txt contains a line where session=eval-7-pos AND pattern=repeated-tool-call",
+        "log-output.txt contains the literal string 'ls -la' on the same line as the eval-7-pos detection",
+        "log-output.txt detection line for eval-7-pos contains a recovery recipe (mentions 'Try a different approach' OR 'different command' OR 'try something else')",
+        "log-output.txt does NOT contain any line where session=eval-7-neg AND pattern=repeated-tool-call (threshold-boundary check)"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "detects-edit-mismatch",
+      "source": "ported-fpd",
+      "category": "capability",
+      "prompt": "Pipe a transcript with 2 'old_string not found' errors within 5 turns into the session-health Stop hook. The hook must detect edit-mismatch and log it with a recovery recipe pointing at re-Reading the file.",
+      "files": [
+        {"path": "mock-transcript.jsonl", "content": "{\"type\":\"tool_result\",\"name\":\"Edit\",\"content\":\"Error: old_string not found in foo.ts\",\"turn\":1}\n{\"type\":\"tool_use\",\"name\":\"Edit\",\"input\":{\"file_path\":\"foo.ts\"},\"turn\":2}\n{\"type\":\"tool_result\",\"name\":\"Edit\",\"content\":\"Error: old_string not found in foo.ts\",\"turn\":3}\n"}
+      ],
+      "assertions": [
+        "log-output.txt exists",
+        "log-output.txt contains the literal string 'edit-mismatch'",
+        "log-output.txt contains 'Re-Read' OR 're-read' (recovery recipe)",
+        "log-output.txt mentions the file 'foo.ts'"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "detects-stale-read-stop",
+      "source": "ported-fpd",
+      "category": "capability",
+      "prompt": "Invoke the session-health Stop hook with session_id=eval-9 against the transcript fixture where Read on bar.ts happened at turn 1, Write to bar.ts happened at turn 10, and Edit on bar.ts happened at turn 12 with no re-Read between turn 10 and turn 12. Hook must detect stale-read pattern. Save .claude/failure-patterns.log to log-output.txt.",
+      "files": [
+        {"path": "mock-transcript.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"bar.ts\"},\"turn\":1}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"echo x\"},\"turn\":5}\n{\"type\":\"tool_use\",\"name\":\"Write\",\"input\":{\"file_path\":\"bar.ts\",\"content\":\"new content\"},\"turn\":10}\n{\"type\":\"tool_use\",\"name\":\"Edit\",\"input\":{\"file_path\":\"bar.ts\",\"old_string\":\"new content\",\"new_string\":\"newer\"},\"turn\":12}\n"}
+      ],
+      "assertions": [
+        "log-output.txt exists",
+        "log-output.txt contains the literal string 'stale-read'",
+        "log-output.txt mentions the file 'bar.ts'",
+        "log-output.txt recovery recipe mentions 'Re-read' OR 'Re-Read'",
+        "log-output.txt detection line for stale-read references session=eval-9"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "detects-recovery-spiral",
+      "source": "ported-fpd",
+      "category": "capability",
+      "prompt": "Two-step eval. First run the session-health Stop hook against spiral-positive.jsonl (3 consecutive re-Reads of previously-seen files — at the threshold of 3) with session_id=eval-10-pos. Then run against spiral-negative.jsonl (only 2 consecutive re-Reads — below the threshold) with session_id=eval-10-neg. Hook must fire recovery-spiral only for the positive run. Save .claude/failure-patterns.log to log-output.txt.",
+      "files": [
+        {"path": "spiral-positive.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"a.ts\"},\"turn\":1}\n{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"b.ts\"},\"turn\":2}\n{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"a.ts\"},\"turn\":3}\n{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"b.ts\"},\"turn\":4}\n{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"a.ts\"},\"turn\":5}\n"},
+        {"path": "spiral-negative.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"a.ts\"},\"turn\":1}\n{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"b.ts\"},\"turn\":2}\n{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"a.ts\"},\"turn\":3}\n{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"b.ts\"},\"turn\":4}\n"}
+      ],
+      "assertions": [
+        "log-output.txt exists",
+        "log-output.txt contains a line where session=eval-10-pos AND pattern=recovery-spiral",
+        "log-output.txt detection line for eval-10-pos recovery recipe mentions '/clear' OR 'handoff RECOVER' OR 'fresh session' OR '/catalyst:handoff'",
+        "log-output.txt does NOT contain any line where session=eval-10-neg AND pattern=recovery-spiral (boundary check)"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "no-false-positives-on-clean-session",
+      "source": "ported-fpd",
+      "category": "capability",
+      "prompt": "Precondition: run the Stop hook against a known-positive transcript first (e.g., transcript-positive.jsonl with 4 identical Bash commands, session_id=eval-11-seed) to confirm the log mechanism is active. Then run the Stop hook against the clean transcript with session_id=eval-11-clean. The hook must NOT write any pattern entry for session eval-11-clean.\n\nStep 1 (seed):\n  echo '{\"transcript_path\":\"./transcript-seed.jsonl\",\"session_id\":\"eval-11-seed\"}' | bash hooks/Stop-session-health.sh\nStep 2 (clean):\n  echo '{\"transcript_path\":\"./mock-transcript.jsonl\",\"session_id\":\"eval-11-clean\"}' | bash hooks/Stop-session-health.sh\n\nSave the resulting .claude/failure-patterns.log to log-output.txt.",
+      "files": [
+        {"path": "transcript-seed.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls -la\"},\"turn\":1}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls -la\"},\"turn\":2}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls -la\"},\"turn\":3}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"ls -la\"},\"turn\":4}\n"},
+        {"path": "mock-transcript.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"a.ts\"},\"turn\":1}\n{\"type\":\"tool_use\",\"name\":\"Edit\",\"input\":{\"file_path\":\"a.ts\"},\"turn\":2}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"npm test\"},\"turn\":3}\n{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"b.ts\"},\"turn\":4}\n{\"type\":\"tool_use\",\"name\":\"Write\",\"input\":{\"file_path\":\"c.ts\",\"content\":\"export {}\"},\"turn\":5}\n"}
+      ],
+      "assertions": [
+        "hook exits 0 on both runs (fail-open; a crashed hook must not count as a pass)",
+        "log-output.txt exists",
+        "log-output.txt contains at least one line where session=eval-11-seed AND pattern=repeated-tool-call (confirms log mechanism is active — a missing line means the hook silently crashed, not that the session was clean)",
+        "log-output.txt does NOT contain any line where session=eval-11-clean (no false positive for clean session)"
+      ]
+    },
+    {
+      "id": "deferred-01",
+      "name": "instruction-fade",
+      "source": "ported-fpd",
+      "status": "deferred-v0.8",
+      "deferral_reason": "Requires long multi-session fixture sequences to demonstrate instruction drift reliably; fixture construction cost is high for v0.7 scope. Carried forward as v0.8 eval-debt.",
+      "category": "capability",
+      "prompt": null,
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": "deferred-02",
+      "name": "context-drowning",
+      "source": "ported-fpd",
+      "status": "deferred-v0.8",
+      "deferral_reason": "Detecting context-drowning (relevant detail buried in noise) requires semantic-similarity tooling not available in the v0.7 code-only grader mix. Deferred until v0.8 model-grader lane is available.",
+      "category": "capability",
+      "prompt": null,
+      "files": [],
+      "assertions": []
+    }
+  ]
+}
