@@ -92,8 +92,8 @@ Briefs are stored once per feature key in the **main worktree** (`<main>/.claude
 
 | Skill | Purpose |
 |-------|---------|
-| [`handoff`](./skills/handoff/SKILL.md) | Structured context transfer for sessions, subagents, and pipelines. Four modes (WRITE / READ / RECOVER / BRIEF) plus PIPELINE orchestration. Typed JSON brief validated against a JSON Schema, feature-keyed via a three-tier ladder, centralized worktree-aware store, render-on-read resume, anti-self-grade guardrails. |
-| [`verify-gate`](./skills/verify-gate/SKILL.md) | PreToolUse hook + skill that blocks "claim success" writes (test-results, build-status, deployment artifacts) unless the evidence file was Read first. Port of Anthropic's `verify-gate.sh` pattern. Solves optimistic completion bias. |
+| [`handoff`](./skills/handoff/SKILL.md) | Structured context transfer for sessions, subagents, and pipelines. Five modes (WRITE / READ / RECOVER / REGROUND / BRIEF) plus PIPELINE orchestration. Typed JSON brief validated against a JSON Schema, feature-keyed via a three-tier ladder, centralized worktree-aware store, render-on-read resume, anti-self-grade guardrails. REGROUND re-injects the load-bearing fields mid-session to counter lost-in-the-middle recall decay. |
+| [`verify-gate`](./skills/verify-gate/SKILL.md) | PreToolUse hook + skill that blocks "claim success" writes (test-results, build-status, deployment artifacts) unless the evidence file was Read first. Port of Anthropic's `verify-gate.sh` pattern. Solves optimistic completion bias. Plus an opt-in over-reliance rule that flags large unverified agent diffs. |
 | [`hook-builder`](./skills/hook-builder/SKILL.md) | Pre-built lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) that wire `handoff` into the session lifecycle. Turns Catalyst from explicit to ambient. Plus an authoring helper for new hooks. |
 | [`evaluator-library`](./skills/evaluator-library/SKILL.md) | 6 bundled domain rubrics (code-quality, ui-design, prose, security, performance, accessibility) dispatched via a shared brief builder that enforces anti-self-grade. Composes with handoff PIPELINE evaluator stages. |
 | [`pipeline-templates`](./skills/pipeline-templates/SKILL.md) | 3 bundled executable pipeline templates (audit-then-fix, research-plan-implement-review, parallel-review-synthesize) + `/pipeline run / list / save / --dry-run`. |
@@ -109,6 +109,7 @@ Catalyst maps directly to Anthropic's primitives:
 | Anthropic primitive | Where Catalyst implements it |
 |---------------------|------------------------------|
 | Context resets > compaction | `handoff` WRITE/READ — fresh-agent bootstrap from `<main>/.claude/handoffs/<key>.json` |
+| Lost-in-the-middle mitigation (re-grounding) | `handoff` REGROUND — read-only mid-session re-injection of goal + locked decisions + next-check |
 | Structured artifact handoff (file-based, not conversational) | typed JSON brief schema, shared across all four modes |
 | Specialized multi-agent (planner / generator / evaluator) | PIPELINE mode canonical role triad |
 | Sprint contracts (pre-coding done agreement) | PIPELINE mode contract negotiation step |
@@ -116,6 +117,7 @@ Catalyst maps directly to Anthropic's primitives:
 | GAN-inspired iterate loops for subjective domains | PIPELINE mode optional loop pattern |
 | Gradable rubrics for subjective domains | `evaluator-library` + eval-harness contracts at `skills/*/evals/` |
 | Evidence-first writes (verify-gate.sh) | `verify-gate` skill |
+| Trust calibration / over-reliance on large unverified agent output | `verify-gate` opt-in over-reliance rule |
 | Lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) | `hook-builder` skill |
 | Pre-built evaluator rubrics (code/ui/prose/security/perf/a11y) | `evaluator-library` skill |
 | End-of-session failure-pattern surfacing | `session-health` skill (Stop hook) |
