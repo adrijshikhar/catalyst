@@ -11,19 +11,19 @@ Binding contract for session-health v0.7. Evals defined before SKILL.md or hooks
 
 ## Capability evals (12)
 
-### Per-turn signals (UserPromptSubmit hook)
+### Per-turn signals (UserPromptSubmit hook) — 7 evals
 
 | ID | Name | What it proves |
 |----|------|----------------|
-| 0  | warns-at-effective-50pct | Hook fired against a transcript estimated at ~55% of the *effective* window (model-aware, not raw advertised %) emits additionalContext with a "consider handoff WRITE" suggestion (warn level) |
-| 1  | force-at-effective-70pct | Hook fired against a transcript estimated at ~75% of the *effective* window emits additionalContext with a strong escalated urgency message |
+| 0  | warns-at-effective-50pct | Hook fired against `transcript-warn-effective.jsonl` (~76525 tok, above 70000 WARN threshold) emits additionalContext with `/catalyst:handoff reground`. Fixture is deliberately below the old 120000-tok threshold, proving recalibration. |
+| 1  | force-at-effective-70pct | Hook fired against `transcript-strong-effective.jsonl` (~109546 tok, above 98000 STRONG threshold) emits additionalContext with escalated urgency |
 | 2  | repeated-tool-call-detected | Hook fired against a transcript with 3 identical Bash commands in last 5 turns flags the loop with a "try different approach" suggestion |
 | 3  | stale-read-detected | Hook fired against a transcript where an Edit on file X happened more than 15 turns after the last Read of X emits a "re-Read X" suggestion |
 | 4  | contradiction-flagged | Hook fired against a transcript where a stated decision contradicts a PROJECT_STATE.md entry surfaces the conflict explicitly |
 | 5  | approaching-effective-window | Transcript at ~55% of a model's *effective* window triggers a per-turn degradation alert; old behavior (firing only at 75% of *advertised* window) is replaced — this eval proves the recalibrated threshold |
 | 6  | reground-recipe | A degradation alert's recommended next step contains the literal `/catalyst:handoff reground` |
 
-### Session-end patterns (Stop hook)
+### Session-end patterns (Stop hook) — 5 evals
 
 | ID | Name | What it proves |
 |----|------|----------------|
@@ -56,10 +56,10 @@ The old `session-degradation-watch` v0.6 thresholds were expressed as percentage
 
 `session-health` v0.7 recalibrates to fractions of the *effective* window:
 
-| Level | Old trigger | New trigger |
-|-------|-------------|-------------|
-| WARN  | 60% of advertised | ~0.50 of effective window |
-| STRONG | 85% of advertised | ~0.70 of effective window |
+| Level | Old trigger | New trigger | At advertised=200k |
+|-------|-------------|-------------|-------------------|
+| WARN  | 60% of advertised (120,000 tok) | 0.50 × effective window | 70,000 tok |
+| STRONG | 85% of advertised (170,000 tok) | 0.70 × effective window | 98,000 tok |
 
 Effective window is computed by the hook as: `effective = advertised_tokens × model_effective_fraction` where `model_effective_fraction` defaults to `0.70` (configurable). The char-count heuristic divides chars by 4 to estimate token usage.
 
@@ -82,8 +82,9 @@ Eval ID 6 (`reground-recipe`) asserts the literal string `/catalyst:handoff regr
 
 | Type | Used for |
 |------|----------|
-| Code | grep on hook stdout / `.claude/failure-patterns.log`, jq on `hookSpecificOutput.additionalContext`, file existence, string contains |
-| Model | Quality of recovery recipe text (specific, actionable, names next step); alert prioritization quality |
+| Code | grep on hook stdout / `.claude/failure-patterns.log`, jq on `hookSpecificOutput.additionalContext`, file existence, string contains, literal OR-lists |
+
+All leaf assertions bottom out in deterministic code checks (exact string match, file existence, jq parse). No Model grader is used — all assertions are code-gradeable.
 
 ---
 
@@ -102,7 +103,7 @@ Eval ID 6 (`reground-recipe`) asserts the literal string `/catalyst:handoff regr
 
 ## Coverage notes
 
-- `instruction-fade` and `context-drowning` (from failure-pattern-detector v0.5 eval-debt) are carried forward as v0.8 eval-debt. They require harder-to-fixture inputs and are not covered here.
+- `instruction-fade` and `context-drowning` (from failure-pattern-detector v0.5 eval-debt) are carried forward as v0.8 eval-debt with stub entries `deferred-01`/`deferred-02` in evals.json. They require harder-to-fixture inputs and are not covered here.
 - Live context-window monitoring against a real ongoing session is post-ship validation — fixtures simulate transcript shape only.
 - Token-counting accuracy uses char-count heuristic by default (chars ÷ 4). Real tiktoken comparison is post-ship manual verification.
 - PROJECT_STATE.md contradiction detection uses simple string match in v0.7; semantic detection deferred to v0.8+.
