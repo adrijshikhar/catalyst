@@ -176,7 +176,6 @@ if [ "$OVERRELIANCE_ON" = "1" ]; then
 
   if [ "$CONTENT_LEN" -ge "$MIN_BYTES" ]; then
     # Check whether ANY file was Read in the freshness window (not just claim files)
-    ANY_READ_SENTINEL="_any_"
     ANY_RECENT_READ=""
     if [ -f "$TRANSCRIPT_PATH" ]; then
       NOW_EPOCH=$(date -u +%s)

@@ -56,11 +56,11 @@ EVENT_POS=$(jq -n \
 OUT_POS=$(printf '%s' "$EVENT_POS" | \
   CATALYST_VERIFY_OVERRELIANCE=1 CLAUDE_PROJECT_DIR="$TMP" bash "$HOOK" 2>/dev/null) || true
 
-# Must contain caution text
-if echo "$OUT_POS" | grep -iEq "over-reliance|unverified|no evidence"; then
+# Must contain caution text — pin the exact prefix the hook emits
+if echo "$OUT_POS" | grep -q "Over-reliance caution:"; then
   echo "PASS positive: over-reliance caution present in output"
 else
-  echo "FAIL positive: expected over-reliance/unverified/no-evidence caution in output, got: $OUT_POS"
+  echo "FAIL positive: expected 'Over-reliance caution:' in output, got: $OUT_POS"
   fail=1
 fi
 
@@ -91,7 +91,7 @@ EVENT_NEG="$EVENT_POS"
 OUT_NEG=$(printf '%s' "$EVENT_NEG" | \
   CLAUDE_PROJECT_DIR="$TMP" bash "$HOOK" 2>/dev/null) || true
 
-if echo "$OUT_NEG" | grep -iEq "over-reliance|unverified|no evidence"; then
+if echo "$OUT_NEG" | grep -q "Over-reliance caution:"; then
   echo "FAIL negative: over-reliance caution emitted even when flag is OFF"
   fail=1
 else
@@ -119,7 +119,7 @@ EVENT_SMALL=$(jq -n \
 OUT_SMALL=$(printf '%s' "$EVENT_SMALL" | \
   CATALYST_VERIFY_OVERRELIANCE=1 CLAUDE_PROJECT_DIR="$TMP" bash "$HOOK" 2>/dev/null) || true
 
-if echo "$OUT_SMALL" | grep -iEq "over-reliance|unverified|no evidence"; then
+if echo "$OUT_SMALL" | grep -q "Over-reliance caution:"; then
   echo "FAIL small-content: over-reliance caution emitted for small content"
   fail=1
 else
@@ -152,11 +152,90 @@ EVENT_WITH_EVIDENCE=$(jq -n \
 OUT_WITH_EVIDENCE=$(printf '%s' "$EVENT_WITH_EVIDENCE" | \
   CATALYST_VERIFY_OVERRELIANCE=1 CLAUDE_PROJECT_DIR="$TMP" bash "$HOOK" 2>/dev/null) || true
 
-if echo "$OUT_WITH_EVIDENCE" | grep -iEq "over-reliance|unverified|no evidence"; then
+if echo "$OUT_WITH_EVIDENCE" | grep -q "Over-reliance caution:"; then
   echo "FAIL evidence-present: over-reliance caution emitted even though evidence was Read"
   fail=1
 else
   echo "PASS evidence-present: no over-reliance caution when recent Read evidence exists"
+fi
+
+# ---------------------------------------------------------------------------
+# Claim-rule deny regression — verify the existing gate still denies through
+# the refactored scan_evidence_for_any_read helper.
+#
+# The default config has a claim rule:
+#   {"writes_to": "test-results.json", "requires_read_of": ["test-output.log", ...]}
+#
+# Sub-test A (deny): Write to test-results.json, transcript has NO evidence
+#   Read of test-output.log (or any other required file), flag OFF (default).
+#   Expected: permissionDecision == "deny", exit 2 (caught via bash exit code).
+#
+# Sub-test B (allow): Same Write, but transcript includes a recent Read of
+#   test-output.log. Expected: hook allows through (exit 0, no deny in output).
+# ---------------------------------------------------------------------------
+
+# Sub-test A: claim deny — no evidence read
+TRANSCRIPT_CLAIM_DENY="$TMP/transcript_claim_deny.jsonl"
+cat > "$TRANSCRIPT_CLAIM_DENY" <<'EOF'
+{"type":"user","content":"run tests"}
+{"type":"assistant","content":"Done, writing results."}
+EOF
+
+EVENT_CLAIM_DENY=$(jq -n \
+  --arg tp "$TRANSCRIPT_CLAIM_DENY" \
+  '{
+    tool_name: "Write",
+    tool_input: {
+      file_path: "/workspace/test-results.json",
+      content: "{\"status\":\"all passed\",\"tests\":42}"
+    },
+    transcript_path: $tp,
+    session_id: "test-claim-deny"
+  }')
+
+HOOK_EXIT_CLAIM_DENY=0
+OUT_CLAIM_DENY=$(printf '%s' "$EVENT_CLAIM_DENY" | \
+  CLAUDE_PROJECT_DIR="$TMP" bash "$HOOK" 2>/dev/null) || HOOK_EXIT_CLAIM_DENY=$?
+
+DECISION_CLAIM_DENY=$(echo "$OUT_CLAIM_DENY" | jq -r '.hookSpecificOutput.permissionDecision // ""' 2>/dev/null || true)
+if [ "$DECISION_CLAIM_DENY" = "deny" ] && [ "$HOOK_EXIT_CLAIM_DENY" -eq 2 ]; then
+  echo "PASS claim-deny: permissionDecision is 'deny' and exit code is 2 (no evidence read)"
+else
+  echo "FAIL claim-deny: expected permissionDecision 'deny' + exit 2, got decision='$DECISION_CLAIM_DENY' exit=$HOOK_EXIT_CLAIM_DENY"
+  echo "  hook output: $OUT_CLAIM_DENY"
+  fail=1
+fi
+
+# Sub-test B: claim allow — evidence file WAS read recently
+TRANSCRIPT_CLAIM_ALLOW="$TMP/transcript_claim_allow.jsonl"
+NOW_TS_CLAIM=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+cat > "$TRANSCRIPT_CLAIM_ALLOW" <<EOF
+{"type":"tool_use","name":"Read","input":{"file_path":"/workspace/test-output.log"},"timestamp":"${NOW_TS_CLAIM}"}
+EOF
+
+EVENT_CLAIM_ALLOW=$(jq -n \
+  --arg tp "$TRANSCRIPT_CLAIM_ALLOW" \
+  '{
+    tool_name: "Write",
+    tool_input: {
+      file_path: "/workspace/test-results.json",
+      content: "{\"status\":\"all passed\",\"tests\":42}"
+    },
+    transcript_path: $tp,
+    session_id: "test-claim-allow"
+  }')
+
+HOOK_EXIT_CLAIM_ALLOW=0
+OUT_CLAIM_ALLOW=$(printf '%s' "$EVENT_CLAIM_ALLOW" | \
+  CLAUDE_PROJECT_DIR="$TMP" bash "$HOOK" 2>/dev/null) || HOOK_EXIT_CLAIM_ALLOW=$?
+
+DECISION_CLAIM_ALLOW=$(echo "$OUT_CLAIM_ALLOW" | jq -r '.hookSpecificOutput.permissionDecision // ""' 2>/dev/null || true)
+if [ "$HOOK_EXIT_CLAIM_ALLOW" -eq 0 ] && [ "$DECISION_CLAIM_ALLOW" != "deny" ]; then
+  echo "PASS claim-allow: hook allowed through when evidence Read is present (exit 0)"
+else
+  echo "FAIL claim-allow: expected allow (exit 0, no deny), got decision='$DECISION_CLAIM_ALLOW' exit=$HOOK_EXIT_CLAIM_ALLOW"
+  echo "  hook output: $OUT_CLAIM_ALLOW"
+  fail=1
 fi
 
 # ---------------------------------------------------------------------------
