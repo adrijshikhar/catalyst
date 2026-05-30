@@ -60,18 +60,20 @@ EDIT_MISMATCH_COUNT=2
 SPIRAL_COUNT=3
 
 if [ -f "$CONFIG_FILE" ]; then
-  ENABLED=$(jq -c '.enabled_patterns // ["repeated-tool-call","edit-mismatch","stale-read","recovery-spiral","instruction-fade","context-drowning"]' "$CONFIG_FILE")
-  REPEATED_COUNT=$(jq -r '.thresholds.repeated_tool_call_count // 3' "$CONFIG_FILE")
-  REPEATED_WINDOW=$(jq -r '.thresholds.repeated_tool_call_window_turns // 5' "$CONFIG_FILE")
-  EDIT_MISMATCH_COUNT=$(jq -r '.thresholds.edit_mismatch_count // 2' "$CONFIG_FILE")
-  SPIRAL_COUNT=$(jq -r '.thresholds.recovery_spiral_count // 3' "$CONFIG_FILE")
-  RAW_LOG=$(jq -r ".log_path // \"$PROJECT_DIR/.claude/session-health.log\"" "$CONFIG_FILE")
-  # Clamp log path inside PROJECT_DIR (hook convention).
-  case "$RAW_LOG" in
-    *..*) LOG_PATH="$PROJECT_DIR/.claude/session-health.log" ;;
-    "$PROJECT_DIR"/*) LOG_PATH="$RAW_LOG" ;;
-    *) LOG_PATH="$PROJECT_DIR/.claude/session-health.log" ;;
-  esac
+  {
+    ENABLED=$(jq -c '.enabled_patterns // ["repeated-tool-call","edit-mismatch","stale-read","recovery-spiral","instruction-fade","context-drowning"]' "$CONFIG_FILE" || echo '["repeated-tool-call","edit-mismatch","stale-read","recovery-spiral","instruction-fade","context-drowning"]')
+    REPEATED_COUNT=$(jq -r '.thresholds.repeated_tool_call_count // 3' "$CONFIG_FILE" || echo 3)
+    REPEATED_WINDOW=$(jq -r '.thresholds.repeated_tool_call_window_turns // 5' "$CONFIG_FILE" || echo 5)
+    EDIT_MISMATCH_COUNT=$(jq -r '.thresholds.edit_mismatch_count // 2' "$CONFIG_FILE" || echo 2)
+    SPIRAL_COUNT=$(jq -r '.thresholds.recovery_spiral_count // 3' "$CONFIG_FILE" || echo 3)
+    RAW_LOG=$(jq -r --arg d "$PROJECT_DIR/.claude/session-health.log" '.log_path // $d' "$CONFIG_FILE" || echo "$PROJECT_DIR/.claude/session-health.log")
+    # Clamp log path inside PROJECT_DIR (hook convention).
+    case "$RAW_LOG" in
+      *..*) LOG_PATH="$PROJECT_DIR/.claude/session-health.log" ;;
+      "$PROJECT_DIR"/*) LOG_PATH="$RAW_LOG" ;;
+      *) LOG_PATH="$PROJECT_DIR/.claude/session-health.log" ;;
+    esac
+  } || true
 fi
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

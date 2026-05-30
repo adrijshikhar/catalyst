@@ -58,17 +58,19 @@ CHECK_CONTRADICTION=1
 LOG_PATH="$PROJECT_DIR/.claude/session-health.log"
 
 if [ -f "$CONFIG_FILE" ]; then
-  REPEAT_COUNT=$(jq -r '.repeated_tool_call_count // 3' "$CONFIG_FILE")
-  REPEAT_WINDOW=$(jq -r '.repeated_tool_call_window_turns // 5' "$CONFIG_FILE")
-  STALE_TURNS=$(jq -r '.stale_read_max_turns // 15' "$CONFIG_FILE")
-  CHECK_CONTRADICTION=$(jq -r '.check_contradiction_with_project_state // true | if . then 1 else 0 end' "$CONFIG_FILE")
-  RAW_LOG=$(jq -r ".log_path // \"$PROJECT_DIR/.claude/session-health.log\"" "$CONFIG_FILE")
-  # Clamp log path inside PROJECT_DIR (hook convention: never write outside project dir).
-  case "$RAW_LOG" in
-    *..*) LOG_PATH="$PROJECT_DIR/.claude/session-health.log" ;;
-    "$PROJECT_DIR"/*) LOG_PATH="$RAW_LOG" ;;
-    *) LOG_PATH="$PROJECT_DIR/.claude/session-health.log" ;;
-  esac
+  {
+    REPEAT_COUNT=$(jq -r '.repeated_tool_call_count // 3' "$CONFIG_FILE" || echo 3)
+    REPEAT_WINDOW=$(jq -r '.repeated_tool_call_window_turns // 5' "$CONFIG_FILE" || echo 5)
+    STALE_TURNS=$(jq -r '.stale_read_max_turns // 15' "$CONFIG_FILE" || echo 15)
+    CHECK_CONTRADICTION=$(jq -r '.check_contradiction_with_project_state // true | if . then 1 else 0 end' "$CONFIG_FILE" || echo 1)
+    RAW_LOG=$(jq -r --arg d "$PROJECT_DIR/.claude/session-health.log" '.log_path // $d' "$CONFIG_FILE" || echo "$PROJECT_DIR/.claude/session-health.log")
+    # Clamp log path inside PROJECT_DIR (hook convention: never write outside project dir).
+    case "$RAW_LOG" in
+      *..*) LOG_PATH="$PROJECT_DIR/.claude/session-health.log" ;;
+      "$PROJECT_DIR"/*) LOG_PATH="$RAW_LOG" ;;
+      *) LOG_PATH="$PROJECT_DIR/.claude/session-health.log" ;;
+    esac
+  } || true
 fi
 
 # ── Signal 1 + 2: context level ───────────────────────────────────────────────
