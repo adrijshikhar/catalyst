@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -65,6 +66,34 @@ class TestRender(unittest.TestCase):
         obj["state"]["worktree"]["git_common_dir"] = ".git"
         out = hr.render(obj, current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
         self.assertNotIn("REPO MISMATCH", out)
+
+
+class TestKeyPathContainment(unittest.TestCase):
+    """_key_path refuses keys that escape the handoffs store (path traversal)."""
+
+    def _with_store(self, store: Path, key: str):
+        orig = hr._hp.handoffs_dir
+        hr._hp.handoffs_dir = lambda *a, **k: store
+        try:
+            return hr._key_path(key)
+        finally:
+            hr._hp.handoffs_dir = orig
+
+    def test_plain_key_resolves_inside_store(self):
+        with tempfile.TemporaryDirectory() as d:
+            store = Path(d)
+            got = self._with_store(store, "feat-jwt-expiry")
+            self.assertEqual(got, (store / "feat-jwt-expiry.json").resolve())
+
+    def test_traversal_key_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            store = Path(d) / "handoffs"
+            store.mkdir()
+            self.assertIsNone(self._with_store(store, "../../../etc/passwd"))
+
+    def test_absolute_key_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertIsNone(self._with_store(Path(d), "/etc/passwd"))
 
 
 if __name__ == "__main__":
