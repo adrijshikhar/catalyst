@@ -163,15 +163,27 @@ Bundled templates live in `skills/pipeline-templates/templates/<name>.md`. User-
 | Stage entries | Numbered list. Each stage names: role, parallel/sequential/background, inputs, expected output. Evaluator-role stages reference `evaluator-library` by domain. |
 | Anti-pattern | Don't modify bundled templates — save a user copy to `.claude/pipelines/` instead. Bundled changes will conflict on plugin update. |
 
-## Failure-pattern-detector conventions
+## Session-health conventions
 
-The Stop hook at `hooks/Stop-failure-pattern-detect.sh` composes with Tier 1's `Stop-commit-backstop.sh` — both fire, neither overwrites. Pattern detection logic lives entirely inside the hook (no separate detector binary).
+`session-health` merges `failure-pattern-detector` (v0.5) and `session-degradation-watch` (v0.6)
+into two composing hooks backed by a shared signal library.
+
+- `hooks/UserPromptSubmit-session-health.sh` — per-turn, composes with `UserPromptSubmit-orient.sh`
+- `hooks/Stop-session-health.sh` — session-end, composes with `Stop-commit-backstop.sh`
+- `hooks/lib/session-health-signals.sh` — shared POSIX bash + jq library (sourced, not executed)
+
+Both Stop hooks fire independently; neither's `additionalContext` overwrites the other.
 
 | Convention | Rule |
 |------------|------|
-| Log path | `.claude/failure-patterns.log` (configurable). Plain text, append-only, one line per detection. |
-| Recovery recipe | EVERY pattern emits a recipe naming the specific next step. Generic "try again" recipes are critique failures. |
-| Pattern addition | New patterns ship in the hook directly (POSIX bash + jq). Each gets an entry in `enabled_patterns` config + a SKILL.md row. |
+| Log path | `.claude/session-health.log` (configurable). Append-only, one line per alert/detection. |
+| Recovery recipe | EVERY alert and EVERY pattern detection names a specific next step. Generic "be careful" recipes are critique failures. |
+| Effective window | Thresholds use `effective = advertised × CATALYST_SH_EFFECTIVE_FRAC` (default 0.70). Warn at 0.50×eff, Strong at 0.70×eff. |
+| Signal ordering | Per-turn: context STRONG > context WARN > contradiction > stale-read > repeated-tool. One alert per turn — never pile up. |
+| Auto-recovery ban | The hook SUGGESTS; it never auto-calls handoff or modifies state. In-loop auto-recovery doesn't work (issue #60248). |
+| Token counting | Char-count heuristic (chars / 4). Opt-in tiktoken via `CATALYST_TIKTOKEN=1` + Python + tiktoken. |
+| Pattern addition | New patterns ship in `Stop-session-health.sh` + `session-health-signals.sh`. Each gets an entry in `enabled_patterns` config + a SKILL.md row. |
+| Composition | Both hooks compose additively. settings.json `.hooks.UserPromptSubmit` / `.hooks.Stop` are arrays — multiple entries fire in order. |
 
 ## Brain-bridge conventions
 
@@ -185,18 +197,7 @@ Bundled adapters live in `skills/brain-bridge/adapters/<backend>.sh`. Each is a 
 | Pointer-only rule | NEVER inline file content. Pointers only (file:line, ADR IDs, doc tags). Hard ban. |
 | Failure mode | Backend unreachable → exit non-zero AND print empty results JSON. Caller renders brief without `## Brain pointers` section (fail-open). |
 
-## Session-degradation-watch conventions
-
-The UserPromptSubmit hook at `hooks/UserPromptSubmit-session-degradation-watch.sh` composes with Tier 1's `UserPromptSubmit-orient.sh` — multiple UserPromptSubmit hooks fire on the same event; each adds its own `additionalContext`. Both shown.
-
-| Convention | Rule |
-|------------|------|
-| Signal ordering | Most urgent fires first: context FORCE > context STRONG > contradiction > stale read > repeated tool call > context WARN. One alert per turn — never pile up. |
-| Recommendation rule | EVERY alert names a specific next step (call handoff WRITE, re-Read X, try different approach). Generic "be careful" alerts are a critique failure. |
-| Auto-recovery ban | The hook SUGGESTS; it never auto-calls handoff or modifies state. In-loop auto-recovery doesn't work (issue #60248). |
-| Log path | `.claude/session-degradation.log` (configurable). Append-only, one line per alert. |
-| Token counting | Char-count heuristic by default (chars / 4). Opt-in tiktoken via `CATALYST_TIKTOKEN=1` env var + Python + tiktoken installed. |
-| Composition | UserPromptSubmit hooks compose additively. settings.json `.hooks.UserPromptSubmit` is an array — multiple entries fire in order. |
+*(Session-degradation-watch and failure-pattern-detector are retired. Their conventions are now unified under **Session-health conventions** above.)*
 
 ## Commands as thin wrappers
 

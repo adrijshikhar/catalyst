@@ -47,6 +47,10 @@ case "$ACTION" in
     fi
     cp "$HOOKS_SRC_DIR/$HOOK_FILE" "$HOOKS_DEST_DIR/$HOOK_FILE"
     chmod +x "$HOOKS_DEST_DIR/$HOOK_FILE"
+    # Copy the shared signal library if it exists (used by session-health hooks).
+    if [ -d "$HOOKS_SRC_DIR/lib" ]; then
+      cp -r "$HOOKS_SRC_DIR/lib" "$HOOKS_DEST_DIR/lib"
+    fi
 
     CMD="bash \$CLAUDE_PROJECT_DIR/.claude/hooks/$HOOK_FILE"
     # Claude Code settings.json hook schema:

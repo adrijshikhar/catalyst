@@ -99,8 +99,7 @@ _sh_strong_frac_pct() {
 
 # sh_count_tokens <transcript_file>
 # Estimates token count. Uses tiktoken when CATALYST_TIKTOKEN=1 and tiktoken
-# is importable; otherwise falls back to chars÷4 heuristic (same approach as
-# UserPromptSubmit-session-degradation-watch.sh v0.6).
+# is importable; otherwise falls back to chars÷4 heuristic.
 sh_count_tokens() {
   local transcript_file="$1"
   [ -f "$transcript_file" ] || { echo "0"; return 0; }
@@ -283,7 +282,7 @@ sh_detect_contradiction() {
 
 # sh_pattern_repeated_tool <transcript_file> <count_threshold> <window_turns>
 # Stop-hook variant: checks Bash/Read/Grep calls only (session-end scope,
-# ported verbatim from Stop-failure-pattern-detect.sh v0.5).
+# ported from failure-pattern-detector v0.5).
 # Prints "CMD COUNT" on match; returns 0 on match, 1 otherwise.
 sh_pattern_repeated_tool() {
   local transcript="$1"
@@ -333,7 +332,7 @@ sh_pattern_edit_mismatch() {
 # sh_pattern_stale_read_stop <transcript_file>
 # Stop-hook variant: detects the Write-between-Read-and-Edit stale pattern
 # (distinct from the per-turn gap-count stale-read in sh_detect_stale_read).
-# Ported verbatim from Stop-failure-pattern-detect.sh v0.5.
+# Ported from failure-pattern-detector v0.5.
 # Prints the file path on match; returns 0 on match, 1 otherwise.
 sh_pattern_stale_read_stop() {
   local transcript="$1"
@@ -404,7 +403,7 @@ sh_pattern_recovery_spiral() {
 
 # sh_pattern_instruction_fade <transcript_file>
 # Heuristic: same first 80 chars of a user message repeated ≥ 2 times within
-# the last 10 user turns. Ported verbatim from Stop-failure-pattern-detect.sh v0.5.
+# the last 10 user turns. Ported from failure-pattern-detector v0.5.
 # Prints the repeated instruction snippet on match; returns 0 on match, 1 otherwise.
 sh_pattern_instruction_fade() {
   local transcript="$1"
@@ -426,7 +425,7 @@ sh_pattern_instruction_fade() {
 
 # sh_pattern_context_drowning <transcript_file>
 # Heuristic: any tool_result whose content exceeds 10KB (10240 chars).
-# Ported verbatim from Stop-failure-pattern-detect.sh v0.5.
+# Ported from failure-pattern-detector v0.5.
 # Prints "TOOL_NAME:SIZE" on match; returns 0 on match, 1 otherwise.
 sh_pattern_context_drowning() {
   local transcript="$1"

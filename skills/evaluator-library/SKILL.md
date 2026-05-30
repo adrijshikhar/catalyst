@@ -77,7 +77,7 @@ The only config field honored by the dispatcher today is `pass_threshold` (defau
 ## Composition with other Catalyst skills
 
 - `handoff` PIPELINE mode invokes evaluator-library at Synthesize precondition stages. Anti-self-grade rule is reinforced.
-- `failure-pattern-detector` (ships in Tier 2 Task 5) will flag a `recovery-spiral` if you repeatedly re-dispatch the same evaluator on the same artifact without acting on the verdict — that's a signal you're stuck.
+- `session-health` will flag a `recovery-spiral` at session end if you repeatedly re-dispatch the same evaluator on the same artifact without acting on the verdict — that's a signal you're stuck.
 - `pipeline-templates` bundled templates reference evaluator-library by name for their evaluator stages.
 
 ## Model evolution

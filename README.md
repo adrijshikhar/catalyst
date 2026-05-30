@@ -96,10 +96,9 @@ Briefs are stored once per feature key in the **main worktree** (`<main>/.claude
 | [`verify-gate`](./skills/verify-gate/SKILL.md) | PreToolUse hook + skill that blocks "claim success" writes (test-results, build-status, deployment artifacts) unless the evidence file was Read first. Port of Anthropic's `verify-gate.sh` pattern. Solves optimistic completion bias. |
 | [`hook-builder`](./skills/hook-builder/SKILL.md) | Pre-built lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) that wire `handoff` into the session lifecycle. Turns Catalyst from explicit to ambient. Plus an authoring helper for new hooks. |
 | [`evaluator-library`](./skills/evaluator-library/SKILL.md) | 6 bundled domain rubrics (code-quality, ui-design, prose, security, performance, accessibility) dispatched via a shared brief builder that enforces anti-self-grade. Composes with handoff PIPELINE evaluator stages. |
-| [`failure-pattern-detector`](./skills/failure-pattern-detector/SKILL.md) | Stop hook + skill that scans the session at end-of-session for 6 failure patterns (instruction-fade, edit-mismatch, stale-read, repeated-tool-call, recovery-spiral, context-drowning) and surfaces each with a specific recovery recipe. |
 | [`pipeline-templates`](./skills/pipeline-templates/SKILL.md) | 3 bundled executable pipeline templates (audit-then-fix, research-plan-implement-review, parallel-review-synthesize) + `/pipeline run / list / save / --dry-run`. |
 | [`brain-bridge`](./skills/brain-bridge/SKILL.md) | MCP adapter wrapper that pulls Company Brain context into handoff PIPELINE briefs as pointers — never inlined content. 3 bundled adapters. Configurable token budget + relevance threshold. |
-| [`session-degradation-watch`](./skills/session-degradation-watch/SKILL.md) | UserPromptSubmit hook + skill that monitors 4 signals (context %, repeated tool call, stale read, contradiction with PROJECT_STATE) every turn and surfaces the most urgent alert. Composes additively with the orient hook. |
+| [`session-health`](./skills/session-health/SKILL.md) | Two-timing detector: per-turn UserPromptSubmit hook monitors 4 degradation signals with recalibrated effective-window thresholds (warn at 50% of effective window, strong at 70%), and session-end Stop hook scans for 6 named failure patterns (instruction-fade, edit-mismatch, stale-read, repeated-tool-call, recovery-spiral, context-drowning) with recovery recipes. |
 
 More skills land here as the harness matures. Roadmap focuses on patterns the Anthropic framework names: sprint contracts, GAN-style iterate loops, evaluator-generator separation, live application testing, context-budget watchers.
 
@@ -119,10 +118,10 @@ Catalyst maps directly to Anthropic's primitives:
 | Evidence-first writes (verify-gate.sh) | `verify-gate` skill |
 | Lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) | `hook-builder` skill |
 | Pre-built evaluator rubrics (code/ui/prose/security/perf/a11y) | `evaluator-library` skill |
-| End-of-session failure-pattern surfacing | `failure-pattern-detector` skill |
+| End-of-session failure-pattern surfacing | `session-health` skill (Stop hook) |
 | Executable saved pipeline templates | `pipeline-templates` skill |
 | Brain / knowledge-layer context injection (MCP) | `brain-bridge` skill |
-| Real-time degradation surfacing | `session-degradation-watch` skill |
+| Real-time degradation surfacing | `session-health` skill (UserPromptSubmit hook) |
 
 ## Install
 
