@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" width="104" height="104" alt="Catalyst logo"/>
+</p>
+
 <h1 align="center">Catalyst</h1>
 
 <p align="center">

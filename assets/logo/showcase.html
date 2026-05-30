@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Catalyst — logo variants</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin:0; font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         background:#0b0d12; color:#e6e8ee; padding:40px; }
+  h1 { font-weight:700; letter-spacing:-.02em; }
+  p.sub { color:#9aa3b2; margin-top:-8px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:24px; margin-top:32px; }
+  .card { background:#13161d; border:1px solid #232734; border-radius:16px; padding:24px; transition:transform .15s,border-color .15s; }
+  .card:hover { transform:translateY(-4px); border-color:#4F8CFF; }
+  .frames { display:flex; align-items:center; gap:20px; }
+  .frame { width:96px; height:96px; display:grid; place-items:center; border-radius:12px; }
+  .light { background:#ffffff; }
+  .dark  { background:#0b0d12; border:1px solid #232734; }
+  .frame img { width:64px; height:64px; }
+  .name { margin-top:18px; font-weight:600; }
+  .why { color:#9aa3b2; font-size:13.5px; margin-top:4px; }
+  .tag { display:inline-block; font-size:11px; color:#8B5CF6; border:1px solid #2c2740; border-radius:6px; padding:1px 7px; margin-top:10px; }
+</style>
+</head>
+<body>
+  <h1>Catalyst — logo variants</h1>
+  <p class="sub">6 geometric marks, each on light + dark. Gradient #4F8CFF → #8B5CF6.</p>
+  <div class="grid">
+    <div class="card">
+      <div class="frames"><div class="frame light"><img src="1-catalytic-c.svg"/></div><div class="frame dark"><img src="1-catalytic-c.svg"/></div></div>
+      <div class="name">1 · Catalytic C</div>
+      <div class="why">Open reaction ring spells the "C"; node + sparks at the active gap = acceleration. Most brand-literal.</div>
+      <span class="tag">monogram</span>
+    </div>
+    <div class="card">
+      <div class="frames"><div class="frame light"><img src="2-reaction-node.svg"/></div><div class="frame dark"><img src="2-reaction-node.svg"/></div></div>
+      <div class="name">2 · Reaction node</div>
+      <div class="why">Reactants converge on an unconsumed core. Reads as "connective tissue" / hub. Symmetric, app-icon friendly.</div>
+      <span class="tag">network</span>
+    </div>
+    <div class="card">
+      <div class="frames"><div class="frame light"><img src="3-alembic.svg"/></div><div class="frame dark"><img src="3-alembic.svg"/></div></div>
+      <div class="name">3 · Alembic</div>
+      <div class="why">Chemistry flask with a rising spark. Most literal "catalyst" metaphor; least abstract.</div>
+      <span class="tag">chemistry</span>
+    </div>
+    <div class="card">
+      <div class="frames"><div class="frame light"><img src="4-accelerator.svg"/></div><div class="frame dark"><img src="4-accelerator.svg"/></div></div>
+      <div class="name">4 · Accelerator</div>
+      <div class="why">Fading chevrons + lead node = motion/acceleration. Clean, but generic (play/forward connotation).</div>
+      <span class="tag">motion</span>
+    </div>
+    <div class="card">
+      <div class="frames"><div class="frame light"><img src="5-molecule-spark.svg"/></div><div class="frame dark"><img src="5-molecule-spark.svg"/></div></div>
+      <div class="name">5 · Molecule spark</div>
+      <div class="why">Benzene-style ring of bond nodes with a central spark. Chemistry + system, denser at small sizes.</div>
+      <span class="tag">molecule</span>
+    </div>
+    <div class="card">
+      <div class="frames"><div class="frame light"><img src="6-catalytic-cycle.svg"/></div><div class="frame dark"><img src="6-catalytic-cycle.svg"/></div></div>
+      <div class="name">6 · Catalytic cycle</div>
+      <div class="why">Looping arrow = regenerated, not consumed (the literal definition) with a node on the path.</div>
+      <span class="tag">cycle</span>
+    </div>
+  </div>
+</body>
+</html>
