@@ -32,11 +32,9 @@ tier-3 (no-git fallback) uses `<store>/HANDOFF.json`. READ renders via `python3 
 | 13 | fresh-session-resumes-from-brief | Real-world dogfood: subagent reads `catalyst-dogfood-build.json` via `handoff-render.py`, quotes the next acceptance check, surfaces locked decisions + a rejected path, and lists the dogfood plan steps in order. Anti-context-bleed check: PROJECT_STATE.md is NOT auto-read. |
 | — | typed-brief-validates | A WRITE-produced `<key>.json` passes `python3 scripts/handoff-validate.py <key>.json` exit-0 (required fields incl. worktree provenance). Asserted inline in evals 0, 1, 4. |
 
-## Regression evals (1)
+## Regression evals (0)
 
-| ID | Name | Baseline |
-|----|------|----------|
-| 12 | regression-v0.2-legacy-mode | v0.2 SKILL.md snapshot in `skills/handoff-workspace/v0.2-snapshot/` — v0.2 must still produce a working brief at `.claude/HANDOFF.md` in legacy mode (markdown format; this regression eval is the ONLY place `.md` brief paths appear — they are intentionally preserved to confirm the v0.2 path still works) |
+None. The former `regression-v0.2-legacy-mode` eval was removed in the typed-brief migration: legacy markdown briefs are **dropped pre-1.0** (no external users), so there is no legacy `.md` behavior left to guard. Briefs are typed JSON (`<store>/<key>.json`); the single-slot fallback is `HANDOFF.json`, covered by capability eval 3.
 
 ---
 
@@ -45,7 +43,6 @@ tier-3 (no-git fallback) uses `<store>/HANDOFF.json`. READ renders via `python3 
 | Class | Metric | Threshold |
 |-------|--------|-----------|
 | Capability evals (13) | pass@3 | ≥ 0.90 |
-| Regression eval (1) | pass^3 | = 1.00 (release-critical) |
 | All combined | pass@1 | ≥ 0.75 |
 
 pass@3 = at least one of three independent dispatches satisfies all assertions for the eval. pass^3 = all three runs satisfy all assertions.

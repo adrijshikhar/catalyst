@@ -6,7 +6,7 @@
       "id": 0,
       "name": "write-tier-2-branch",
       "category": "capability",
-      "prompt": "Current branch is `feat/jwt-expiry` (read `.git-HEAD` if you need to confirm). The session has been debugging the JWT expiry off-by-one bug — switched `<` to `<=`, ran `pnpm test src/auth/`, 4 of 6 pass, 2 clock-skew tests fail at auth.spec.ts:42-78. Decisions in force: jose lib (not jsonwebtoken), Date.now() (not new Date()), `<=` comparison. Open risk: clock skew. Next acceptance check: 6/6 pass after adding a leeway parameter.\n\nThis is the first handoff for this project (no PROJECT_STATE.md exists yet). Write the handoff now, then explain which key tier you used and why.\n\nWrite outputs under `.claude/` at the current working directory.",
+      "prompt": "Current branch is `feat/jwt-expiry` (read `.git-HEAD` if you need to confirm). The session has been debugging the JWT expiry off-by-one bug \u2014 switched `<` to `<=`, ran `pnpm test src/auth/`, 4 of 6 pass, 2 clock-skew tests fail at auth.spec.ts:42-78. Decisions in force: jose lib (not jsonwebtoken), Date.now() (not new Date()), `<=` comparison. Open risk: clock skew. Next acceptance check: 6/6 pass after adding a leeway parameter.\n\nThis is the first handoff for this project (no PROJECT_STATE.md exists yet). Write the handoff now, then explain which key tier you used and why.\n\nWrite outputs under `.claude/` at the current working directory.",
       "files": [
         {
           "path": ".git-HEAD",
@@ -14,7 +14,7 @@
         }
       ],
       "assertions": [
-        "Brief was written to .claude/handoffs/feat-jwt-expiry.json (tier 2 — branch sanitized)",
+        "Brief was written to .claude/handoffs/feat-jwt-expiry.json (tier 2 \u2014 branch sanitized)",
         "Brief was NOT written to .claude/handoffs/HANDOFF.json (tier 3 should not be used)",
         "The written .claude/handoffs/feat-jwt-expiry.json is valid JSON with schema_version '1' and key 'feat-jwt-expiry'",
         "`python3 scripts/handoff-validate.py .claude/handoffs/feat-jwt-expiry.json` exits 0 (WRITE-gate passes)",
@@ -31,10 +31,10 @@
       "id": 1,
       "name": "write-tier-3-legacy-fallback",
       "category": "capability",
-      "prompt": "There is no git repository here. Treat this working directory as plain filesystem only — do NOT run git commands. The session has been refactoring a logger; cleaned up 4 files. Next acceptance: no console.log in src/. Write the handoff now and explain which tier you used.\n\nWrite outputs under `.claude/` at the current working directory.",
+      "prompt": "There is no git repository here. Treat this working directory as plain filesystem only \u2014 do NOT run git commands. The session has been refactoring a logger; cleaned up 4 files. Next acceptance: no console.log in src/. Write the handoff now and explain which tier you used.\n\nWrite outputs under `.claude/` at the current working directory.",
       "files": [],
       "assertions": [
-        "Brief was written to .claude/handoffs/HANDOFF.json (tier 3 — legacy single-slot fallback)",
+        "Brief was written to .claude/handoffs/HANDOFF.json (tier 3 \u2014 legacy single-slot fallback)",
         "Brief was NOT written to .claude/handoffs/<branch>.json (no feature key resolved)",
         "The written .claude/handoffs/HANDOFF.json is valid JSON with schema_version '1' and key 'HANDOFF'",
         "`python3 scripts/handoff-validate.py .claude/handoffs/HANDOFF.json` exits 0 (WRITE-gate passes)",
@@ -76,7 +76,7 @@
       "id": 3,
       "name": "read-legacy-fallback",
       "category": "capability",
-      "prompt": "Fresh session. There is only a legacy-slot brief at `.claude/handoffs/HANDOFF.json` — no branch-keyed files exist. Read it via `python3 scripts/handoff-render.py --file .claude/handoffs/HANDOFF.json` (or read the JSON directly) and write a short `resume_summary.md` with: next acceptance check, files to read first, and a one-line statement that this is a single-slot (HANDOFF key) brief.",
+      "prompt": "Fresh session. There is only a legacy-slot brief at `.claude/handoffs/HANDOFF.json` \u2014 no branch-keyed files exist. Read it via `python3 scripts/handoff-render.py --file .claude/handoffs/HANDOFF.json` (or read the JSON directly) and write a short `resume_summary.md` with: next acceptance check, files to read first, and a one-line statement that this is a single-slot (HANDOFF key) brief.",
       "files": [
         {
           "path": ".claude/handoffs/HANDOFF.json",
@@ -95,7 +95,7 @@
       "id": 4,
       "name": "recover-degraded",
       "category": "capability",
-      "prompt": "Context has degraded. I keep re-reading files and contradicting earlier decisions. Current branch is `feat/jwt-expiry`. Reconstruct a fresh brief at the right location using whatever you can read from `.claude/` and from `git log` (treat the assumed output below as truth):\n\n```\ngit log --oneline -10\n  a4c7b2f fix(auth): switch expiry comparison to <= for boundary case\n  9e1d0aa feat(auth): migrate from jsonwebtoken to jose\ngit branch --show-current  →  feat/jwt-expiry\n```\n\nThe existing brief at `.claude/handoffs/feat-jwt-expiry.json` is stale — overwrite it with a freshly validated typed brief.\n\nDo NOT prepend anything to PROJECT_STATE.md — recovery is re-assembly, not fresh signal. Tell me what to do after you finish.",
+      "prompt": "Context has degraded. I keep re-reading files and contradicting earlier decisions. Current branch is `feat/jwt-expiry`. Reconstruct a fresh brief at the right location using whatever you can read from `.claude/` and from `git log` (treat the assumed output below as truth):\n\n```\ngit log --oneline -10\n  a4c7b2f fix(auth): switch expiry comparison to <= for boundary case\n  9e1d0aa feat(auth): migrate from jsonwebtoken to jose\ngit branch --show-current  \u2192  feat/jwt-expiry\n```\n\nThe existing brief at `.claude/handoffs/feat-jwt-expiry.json` is stale \u2014 overwrite it with a freshly validated typed brief.\n\nDo NOT prepend anything to PROJECT_STATE.md \u2014 recovery is re-assembly, not fresh signal. Tell me what to do after you finish.",
       "files": [
         {
           "path": ".git-HEAD",
@@ -107,7 +107,7 @@
         },
         {
           "path": ".claude/PROJECT_STATE.md",
-          "content": "# Project state — narrative log\n\n## 2026-05-23 — [feat-jwt-expiry] off-by-one fix\n### Decisions\n- Use `Date.now()` (not new Date()) — allocation in hot path\n- Use `<=` not `<` — exact-boundary tokens were rejected\n- Lib is `jose` not `jsonwebtoken`\n"
+          "content": "# Project state \u2014 narrative log\n\n## 2026-05-23 \u2014 [feat-jwt-expiry] off-by-one fix\n### Decisions\n- Use `Date.now()` (not new Date()) \u2014 allocation in hot path\n- Use `<=` not `<` \u2014 exact-boundary tokens were rejected\n- Lib is `jose` not `jsonwebtoken`\n"
         }
       ],
       "assertions": [
@@ -122,12 +122,12 @@
       "id": 5,
       "name": "brief-subagent-mode",
       "category": "capability",
-      "prompt": "Don't dispatch a subagent — just produce the BRIEF that you would pass to one. The subagent's subtask is: 'Audit the JWT verify call sites in src/auth/middleware.ts and src/auth/verify.ts for missing leeway parameter.' Decisions in force: jose (not jsonwebtoken), `<=` not `<`, Date.now() ms. Rejected: new Date() (alloc in hot path). The subagent must NOT read PROJECT_STATE.md.\n\nWrite the rendered brief as the literal content of a file `brief.md` in the current directory. Do not also write a HANDOFF.json or modify PROJECT_STATE.md.",
+      "prompt": "Don't dispatch a subagent \u2014 just produce the BRIEF that you would pass to one. The subagent's subtask is: 'Audit the JWT verify call sites in src/auth/middleware.ts and src/auth/verify.ts for missing leeway parameter.' Decisions in force: jose (not jsonwebtoken), `<=` not `<`, Date.now() ms. Rejected: new Date() (alloc in hot path). The subagent must NOT read PROJECT_STATE.md.\n\nWrite the rendered brief as the literal content of a file `brief.md` in the current directory. Do not also write a HANDOFF.json or modify PROJECT_STATE.md.",
       "files": [],
       "assertions": [
         "brief.md exists in the working directory",
         "brief.md is 30 lines or fewer",
-        "brief.md does NOT contain the string '# Project state — narrative log' (no PROJECT_STATE inlined)",
+        "brief.md does NOT contain the string '# Project state \u2014 narrative log' (no PROJECT_STATE inlined)",
         "brief.md names the subtask (audit verify call sites)",
         "brief.md names at least one rejected path (new Date())",
         "brief.md names at least one file to read (middleware.ts or verify.ts)",
@@ -140,7 +140,7 @@
       "id": 6,
       "name": "pipeline-parallel",
       "category": "capability",
-      "prompt": "Audit JWT auth for the clock-skew bug AND the rate-limiting on the login endpoint at the same time. They are independent — different files (`src/auth/middleware.ts` vs `src/middleware/rate-limit.ts`). Then plan how to fix both.\n\nUse PIPELINE mode. Surface your decomposition + routing plan in your chat response before dispatching anything. Then dispatch the subagents. After they return, synthesize one combined plan and write it to `combined-plan.md` in the working directory. Do not actually edit the source files (they don't exist in this eval).",
+      "prompt": "Audit JWT auth for the clock-skew bug AND the rate-limiting on the login endpoint at the same time. They are independent \u2014 different files (`src/auth/middleware.ts` vs `src/middleware/rate-limit.ts`). Then plan how to fix both.\n\nUse PIPELINE mode. Surface your decomposition + routing plan in your chat response before dispatching anything. Then dispatch the subagents. After they return, synthesize one combined plan and write it to `combined-plan.md` in the working directory. Do not actually edit the source files (they don't exist in this eval).",
       "files": [],
       "assertions": [
         "Chat response contains an explicit 'Pipeline plan:' (or equivalent header) preamble before dispatching",
@@ -156,7 +156,7 @@
       "id": 7,
       "name": "pipeline-sequential",
       "category": "capability",
-      "prompt": "Run a 3-stage sequential pipeline: (1) research how `jose`'s leeway option works (research only — produce findings as a `research.md` file), (2) plan how to integrate it into our middleware (produce `plan.md`), (3) implement the change as a unified diff (produce `change.diff`). Each stage's brief must reference the prior stage's output by pointer — not inline content.\n\nDispatch via PIPELINE mode. Write all three artifacts in the working directory.",
+      "prompt": "Run a 3-stage sequential pipeline: (1) research how `jose`'s leeway option works (research only \u2014 produce findings as a `research.md` file), (2) plan how to integrate it into our middleware (produce `plan.md`), (3) implement the change as a unified diff (produce `change.diff`). Each stage's brief must reference the prior stage's output by pointer \u2014 not inline content.\n\nDispatch via PIPELINE mode. Write all three artifacts in the working directory.",
       "files": [],
       "assertions": [
         "Three subagents were dispatched serially (not all in parallel)",
@@ -172,7 +172,7 @@
       "id": 8,
       "name": "pipeline-synthesis-discipline",
       "category": "capability",
-      "prompt": "Run three parallel reviews on a hypothetical diff at src/auth/middleware.ts (which doesn't actually exist — produce mock reports based on plausible findings): security review, performance review, correctness review. Each subagent's brief must scope to exactly one domain. Combine the findings into ONE structured report with a unified severity scale. Save as `combined-review.md` in the working directory.",
+      "prompt": "Run three parallel reviews on a hypothetical diff at src/auth/middleware.ts (which doesn't actually exist \u2014 produce mock reports based on plausible findings): security review, performance review, correctness review. Each subagent's brief must scope to exactly one domain. Combine the findings into ONE structured report with a unified severity scale. Save as `combined-review.md` in the working directory.",
       "files": [],
       "assertions": [
         "Three parallel subagents were dispatched",
@@ -187,7 +187,7 @@
       "id": 9,
       "name": "pipeline-abort-trivial",
       "category": "capability",
-      "prompt": "Rename the variable `expirCheck` to `expiryCheck` in `src/auth/middleware.ts`. (The file doesn't exist — just describe what you would do, do not actually edit.)",
+      "prompt": "Rename the variable `expirCheck` to `expiryCheck` in `src/auth/middleware.ts`. (The file doesn't exist \u2014 just describe what you would do, do not actually edit.)",
       "files": [],
       "assertions": [
         "Zero Agent tool invocations (no subagent was dispatched)",
@@ -200,7 +200,7 @@
       "id": 10,
       "name": "pipeline-anti-self-grade",
       "category": "capability",
-      "prompt": "Run a pipeline with a generator and an evaluator. The generator writes a short markdown explainer about JWT clock-skew (save to `explainer.md`). The evaluator scores the explainer on 4 axes (accuracy, clarity, completeness, brevity) on a 1-5 scale and writes the result to `eval-report.md`. The evaluator MUST be a separate subagent with fresh context — it must NOT see the generator's transcript, only the contract you negotiated upfront and the resulting explainer.md file. Negotiate the sprint contract (scope + success criteria) before dispatching the generator, and persist it as `contract.md`.",
+      "prompt": "Run a pipeline with a generator and an evaluator. The generator writes a short markdown explainer about JWT clock-skew (save to `explainer.md`). The evaluator scores the explainer on 4 axes (accuracy, clarity, completeness, brevity) on a 1-5 scale and writes the result to `eval-report.md`. The evaluator MUST be a separate subagent with fresh context \u2014 it must NOT see the generator's transcript, only the contract you negotiated upfront and the resulting explainer.md file. Negotiate the sprint contract (scope + success criteria) before dispatching the generator, and persist it as `contract.md`.",
       "files": [],
       "assertions": [
         "contract.md exists (sprint contract was created before generator dispatch)",
@@ -216,13 +216,13 @@
       "id": 11,
       "name": "pipeline-gan-loop",
       "category": "capability",
-      "prompt": "Run a GAN-inspired iteration loop on a subjective task: write a one-paragraph hook for a blog post titled 'Why your /compact is making things worse'. The evaluator scores on (a) interest hook, (b) accuracy, (c) brevity, each 1-5; threshold = ≥4 on all three. Loop up to 3 iterations. Save each iteration's artifact as `hook-iter-N.md` and each evaluation as `score-iter-N.md`. The final accepted artifact goes to `hook-final.md`. If the loop hits 3 iterations without converging, surface that to me and save the last artifact as `hook-final.md` anyway.",
+      "prompt": "Run a GAN-inspired iteration loop on a subjective task: write a one-paragraph hook for a blog post titled 'Why your /compact is making things worse'. The evaluator scores on (a) interest hook, (b) accuracy, (c) brevity, each 1-5; threshold = \u22654 on all three. Loop up to 3 iterations. Save each iteration's artifact as `hook-iter-N.md` and each evaluation as `score-iter-N.md`. The final accepted artifact goes to `hook-final.md`. If the loop hits 3 iterations without converging, surface that to me and save the last artifact as `hook-final.md` anyway.",
       "files": [],
       "assertions": [
-        "At least one hook-iter-N.md and score-iter-N.md exist (1 ≤ N ≤ 3)",
+        "At least one hook-iter-N.md and score-iter-N.md exist (1 \u2264 N \u2264 3)",
         "hook-final.md exists",
         "Generator and evaluator were separate Agent invocations on each iteration",
-        "If loop completed before 3 iterations, the final score-iter-N.md shows all axes ≥4",
+        "If loop completed before 3 iterations, the final score-iter-N.md shows all axes \u22654",
         "Each iteration's evaluator critique was specific and actionable (not generic praise)",
         "If loop reached 3 iterations without converging, orchestrator surfaced the stall to user"
       ]
@@ -231,7 +231,7 @@
       "id": 13,
       "name": "fresh-session-resumes-from-brief",
       "category": "capability",
-      "prompt": "You are starting a fresh Claude Code session in this project. A typed handoff brief exists at .claude/handoffs/catalyst-dogfood-build.json. The user just asked you to resume.\n\nFollow the handoff skill's READ mode procedure EXACTLY:\n1. Run `python3 scripts/handoff-render.py catalyst-dogfood-build` to render the brief (or read .claude/handoffs/catalyst-dogfood-build.json directly).\n2. Heed any BRANCH MISMATCH warning (current branch 'main' matches the brief's branch).\n3. Note the files listed under files_read_first IF they are referenced in your immediate next action (just list them; don't actually read everything since most don't exist in this eval fixture).\n4. Do NOT auto-read .claude/PROJECT_STATE.md — the brief's files_skip list says it's historical only.\n5. Confirm back: (a) the next acceptance check verbatim, (b) the top 3 decisions still in force from the state packet, (c) one rejected path you must not re-litigate, (d) the first 3 actions in the dogfood plan.\n\nWrite your full response to `resume_response.md` in the current working directory.",
+      "prompt": "You are starting a fresh Claude Code session in this project. A typed handoff brief exists at .claude/handoffs/catalyst-dogfood-build.json. The user just asked you to resume.\n\nFollow the handoff skill's READ mode procedure EXACTLY:\n1. Run `python3 scripts/handoff-render.py catalyst-dogfood-build` to render the brief (or read .claude/handoffs/catalyst-dogfood-build.json directly).\n2. Heed any BRANCH MISMATCH warning (current branch 'main' matches the brief's branch).\n3. Note the files listed under files_read_first IF they are referenced in your immediate next action (just list them; don't actually read everything since most don't exist in this eval fixture).\n4. Do NOT auto-read .claude/PROJECT_STATE.md \u2014 the brief's files_skip list says it's historical only.\n5. Confirm back: (a) the next acceptance check verbatim, (b) the top 3 decisions still in force from the state packet, (c) one rejected path you must not re-litigate, (d) the first 3 actions in the dogfood plan.\n\nWrite your full response to `resume_response.md` in the current working directory.",
       "files": [
         {
           "path": ".claude/handoffs/catalyst-dogfood-build.json",
@@ -248,19 +248,6 @@
         "resume_response.md mentions hook-builder install (dogfood plan step 2)",
         "resume_response.md mentions verify-gate install (dogfood plan step 3)",
         "PROJECT_STATE.md was NOT created or read (file does NOT exist in working dir after eval)"
-      ]
-    },
-    {
-      "id": 12,
-      "name": "regression-v0.2-legacy-mode",
-      "category": "regression",
-      "prompt": "Same as eval 0 (write-tier-2-branch) but run against the v0.2 snapshot SKILL.md instead of the v0.3 SKILL.md. Confirm v0.2 still produces a working brief (will be at .claude/HANDOFF.md — that's correct for v0.2). This validates we haven't broken the legacy-mode path.",
-      "files": [],
-      "assertions": [
-        "Brief was written to .claude/HANDOFF.md (v0.2 only knew the single-slot path)",
-        "Brief contains the v0.2 state packet structure (branch, diff, tests, decisions, rejected, risks, next acceptance)",
-        "PROJECT_STATE.md was created or appended",
-        "Brief is under 200 lines"
       ]
     }
   ]
