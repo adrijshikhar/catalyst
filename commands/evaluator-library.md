@@ -7,7 +7,7 @@ Invoke the `evaluator-library` skill.
 Recognized sub-commands (parse `$ARGUMENT`):
 
 - `list` — List the available domains. Read `skills/evaluator-library/evaluators/*.md` (bundled) and `.claude/evaluator-library/evaluators/*.md` (user) and print the union with bundled / user labels.
-- `run <domain> <artifact>` — Run `bash $CLAUDE_PROJECT_DIR/scripts/dispatch-evaluator.sh <domain> <artifact>`, capture the brief, then dispatch a fresh Agent subagent with that brief. Wait for the evaluator's eval-report.md to land at `.claude/eval-reports/<domain>-<ts>.md`. Print the verdict line back to the user.
+- `run <domain> <artifact>` — Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/dispatch-evaluator.sh <domain> <artifact>`, capture the brief, then dispatch a fresh Agent subagent with that brief. Wait for the evaluator's eval-report.md to land at `.claude/eval-reports/<domain>-<ts>.md`. Print the verdict line back to the user.
 - `run <domain> <artifact> --contract <path>` — Same as above but pass the contract path as the third argument to dispatch-evaluator.sh.
 - `show-rubric <domain>` — Print the contents of `skills/evaluator-library/evaluators/<domain>.md` (preferring user override at `.claude/evaluator-library/evaluators/<domain>.md` if present).
 

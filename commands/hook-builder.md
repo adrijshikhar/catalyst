@@ -11,9 +11,9 @@ Recognized sub-commands (parse `$ARGUMENT`):
   - `SessionStart` → `SessionStart-handoff-read.sh`
   - `Stop` → `Stop-commit-backstop.sh`
   - `UserPromptSubmit` → `UserPromptSubmit-orient.sh`
-  Run `bash $CLAUDE_PROJECT_DIR/scripts/install-hooks.sh install <event> <hook-file>`.
+  Run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-hooks.sh install <event> <hook-file>`.
 - `install --all` — Install all four lifecycle hooks via four sequential calls.
-- `uninstall <event>` — `bash $CLAUDE_PROJECT_DIR/scripts/install-hooks.sh uninstall <event> <hook-file>`
+- `uninstall <event>` — `bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-hooks.sh uninstall <event> <hook-file>`
 - `uninstall --all` — Remove all four.
 - `new <event> <name>` — Generate `hooks/<event>-<name>.sh` from the canonical bash template (set -euo pipefail, stdin read, jq check, TODO marker).
 - `lint <path>` — Read the file and check: matcher patterns (warn if `.*` or empty), `set -euo pipefail` present, `command -v jq` check, fail-open default, naming convention (filename starts with recognized event prefix), `bash -n` syntax.

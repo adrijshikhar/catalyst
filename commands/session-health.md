@@ -8,8 +8,8 @@ Parse `$ARGUMENT` to determine which sub-command to run:
 
 - `install` — Install both hooks into `.claude/settings.json`. Run:
   ```
-  bash $CLAUDE_PROJECT_DIR/scripts/install-hooks.sh install UserPromptSubmit UserPromptSubmit-session-health.sh
-  bash $CLAUDE_PROJECT_DIR/scripts/install-hooks.sh install Stop Stop-session-health.sh
+  bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-hooks.sh install UserPromptSubmit UserPromptSubmit-session-health.sh
+  bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-hooks.sh install Stop Stop-session-health.sh
   ```
   Also copy `hooks/lib/` to `.claude/hooks/lib/` so the shared signal library is available.
   Report which files were copied and which settings.json entries were added.
@@ -17,8 +17,8 @@ Parse `$ARGUMENT` to determine which sub-command to run:
 
 - `uninstall` — Remove both hooks. Run:
   ```
-  bash $CLAUDE_PROJECT_DIR/scripts/install-hooks.sh uninstall UserPromptSubmit UserPromptSubmit-session-health.sh
-  bash $CLAUDE_PROJECT_DIR/scripts/install-hooks.sh uninstall Stop Stop-session-health.sh
+  bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-hooks.sh uninstall UserPromptSubmit UserPromptSubmit-session-health.sh
+  bash ${CLAUDE_PLUGIN_ROOT}/scripts/install-hooks.sh uninstall Stop Stop-session-health.sh
   ```
 
 - `status` — Print the last 20 entries from `.claude/session-health.log`. If the log
