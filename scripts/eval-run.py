@@ -23,6 +23,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# Snapshots are committed, so transcripts must not leak the developer's absolute
+# home path (CI's no-personal-paths lint rejects '/Users/<name>' etc.). Replace
+# the home dir with a stable, portable placeholder before writing.
+_HOME = str(Path.home())
+
+
+def _scrub(text: str) -> str:
+    """Strip the developer's home path from a transcript before it is committed."""
+    return text.replace(_HOME, "$HOME") if _HOME and _HOME != "/" else text
+
 
 def _sh(cmd: list[str]) -> str:
     return subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT).stdout.strip()
@@ -138,6 +148,7 @@ def main(argv: list[str]) -> int:
                         file=sys.stderr,
                     )
                     return 4
+            transcript = _scrub(transcript)
             raw_path = snap_dir / f"{ev['id']}-run{k}.jsonl"
             raw_path.write_text(transcript, encoding="utf-8")
             runs.append({"run": k, "transcript_text": transcript})
