@@ -32,7 +32,17 @@ All four are POSIX bash + jq. They fail-open on infrastructure errors (missing j
 /hook-builder install --all
 ```
 
-Installs the four Tier-1 lifecycle hooks idempotently. Existing settings.json hook entries are preserved (additive merge). Subsequent installs of the same hook are no-ops.
+Installs the four Tier-1 lifecycle hooks idempotently. Existing settings.json
+hook entries are preserved (additive merge) — a re-install adds no duplicate
+entry. The hook **script file itself is always re-copied** from the plugin into
+`.claude/hooks/`, even when the settings entry already exists.
+
+> **Re-run `install --all` after every plugin update.** Installed hooks live as
+> *copies* in `.claude/hooks/`; upgrading the plugin cache does NOT refresh those
+> copies. Until you re-install, a bug fixed in a new plugin version still runs the
+> old, broken hook from `.claude/hooks/`. Re-running `install --all` overwrites the
+> copies with the current version (the file copy is unconditional, so this is safe
+> and cheap to run anytime).
 
 The `session-health` hooks (UserPromptSubmit + Stop + lib/) are NOT included in `--all` — use `/session-health install` for those.
 
