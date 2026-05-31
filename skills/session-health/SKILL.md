@@ -90,7 +90,10 @@ act on a recursive invocation. The recipe names the exact next step; acting on i
 the agent's choice.
 
 The canonical degradation recovery is `/catalyst:handoff reground` — a WRITE mode that
-checkpoints state into a typed JSON brief before the context wall hits.
+checkpoints state into a typed JSON brief before the context wall hits. Alternatively,
+`/catalyst:handoff split` forks a braided session into N self-contained briefs when the
+session has accumulated multiple interleaved threads. Degradation alerts recommend one or
+the other (suggest-only; which to use is the agent's choice).
 
 ## Composition with Tier-1 hooks
 

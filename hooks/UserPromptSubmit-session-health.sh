@@ -106,9 +106,9 @@ fi
 ALERT=""
 
 if [ "$CTX_LEVEL" = "strong" ]; then
-  ALERT="CONTEXT STRONG: transcript is ~${USED_TOKENS} tokens (effective window ${EFF_WIN} tok; strong threshold ${STRONG_TOK} tok). Context critically full — run /catalyst:handoff reground NOW before continuing."
+  ALERT="CONTEXT STRONG: transcript is ~${USED_TOKENS} tokens (effective window ${EFF_WIN} tok; strong threshold ${STRONG_TOK} tok). Context critically full — run /catalyst:handoff reground NOW before continuing, or /catalyst:handoff split if this session has braided multiple threads."
 elif [ "$CTX_LEVEL" = "warn" ]; then
-  ALERT="CONTEXT WARN: transcript is ~${USED_TOKENS} tokens (effective window ${EFF_WIN} tok; warn threshold ${WARN_TOK} tok). Approaching the effective context limit — run /catalyst:handoff reground to checkpoint progress."
+  ALERT="CONTEXT WARN: transcript is ~${USED_TOKENS} tokens (effective window ${EFF_WIN} tok; warn threshold ${WARN_TOK} tok). Approaching the effective context limit — run /catalyst:handoff reground to re-ground, or /catalyst:handoff split if this session has braided multiple threads."
 elif [ -n "$CONTRADICTION_TEXT" ]; then
   ALERT="CONTRADICTION: $CONTRADICTION_TEXT. Verify against .claude/PROJECT_STATE.md before proceeding."
 elif [ -n "$STALE_FILE" ]; then
