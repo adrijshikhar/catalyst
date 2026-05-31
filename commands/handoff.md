@@ -1,5 +1,5 @@
 ---
-description: Invoke the handoff skill. With no argument, runs WRITE mode and resolves the key via the 3-tier ladder (explicit name → current branch → legacy). With "$ARGUMENT" provided, uses it as the explicit tier-1 key. Special keywords — "read" / "resume" → READ mode; "recover" / "rebuild" → RECOVER mode.
+description: Invoke the handoff skill. With no argument, runs WRITE mode and resolves the key via the 3-tier ladder (explicit name → current branch → legacy). With "$ARGUMENT" provided, uses it as the explicit tier-1 key. Special keywords — "read" / "resume" → READ; "recover" / "rebuild" → RECOVER; "reground" → REGROUND (read-only mid-session re-injection); "split" → SPLIT (fork a braided session into N self-contained briefs).
 ---
 
 Invoke the `handoff` skill.
