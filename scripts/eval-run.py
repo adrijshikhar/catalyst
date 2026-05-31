@@ -43,9 +43,28 @@ def run_eval(prompt: str, max_turns: int = 12) -> str:
          "--dangerously-skip-permissions", "--max-turns", str(max_turns), "--verbose"],
         capture_output=True, text=True, cwd=ROOT,
     )
+    # `claude -p` can exit non-zero purely because an UNRELATED lifecycle hook
+    # failed (e.g. a global SessionEnd hook erroring with "Hook cancelled"),
+    # even though the run itself produced a complete transcript. A stream-json
+    # `{"type":"result"}` object marks a finished run — if it's present the
+    # transcript is usable, so warn and keep it rather than aborting the whole
+    # seed. Only hard-fail when no result was produced.
+    produced_result = '"type":"result"' in proc.stdout
     if proc.returncode != 0:
+        # Keep the transcript only if it finished AND is not a login-wall result
+        # (which also carries a `result` object). The auth wall must still hard-
+        # fail on every run, not just the first.
+        if produced_result and not looks_unauthenticated(proc.stdout):
+            print(
+                f"WARN: `claude -p` exited {proc.returncode} but produced a result "
+                f"transcript (likely an unrelated lifecycle-hook failure); using it. "
+                f"stderr head: {proc.stderr.strip()[:160]}",
+                file=sys.stderr,
+            )
+            return proc.stdout
         print(
-            f"ERROR: `claude -p` exited {proc.returncode}. stderr:\n{proc.stderr.strip()}",
+            f"ERROR: `claude -p` exited {proc.returncode} with no result transcript. "
+            f"stderr:\n{proc.stderr.strip()}",
             file=sys.stderr,
         )
         sys.exit(5)
