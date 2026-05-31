@@ -27,7 +27,7 @@ Backend is selected by explicit `backend` field in `.claude/brain-bridge.json` (
 | `brain` | `adapters/brain.sh` | `{sections: [{document_id, date?, title, tag?, path?, relevance}]}` |
 | `codebase-memory-mcp` | `adapters/codebase-memory-mcp.sh` | `{symbols: [{name, file, line, kind, score}]}` |
 
-Each adapter is a POSIX bash + jq script reading raw backend output on stdin and printing normalized JSON to stdout.
+Each adapter is a POSIX bash + jq script reading raw backend output on stdin and printing normalized JSON to stdout. Adapter paths are relative to the plugin root — resolve them as `${CLAUDE_PLUGIN_ROOT}/skills/brain-bridge/adapters/<backend>.sh` (they ship in the plugin, not the user's project).
 
 ## Normalized pointer shape
 

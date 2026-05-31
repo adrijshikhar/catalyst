@@ -3,16 +3,17 @@
 #
 # Event:   UserPromptSubmit
 # Purpose: Reads the transcript on every user prompt, runs 4 per-turn signals
-#          via the shared session-health-signals library, and emits ONE
-#          additionalContext alert at the most urgent level (single-alert bar).
+#          (context-pressure counts as one signal surfaced at 2 levels) via the
+#          shared session-health-signals library, and emits ONE additionalContext
+#          alert at the most urgent level (single-alert bar).
 #          Appends one line per alert to .claude/session-health.log.
 #
-# Signals (urgency order, highest → lowest):
-#   1. context STRONG  — token count ≥ 0.70×effective window
-#   2. context WARN    — token count ≥ 0.50×effective window
-#   3. contradiction   — last assistant turn contradicts PROJECT_STATE.md
-#   4. stale-read      — Edit on file F where last Read was >15 tool-use events ago
-#   5. repeated-tool   — same tool call ×3 in last 5 turns
+# Signals (urgency order, highest → lowest; context-pressure = one signal, 2 levels):
+#   1. context-pressure STRONG  — token count ≥ 0.70×effective window
+#   1. context-pressure WARN     — token count ≥ 0.50×effective window
+#   2. contradiction   — last assistant turn contradicts PROJECT_STATE.md
+#   3. stale-read      — Edit on file F where last Read was >15 tool-use events ago
+#   4. repeated-tool   — same tool call ×3 in last 5 turns
 #
 # Exit codes:
 #   0   — done; stdout is hook JSON (or empty when no signal fires)
