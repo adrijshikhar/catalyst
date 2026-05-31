@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Bump version and tag
+    runs-on: ubuntu-latest
+    # Loop prevention, two independent layers:
+    #  1. Skip the CI's own bump commits by committer identity (not spoofable by
+    #     commit-message text — the bump is authored by github-actions[bot]).
+    #  2. Belt-and-suspenders: also skip on the literal [skip ci] marker.
+    if: >-
+      github.event.head_commit.author.email != '41898282+github-actions[bot]@users.noreply.github.com'
+      && !contains(github.event.head_commit.message, '[skip ci]')
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          # Prefer RELEASE_PAT (admin-owned classic PAT with `repo` scope, or
+          # fine-grained PAT with Contents:write) so the bump push can bypass
+          # branch protection on main. The default GITHUB_TOKEN cannot bypass
+          # protection. Falls back to GITHUB_TOKEN if the secret is unset
+          # (e.g., forks, first-time setup, or unprotected branches).
+          token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        id: bump
+        run: bash scripts/release.sh
+
+      - name: Create GitHub Release
+        if: steps.bump.outputs.skipped != 'true' && steps.bump.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.bump.outputs.tag }}" \
+            --title "Catalyst ${{ steps.bump.outputs.version }}" \
+            --generate-notes

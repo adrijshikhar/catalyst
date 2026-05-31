@@ -1,0 +1,2 @@
+2026-05-24T06:41:47Z  7202499  v0.3 iter-1  code_pass=1.0  evals=13(12cap+1reg)  deferred=23model
+2026-05-24T15:07:25Z  5f6bc3b  v0.4 iter-2  eval-13 dogfood test  8/9→9/9 after assertion fix  handoff skill PASSED real-world test

@@ -1,0 +1,21 @@
+{
+  "name": "catalyst",
+  "version": "0.6.0",
+  "description": "Catalyst — Claude Code skills for agent orchestration and harness efficiency.",
+  "author": {
+    "name": "Adrij Shikhar",
+    "url": "https://github.com/adrijshikhar"
+  },
+  "homepage": "https://github.com/adrijshikhar/catalyst",
+  "repository": "https://github.com/adrijshikhar/catalyst",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "skills",
+    "agent-orchestration",
+    "handoff",
+    "subagent",
+    "harness",
+    "efficiency"
+  ]
+}

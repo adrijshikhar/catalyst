@@ -1,0 +1,96 @@
+{
+  "skill_name": "verify-gate",
+  "version": "0.4",
+  "evals": [
+    {
+      "id": 0,
+      "name": "hook-blocks-unverified-claim-write",
+      "category": "capability",
+      "prompt": "You are testing the verify-gate hook. Simulate a PreToolUse event where the agent tries to Write to `test-results.json` claiming all tests pass. The session transcript shows the agent ran Bash but NEVER Read `test-output.log`. Invoke the hook by piping the input JSON below to `bash hooks/PreToolUse-verify-gate.sh`. Capture exit code and stdout. Save the captured stdout to `hook-output.json` and the exit code to `exit-code.txt` in your working dir.\n\nInput JSON:\n```\n{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"test-results.json\",\"content\":\"{\\\"status\\\":\\\"pass\\\"}\"},\"session_id\":\"eval-0\",\"transcript_path\":\"./mock-transcript.jsonl\"}\n```\n\nThe mock transcript (`mock-transcript.jsonl`) is already in your working dir and contains only Bash invocations, no Reads on test-output.log.",
+      "files": [
+        {"path": "mock-transcript.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"pnpm test\"}}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"echo done\"}}\n"}
+      ],
+      "assertions": [
+        "hook-output.json exists",
+        "exit-code.txt contains a non-zero exit code (block) — typically 2",
+        "hook-output.json contains permissionDecision: deny",
+        "hook-output.json contains a permissionDecisionReason mentioning the missing evidence file (test-output.log)"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "hook-allows-after-evidence-read",
+      "category": "capability",
+      "prompt": "Same setup as eval 0, but the mock transcript now contains a Read on `test-output.log`. Invoke the hook with the same input JSON. Save captured stdout to `hook-output.json` and exit code to `exit-code.txt`.\n\nInput JSON:\n```\n{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"test-results.json\",\"content\":\"{\\\"status\\\":\\\"pass\\\"}\"},\"session_id\":\"eval-1\",\"transcript_path\":\"./mock-transcript.jsonl\"}\n```",
+      "files": [
+        {"path": "mock-transcript.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"test-output.log\"},\"timestamp\":\"2026-05-24T10:00:00Z\"}\n{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"pnpm test\"},\"timestamp\":\"2026-05-24T10:01:00Z\"}\n"}
+      ],
+      "assertions": [
+        "exit-code.txt contains exit code 0 (allow)",
+        "hook-output.json EITHER absent OR contains permissionDecision: allow",
+        "hook does NOT emit a denial reason"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "hook-respects-freshness-window",
+      "category": "capability",
+      "prompt": "Same setup as eval 1, but the Read happened 30 minutes BEFORE the current write attempt. With a 10-minute default freshness window, the hook must deny.\n\nInput JSON:\n```\n{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"test-results.json\",\"content\":\"{\\\"status\\\":\\\"pass\\\"}\"},\"session_id\":\"eval-2\",\"transcript_path\":\"./mock-transcript.jsonl\"}\n```\n\nMock transcript has a Read with timestamp 30min in the past. Invoke hook, save outputs.",
+      "files": [
+        {"path": "mock-transcript.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"test-output.log\"},\"timestamp\":\"2026-05-24T09:30:00Z\"}\n"}
+      ],
+      "assertions": [
+        "exit-code.txt contains a non-zero exit code",
+        "hook-output.json contains permissionDecision: deny",
+        "hook-output.json denial reason mentions 'stale' or 'freshness' or '10' (the window length)"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "hook-respects-config-overrides",
+      "category": "capability",
+      "prompt": "Project provides a custom .claude/verify-gate.json that adds a rule: writes to `deployment.log` require Read on `build.log`. Simulate a write to `deployment.log` with NO prior Read on `build.log`. Hook must deny per the custom rule.\n\nInput JSON:\n```\n{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"deployment.log\",\"content\":\"deployed ok\"},\"session_id\":\"eval-3\",\"transcript_path\":\"./mock-transcript.jsonl\"}\n```\n\nThe config file `.claude/verify-gate.json` is in your working dir.",
+      "files": [
+        {"path": ".claude/verify-gate.json", "content": "{\n  \"claims\": [\n    {\"writes_to\": \"deployment.log\", \"requires_read_of\": [\"build.log\"]}\n  ],\n  \"evidence_freshness_minutes\": 10\n}\n"},
+        {"path": "mock-transcript.jsonl", "content": "{\"type\":\"tool_use\",\"name\":\"Bash\",\"input\":{\"command\":\"docker push\"}}\n"}
+      ],
+      "assertions": [
+        "exit-code.txt contains a non-zero exit code",
+        "hook-output.json contains permissionDecision: deny",
+        "hook-output.json denial reason mentions build.log (the custom required evidence)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "install-command-wires-settings",
+      "category": "capability",
+      "prompt": "Simulate running `/verify-gate install` against a project that has an existing `.claude/settings.json` with one unrelated PreToolUse hook. The install command must (a) copy the hook script to `.claude/hooks/PreToolUse-verify-gate.sh`, and (b) merge a new PreToolUse hook entry into settings.json WITHOUT removing the existing entry. Use the install logic from `scripts/install-hooks.sh` (or the equivalent in the SKILL.md procedure).\n\nThe existing settings.json is provided. Perform the install. Then save the final settings.json content to `final-settings.json` in your working dir.",
+      "files": [
+        {"path": ".claude/settings.json", "content": "{\n  \"hooks\": {\n    \"PreToolUse\": [\n      {\"matcher\": \"Bash\", \"command\": \"bash /tmp/existing-hook.sh\"}\n    ]\n  }\n}\n"}
+      ],
+      "assertions": [
+        "final-settings.json exists",
+        ".claude/hooks/PreToolUse-verify-gate.sh exists after install",
+        "final-settings.json.hooks.PreToolUse has length 2 (existing + new)",
+        "final-settings.json still contains the original Bash matcher entry",
+        "final-settings.json contains a new entry with matcher 'Write|Edit' pointing at PreToolUse-verify-gate.sh"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "regression-handoff-v03-write-still-works",
+      "category": "regression",
+      "prompt": "With verify-gate hook installed, simulate the handoff v0.3 WRITE flow. Set up: branch is 'feat/jwt-expiry' (via .git-HEAD), no prior brief exists. The session has a Read on a fixture 'test-output.log' (legitimate evidence). Now invoke handoff WRITE — it must produce .claude/handoffs/feat-jwt-expiry.md and .claude/PROJECT_STATE.md without being blocked by verify-gate.\n\nThis is a regression check: verify-gate must NOT false-positive-block handoff's writes to .claude/ paths.\n\nUse the v0.3 handoff SKILL.md at /path/to/catalyst/skills/handoff/SKILL.md.",
+      "files": [
+        {"path": ".git-HEAD", "content": "feat/jwt-expiry\n"},
+        {"path": "test-output.log", "content": "PASS auth.spec.ts 6/6\n"}
+      ],
+      "assertions": [
+        ".claude/handoffs/feat-jwt-expiry.md exists",
+        ".claude/PROJECT_STATE.md exists",
+        "Neither write was blocked (no permissionDecision: deny in chat response)",
+        "Brief contains the required v0.3 fields (Resume prompt, State packet, etc.)"
+      ]
+    }
+  ]
+}

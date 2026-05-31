@@ -1,0 +1,7 @@
+{
+  "sections": [
+    {"document_id": "ADR-007", "date": "2026-03-15", "title": "JWT library choice", "relevance": 0.88},
+    {"document_id": "doc-conventions-errors", "tag": "error-handling", "path": "docs/conventions.md#errors", "relevance": 0.65},
+    {"document_id": "draft-2025-old", "date": "2025-01-01", "title": "deprecated session model", "relevance": 0.30}
+  ]
+}

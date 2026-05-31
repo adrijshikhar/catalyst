@@ -1,0 +1,14 @@
+{
+  "name": "catalyst",
+  "owner": {
+    "name": "Adrij Shikhar",
+    "url": "https://github.com/adrijshikhar"
+  },
+  "plugins": [
+    {
+      "name": "catalyst",
+      "source": "./",
+      "description": "Catalyst — Claude Code skills for agent orchestration and harness efficiency."
+    }
+  ]
+}

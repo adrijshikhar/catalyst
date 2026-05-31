@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# SessionStart-handoff-read.sh — Catalyst hook-builder
+#
+# Fires on session start. Detects whether a relevant handoff brief exists
+# for the current branch. If so, injects a prompt to invoke handoff READ.
+
+set -euo pipefail
+
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+
+# Resolve the centralized handoffs store — anchored at the MAIN worktree
+# (parent of the shared .git). Inlined (not calling scripts/handoff-dir.sh)
+# because installed hooks ship standalone in .claude/hooks/ without scripts/.
+# Mirrors scripts/handoff-dir.sh + handoff_paths.py (parity test guards those).
+resolve_store() {
+  local dir="$1" common
+  common=$(git -C "$dir" rev-parse --git-common-dir 2>/dev/null || true)
+  if [ -n "$common" ]; then
+    case "$common" in /*) : ;; *) common="$dir/$common" ;; esac
+    common=$(cd "$common" 2>/dev/null && pwd || echo "$common")
+    if [ "$(basename "$common")" = ".git" ]; then
+      echo "$(dirname "$common")/.claude/handoffs"
+      return
+    fi
+  fi
+  echo "$dir/.claude/handoffs"
+}
+
+BRANCH=""
+# Worktree-safe repo detection: in a linked worktree `.git` is a FILE, so
+# `[ -d .git ]` is false and branch detection would be skipped, wrongly
+# surfacing the legacy slot instead of the branch-keyed brief. Use git itself.
+if git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+  BRANCH=$(git -C "$PROJECT_DIR" branch --show-current 2>/dev/null || true)
+fi
+
+STORE=$(resolve_store "$PROJECT_DIR")
+LEGACY_PATH="$STORE/HANDOFF.json"
+KEYED_PATH=""
+if [ -n "$BRANCH" ]; then
+  KEY=$(echo "$BRANCH" | sed 's|/|-|g' | cut -c1-80)
+  KEYED_PATH="$STORE/$KEY.json"
+fi
+
+EXISTS_KEYED="no"
+EXISTS_LEGACY="no"
+[ -f "$KEYED_PATH" ] && [ -n "$KEYED_PATH" ] && EXISTS_KEYED="yes"
+[ -f "$LEGACY_PATH" ] && EXISTS_LEGACY="yes"
+
+if [ "$EXISTS_KEYED" = "no" ] && [ "$EXISTS_LEGACY" = "no" ]; then
+  exit 0  # No brief, no message
+fi
+
+if [ "$EXISTS_KEYED" = "yes" ]; then
+  CTX="A handoff brief exists for the current branch at $KEYED_PATH. Invoke the handoff skill in READ mode (renders via scripts/handoff-render.py) if the user wants to resume."
+elif [ "$EXISTS_LEGACY" = "yes" ]; then
+  CTX="A legacy handoff brief exists at $LEGACY_PATH. Invoke the handoff skill in READ mode (renders via scripts/handoff-render.py — legacy / tier-3 fallback) if the user wants to resume."
+fi
+
+jq -n --arg ctx "$CTX" '{
+  hookSpecificOutput: {
+    hookEventName: "SessionStart",
+    additionalContext: $ctx
+  }
+}'

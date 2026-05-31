@@ -1,0 +1,79 @@
+{
+  "skill_name": "hook-builder",
+  "version": "0.4",
+  "evals": [
+    {
+      "id": 0,
+      "name": "install-single-precompact",
+      "category": "capability",
+      "prompt": "Run `/hook-builder install PreCompact` against a fresh project (empty .claude/settings.json). The install must (a) copy hooks/PreCompact-handoff-write.sh to .claude/hooks/, and (b) add a PreCompact entry to settings.json pointing at the copied hook. Use the shared installer at scripts/install-hooks.sh from the Catalyst repo at /path/to/catalyst.\n\nWorking dir is fresh — no .claude/ exists. After install, save the resulting settings.json content to `final-settings.json` and list .claude/hooks/ contents to `installed-hooks.txt`.",
+      "files": [],
+      "assertions": [
+        ".claude/hooks/PreCompact-handoff-write.sh exists",
+        "final-settings.json contains a PreCompact hook entry",
+        "final-settings.json hooks.PreCompact has exactly 1 entry",
+        "The command field points at PreCompact-handoff-write.sh"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "install-all-four",
+      "category": "capability",
+      "prompt": "Run `/hook-builder install --all` against a fresh project. Must install all 4 lifecycle hooks (PreCompact, SessionStart, Stop, UserPromptSubmit). Run it TWICE to verify idempotency (second run should not duplicate entries).\n\nSave the resulting settings.json after both runs to `final-settings.json`.",
+      "files": [],
+      "assertions": [
+        ".claude/hooks/PreCompact-handoff-write.sh exists",
+        ".claude/hooks/SessionStart-handoff-read.sh exists",
+        ".claude/hooks/Stop-commit-backstop.sh exists",
+        ".claude/hooks/UserPromptSubmit-orient.sh exists",
+        "final-settings.json hooks.PreCompact has exactly 1 entry (idempotent)",
+        "final-settings.json hooks.SessionStart has exactly 1 entry",
+        "final-settings.json hooks.Stop has exactly 1 entry",
+        "final-settings.json hooks.UserPromptSubmit has exactly 1 entry"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "uninstall-removes-cleanly",
+      "category": "capability",
+      "prompt": "Starting state: PreCompact hook already installed. Run `/hook-builder uninstall PreCompact`. The hook script must be deleted from .claude/hooks/ AND the entry must be removed from .claude/settings.json. Save resulting settings.json to `final-settings.json` and list .claude/hooks/ to `installed-hooks.txt`.",
+      "files": [
+        {"path": ".claude/settings.json", "content": "{\"hooks\":{\"PreCompact\":[{\"command\":\"bash $CLAUDE_PROJECT_DIR/.claude/hooks/PreCompact-handoff-write.sh\"}]}}\n"},
+        {"path": ".claude/hooks/PreCompact-handoff-write.sh", "content": "#!/bin/bash\necho 'placeholder'\n"}
+      ],
+      "assertions": [
+        ".claude/hooks/PreCompact-handoff-write.sh does NOT exist after uninstall",
+        "final-settings.json hooks.PreCompact is empty array OR PreCompact key not present"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "new-event-scaffold",
+      "category": "capability",
+      "prompt": "Run `/hook-builder new PostToolUse my-custom-hook`. The skill must scaffold a new hook script at `hooks/PostToolUse-my-custom-hook.sh` with: (a) a header comment naming the event, (b) `set -euo pipefail`, (c) stdin JSON read, (d) jq dependency check, (e) appropriate exit codes documented, (f) a TODO marker for the custom logic.\n\nSave the scaffolded content to `scaffold-output.sh` in your working dir.",
+      "files": [],
+      "assertions": [
+        "scaffold-output.sh exists",
+        "scaffold-output.sh contains 'set -euo pipefail'",
+        "scaffold-output.sh references the PostToolUse event in a comment or output",
+        "scaffold-output.sh checks for jq",
+        "scaffold-output.sh has a TODO marker for the custom logic",
+        "scaffold-output.sh passes 'bash -n' syntax check"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "lint-catches-bad-matcher",
+      "category": "capability",
+      "prompt": "Run `/hook-builder lint <path>` on a hook file that has an overly broad matcher (`.*` which matches every tool). The lint command must flag this as a problem.\n\nThe target file `bad-hook.json` (representing a settings.json snippet) is provided. Save the lint output to `lint-output.txt`.",
+      "files": [
+        {"path": "bad-hook.json", "content": "{\"matcher\": \".*\", \"command\": \"bash /tmp/x.sh\"}\n"}
+      ],
+      "assertions": [
+        "lint-output.txt exists",
+        "lint-output.txt mentions 'matcher' AND ('broad' OR 'wildcard' OR '.*')",
+        "lint-output.txt indicates this is a warning or error (not silent pass)"
+      ]
+    }
+  ]
+}
