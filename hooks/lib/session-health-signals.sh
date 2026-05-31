@@ -410,15 +410,20 @@ sh_pattern_instruction_fade() {
 
   local repeated_user
   repeated_user=$(jq -r 'select(.type == "user") |
-    ([.content] | flatten | map(if type == "object" then (.text // .content // (. | tostring)) else (. | tostring) end) | add // "" | .[0:80])' \
+    ([.content] | flatten | map(if type == "object" then (.text // .content // "") else (. // "" | tostring) end) | add // "" | .[0:80])
+    | select(test("[A-Za-z]") and . != "null")' \
     "$transcript" 2>/dev/null \
     | tail -10 | sort | uniq -c | sort -rn | awk '$1 >= 2 {print $0; exit}' || echo "")
 
   if [ -n "$repeated_user" ]; then
     local instr
     instr=$(echo "$repeated_user" | sed -E 's/^ *[0-9]+ *//')
-    echo "$instr"
-    return 0
+    # Guard against empty / literal-"null" snippets (transcripts with many
+    # system-injected or empty user turns would otherwise fire on "null").
+    if [ -n "$instr" ] && [ "$instr" != "null" ]; then
+      echo "$instr"
+      return 0
+    fi
   fi
   return 1
 }

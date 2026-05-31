@@ -6,7 +6,7 @@
 #          failure patterns via the shared session-health-signals library.
 #          For each detected pattern, logs a timestamped entry with the
 #          session ID, pattern name, detail, and a SPECIFIC recovery recipe.
-#          Emits additionalContext with a brief summary if any patterns matched.
+#          Emits a `systemMessage` with a brief summary if any patterns matched.
 #
 # Patterns detected (v0.7):
 #   - repeated-tool-call   : same Bash/Read/Grep input ≥3× in last 5 turns
@@ -159,10 +159,13 @@ if is_enabled "context-drowning"; then
   fi
 fi
 
-# ── Emit additionalContext if any pattern matched ─────────────────────────────
+# ── Surface via systemMessage if any pattern matched ──────────────────────────
+# Stop hooks do NOT support hookSpecificOutput.additionalContext (that field is
+# UserPromptSubmit/PostToolUse only). The valid non-blocking surface for Stop is
+# `systemMessage`. Emitting the wrong shape fails Claude Code's output schema.
 if [ -n "$DETECTIONS" ]; then
-  jq -n --arg ctx "Detected failure pattern(s) this session:${DETECTIONS}"$'\n\n'"See $LOG_PATH for the full log." \
-    '{hookSpecificOutput: {hookEventName: "Stop", additionalContext: $ctx}}'
+  jq -n --arg msg "Detected failure pattern(s) this session:${DETECTIONS}"$'\n\n'"See $LOG_PATH for the full log." \
+    '{systemMessage: $msg}'
 fi
 
 exit 0
