@@ -58,4 +58,20 @@ else
   echo "PASS: no instruction-fade false-positive on null user turns"
 fi
 
+# 3) edit-mismatch must FIRE on repeated "old_string not found" tool_results.
+#    Regression for the dead-detector bug: the old jq selected
+#    `.name == "Edit"`, but tool_result rows carry no `.name`, so it never fired.
+EMT="$TMP/editmiss.jsonl"
+for _ in 1 2 3; do
+  printf '%s\n' '{"type":"tool_use","name":"Edit","input":{"file_path":"src/a.ts"}}' >> "$EMT"
+  printf '%s\n' '{"type":"tool_result","content":"Error: old_string not found in file"}' >> "$EMT"
+done
+EVENT3=$(jq -n --arg t "$EMT" --arg c "$TMP" '{transcript_path:$t,session_id:"reg3",cwd:$c}')
+out3=$(printf '%s' "$EVENT3" | CLAUDE_PROJECT_DIR="$TMP" bash "$TMP/.claude/hooks/Stop-session-health.sh" 2>/dev/null) || true
+if printf '%s' "$out3" | grep -q 'edit-mismatch'; then
+  echo "PASS: edit-mismatch fires on repeated old_string-not-found results"
+else
+  echo "FAIL: edit-mismatch did not fire (dead-detector regression): $out3"; fail=1
+fi
+
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }
