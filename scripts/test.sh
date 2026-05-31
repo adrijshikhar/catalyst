@@ -23,4 +23,10 @@ bash tests/sh/test_hook_smoke.sh
 echo "== count-tokens smoke =="
 bash tests/sh/test_count_tokens.sh
 
+echo "== session-health Stop output schema =="
+bash tests/sh/test_session_health_stop_output.sh
+
+echo "== verify-gate over-reliance rule =="
+bash tests/sh/test_verify_gate_overreliance.sh
+
 echo "All checks passed."
