@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Use when ending a session, switching context, approaching context limits, before /clear or /compact, when starting a fresh session that may have a prior handoff to resume, when context appears degraded, when briefing a subagent for an isolated subtask, or when orchestrating multi-stage work as a pipeline. Operates in four modes — WRITE (save state on the way out), READ (resume cleanly on the way in), RECOVER (rebuild state when degraded), and BRIEF (produce inline minimum-viable context for a subagent) — plus a PIPELINE orchestration that uses BRIEF as the briefing primitive across decompose → route → dispatch → synthesize. Feature-keyed via a three-tier ladder (explicit name → git branch → legacy single-slot), so parallel feature work doesn't clobber state. Use this skill liberally for any session that produced non-trivial decisions, any subagent dispatch that needs scoped context, or any multi-stage task with distinct phases or concerns.
+description: Use when ending a session, switching context, approaching context limits, before /clear or /compact, when starting a fresh session that may have a prior handoff to resume, when context appears degraded, when briefing a subagent for an isolated subtask, when orchestrating multi-stage work as a pipeline, or when a session has braided across multiple threads that need to be forked into isolated self-contained work streams. Operates in five modes — WRITE (save state on the way out), READ (resume cleanly on the way in), RECOVER (rebuild state when degraded), BRIEF (produce inline minimum-viable context for a subagent), and SPLIT (fork a braided session into N self-contained briefs with user confirmation) — plus a PIPELINE orchestration that uses BRIEF as the briefing primitive across decompose → route → dispatch → synthesize. Feature-keyed via a three-tier ladder (explicit name → git branch → legacy single-slot), so parallel feature work doesn't clobber state. Use this skill liberally for any session that produced non-trivial decisions, any subagent dispatch that needs scoped context, any multi-stage task with distinct phases or concerns, or any session where work drifted across multiple distinct threads.
 ---
 
 # Handoff
@@ -36,7 +36,7 @@ WRITE / READ / RECOVER determine the **key** for the brief in this order:
 
 BRIEF and PIPELINE modes do not persist, so they don't resolve a key — they may *reference* a key when telling a subagent which feature's narrative slice is relevant.
 
-## Four modes (overview)
+## Six modes (overview)
 
 | Mode | Trigger | Persists? | Consumer |
 |------|---------|-----------|----------|
@@ -45,8 +45,9 @@ BRIEF and PIPELINE modes do not persist, so they don't resolve a key — they ma
 | **RECOVER** | Context degraded mid-session — re-reads, contradictions, forgotten decisions | Disk: overwrites brief for current key; does NOT prepend narrative | Current session, post-`/clear` |
 | **REGROUND** | Mid-session, recall degrading / decisions slipping into the middle | None (read-only re-injection) | Current session |
 | **BRIEF** | About to dispatch a subagent and want it to start with the right minimum context | In-memory string passed to Agent tool task description; no disk | Subagent |
+| **SPLIT** | Session braided across multiple threads (drifted mid-feature); want to fork into isolated sessions | Disk: N × `<store>/<key>.json` (validated) + ONE combined `PROJECT_STATE` entry | N next sessions (one per thread) |
 
-The schema for the brief is shared across all four modes. Only persistence and consumer differ.
+The schema for the brief is shared across all six modes. Only persistence and consumer differ.
 
 Plus **PIPELINE** mode — orchestration built on top of BRIEF (decompose → route → dispatch → synthesize). See its own section below.
 
@@ -230,6 +231,111 @@ Read the output aloud into the working context, then continue. No branch or repo
 - **Files to keep in view** — `files_read_first` paths with their `why`
 
 It deliberately omits: `## Summary`, `Written in worktree`, BRANCH MISMATCH, REPO MISMATCH, rejected paths, open risks, diff summary, and the resume prompt. Those belong to READ/RECOVER, not to a mid-session re-grounding.
+
+---
+
+## Mode: SPLIT
+
+The current session drifted across multiple distinct threads — one feature discussion braided into another, decisions from two separate efforts are entangled, or the context window now carries state that belongs in N different futures. SPLIT forks the session into N self-contained briefs so that each next session starts clean and focused.
+
+SPLIT is **pure orchestration over WRITE machinery**: it builds N typed briefs using the same validate → move flow WRITE uses, plus one combined PROJECT_STATE fork entry. No new scripts required.
+
+> **Helper-script location.** Resolve `$SCR` once at the start (same as WRITE/RECOVER):
+> ```bash
+> SCR="${CLAUDE_PLUGIN_ROOT:-.}/scripts"
+> ```
+
+### Step 1 — Analyze + propose
+
+Read the session transcript. Identify the distinct threads of work — decisions, files touched, open questions — that belong together. For each candidate thread, produce a one-line summary:
+
+```
+Thread N: <one-line summary>
+  Key suggestion: <kebab-slug>   (model proposes; user edits)
+  Owns: <the decisions / files / next-check that belong here>
+  Next acceptance check: <one verifiable check for this thread>
+  Open risks: <any risks specific to this thread>
+```
+
+Present the full proposal as a numbered list to the user. Keep the list compact (≤5 lines per thread). Soft cap: **≤4 threads**. If you find more than 4, prefer fewer coarser threads — or recommend RECOVER instead, which is better for severely fragmented context.
+
+### Step 2 — Confirm (REQUIRED — write NOTHING first)
+
+Wait for the user to review and approve the proposal. The user may:
+
+- Approve as-is.
+- Rename a key slug.
+- Move a decision from one thread to another.
+- Merge two threads into one.
+- Drop a thread entirely.
+
+**SPLIT writes NO files until the user explicitly confirms.** The human owns the thread boundary. Do not proceed to Step 3 until confirmation is received.
+
+### Step 3 — Write N self-contained briefs
+
+For each confirmed thread, in sequence:
+
+1. Resolve `$SCR` (already done in Step 1; reuse it).
+2. Determine the key: the user-confirmed slug is a **tier-1 explicit key** for that thread. The "main" thread may reuse the current branch key.
+3. Build the typed brief per the shared schema. Include:
+   - The thread's own `state.decisions`, `state.rejected_paths`, `state.open_risks`, `state.next_acceptance_check`.
+   - A `shared_context` slice with decisions and files that are genuinely cross-cutting (copied verbatim into EACH brief — true isolation; no pointer-only trick here).
+   - `files_read_first` scoped to this thread's work.
+4. Write to a temp file. Run `python3 "$SCR/handoff-validate.py" <tmp>.json`; fix every reported field and re-run until it prints `handoff-validate: OK`.
+5. Move the validated file to `<store>/<key>.json` (where `<store>` = `bash "$SCR/handoff-dir.sh"`).
+
+Shared context is **copied** into each brief. Each brief must be independently resumable — the consumer of thread B must not need thread A's brief on disk.
+
+### Step 4 — One combined fork entry
+
+Prepend exactly ONE entry to `.claude/PROJECT_STATE.md` covering ALL threads. Use this heading format:
+
+```markdown
+## <ISO date> — [split: <keyA>, <keyB>, ...] <short why>
+
+### What was done
+- Session covered both <keyA> (<summary>) and <keyB> (<summary>).
+- Forked into <N> self-contained briefs; each continues independently.
+
+### Shared decisions (cross-cutting)
+- **<decision>** — <why>. Applies to all forks.
+
+### Per-thread pointers
+- `<keyA>`: <path>:<line-range> — <what's there>
+- `<keyB>`: <path>:<line-range> — <what's there>
+```
+
+The header `# Project state` must remain the first line of the file. Insert this entry immediately after the header block, above any existing entries (same rule as WRITE). Do NOT write one entry per thread — one combined entry only.
+
+If `PROJECT_STATE.md` doesn't exist, create it with the standard header first, then add the entry.
+
+### Step 5 — Resume prompts
+
+Print one resume prompt per thread:
+
+```
+Split complete — <N> briefs written:
+
+  Thread 1 (<keyA>): <store>/<keyA>.json (validated)
+    Resume: /catalyst:handoff resume <keyA>   (or paste the resume prompt from that brief)
+  Thread 2 (<keyB>): <store>/<keyB>.json (validated)
+    Resume: /catalyst:handoff resume <keyB>
+
+One combined fork entry prepended to .claude/PROJECT_STATE.md.
+
+Next: /clear, then resume each thread in a fresh session.
+You may keep one thread alive in the current session — /clear and resume with the key you want to continue.
+```
+
+### SPLIT vs alternatives
+
+| Situation | Preferred mode |
+|-----------|---------------|
+| One thread, context degraded | RECOVER |
+| One thread, recall slipping mid-session | REGROUND |
+| Session has 2-4 distinct threads, still coherent | **SPLIT** |
+| Context is severely fragmented (>4 threads, no clear owner) | RECOVER first, then SPLIT |
+| About to dispatch a bounded subtask | BRIEF |
 
 ---
 
