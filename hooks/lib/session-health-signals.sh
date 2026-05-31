@@ -72,8 +72,14 @@
 
 _sh_advertised_tokens() {
   local adv="${CATALYST_SH_ADVERTISED_TOKENS:-200000}"
-  # Guard: treat 0 or non-numeric values as the default 200000.
-  [ "${adv:-0}" -le 0 ] 2>/dev/null && adv=200000
+  # Guard: treat empty, non-numeric, or non-positive values as the default.
+  # A non-numeric value (e.g. "abc") would otherwise slip past `[ -le 0 ]`
+  # (which errors and is silenced) and then abort downstream `$(( adv * ... ))`
+  # under `set -u`, silently suppressing all context alerts.
+  case "$adv" in
+    ''|*[!0-9]*) adv=200000 ;;
+  esac
+  [ "$adv" -le 0 ] 2>/dev/null && adv=200000
   echo "$adv"
 }
 
@@ -315,7 +321,11 @@ sh_pattern_edit_mismatch() {
   local mismatch_threshold="${2:-2}"
 
   local fail_count
-  fail_count=$(jq -r 'select(.type == "tool_result" and .name == "Edit") | .content // ""' \
+  # tool_result rows carry no `.name` field (only content + type), so the old
+  # `.name == "Edit"` selector matched nothing and this detector never fired.
+  # "old_string not found" appears only in Edit results, so scanning all
+  # tool_result content is both correct and sufficient.
+  fail_count=$(jq -r 'select(.type == "tool_result") | .content // ""' \
     "$transcript" 2>/dev/null \
     | grep -c "old_string not found" || true)
 

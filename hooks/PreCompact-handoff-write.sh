@@ -5,8 +5,10 @@
 # the brief survives the compaction. The agent reads back the brief on next
 # session via SessionStart-handoff-read.sh.
 #
-# Implementation: emit additionalContext that tells Claude to invoke handoff WRITE.
-# Claude Code injects this into the agent's context before compaction runs.
+# Implementation: emit a top-level `systemMessage` telling Claude to invoke
+# handoff WRITE. PreCompact does NOT accept `hookSpecificOutput` — emitting it
+# fails schema validation ("Hook JSON output validation failed"). systemMessage
+# is the only injection channel for this event.
 
 set -euo pipefail
 
@@ -54,9 +56,4 @@ else
   REASON="About to compact. Invoke the handoff skill in WRITE mode to save current state to $PATH_HINT (legacy slot — no branch) before context is summarized."
 fi
 
-jq -n --arg ctx "$REASON" '{
-  hookSpecificOutput: {
-    hookEventName: "PreCompact",
-    additionalContext: $ctx
-  }
-}'
+jq -n --arg ctx "$REASON" '{systemMessage: $ctx}'

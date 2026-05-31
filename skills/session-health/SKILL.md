@@ -89,8 +89,10 @@ auto-recovery doesn't work — the hook fires in a context where the agent can't
 act on a recursive invocation. The recipe names the exact next step; acting on it is
 the agent's choice.
 
-The canonical degradation recovery is `/catalyst:handoff reground` — a WRITE mode that
-checkpoints state into a typed JSON brief before the context wall hits. Alternatively,
+The canonical degradation recovery is `/catalyst:handoff reground` — a read-only
+re-injection of the current brief's goal, locked decisions, and files-to-keep-in-view
+into the active context (no disk write). If no brief exists yet, run WRITE first to
+checkpoint state, then reground. Alternatively,
 `/catalyst:handoff split` forks a braided session into N self-contained briefs when the
 session has accumulated multiple interleaved threads. Degradation alerts recommend one or
 the other (suggest-only; which to use is the agent's choice).
