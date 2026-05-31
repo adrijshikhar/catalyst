@@ -2,8 +2,11 @@
 # Stop-commit-backstop.sh — Catalyst hook-builder
 #
 # Fires when the session ends. If there are uncommitted changes in the working
-# tree, surface them via additionalContext so the next session can pick up
-# cleanly. Does NOT auto-commit (user might want to review).
+# tree, surface them via a top-level `systemMessage` so the next session can
+# pick up cleanly. Does NOT auto-commit (user might want to review).
+#
+# NOTE: Stop hooks do NOT accept `hookSpecificOutput.additionalContext` — that
+# shape fails schema validation. Use `systemMessage` (same as Stop-session-health.sh).
 
 set -euo pipefail
 
@@ -25,9 +28,4 @@ $UNCOMMITTED
 
 Consider invoking the handoff skill in WRITE mode to preserve session state, then commit the changes manually or in the next session."
 
-jq -n --arg ctx "$CTX" '{
-  hookSpecificOutput: {
-    hookEventName: "Stop",
-    additionalContext: $ctx
-  }
-}'
+jq -n --arg ctx "$CTX" '{systemMessage: $ctx}'
