@@ -15,6 +15,7 @@ If the user passed a single recognized keyword as `$ARGUMENT`, route to that mod
 - `read` or `resume` → READ mode (load existing brief for current branch / key)
 - `recover` or `rebuild` → RECOVER mode (rebuild a degraded brief)
 - `reground` → REGROUND mode (read-only re-injection of the current key's load-bearing fields: goal, locked decisions, files to keep in view — no disk write, no mismatch checks)
+- `split` → SPLIT mode (fork the braided session into N self-contained briefs: analyze → propose threads → user confirms → write one validated brief per thread + one combined PROJECT_STATE fork entry → print resume prompts)
 - any other non-empty value → WRITE mode with `$ARGUMENT` as the tier-1 explicit key (writes the validated JSON brief to `<store>/<argument>.json`)
 - empty argument → WRITE mode, resolve key via the ladder (branch → legacy)
 

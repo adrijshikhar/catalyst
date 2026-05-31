@@ -1,0 +1,19 @@
+{"type": "assistant", "content": "Let's look at the JWT expiry check — the failing tests suggest an off-by-one at the boundary."}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/auth/middleware.ts"}}
+{"type": "tool_result", "content": "// jwt-expiry check\nif (payload.exp < Date.now() / 1000) {\n  throw new UnauthorizedError('token expired');\n}\n"}
+{"type": "assistant", "content": "Found it. The comparison uses `<` — tokens expiring at exactly `exp` are wrongly rejected. Decision: switch to `<=`."}
+{"type": "tool_use", "name": "Edit", "input": {"file_path": "src/auth/middleware.ts", "old_string": "if (payload.exp < Date.now() / 1000)", "new_string": "if (payload.exp <= Date.now() / 1000)"}}
+{"type": "tool_result", "content": "Edit applied."}
+{"type": "assistant", "content": "Before running auth tests, the rate-limit middleware has been surfacing 503s on the login route — let me check why the sliding window is accumulating across routes."}
+{"type": "tool_use", "name": "Read", "input": {"file_path": "src/middleware/rate-limit.ts"}}
+{"type": "tool_result", "content": "// sliding-window rate limiter\nconst key = `rl:${req.ip}`; // global key, not per-route\nconst count = await redis.incr(key);\nif (count > RATE_LIMIT_MAX) throw new RateLimitError();\n"}
+{"type": "assistant", "content": "The limiter uses a global key (per-IP only). Decision locked: sliding window architecture stays; we add per-route keys as opt-in via decorator."}
+{"type": "tool_use", "name": "Bash", "input": {"command": "pnpm test src/auth/auth.spec.ts 2>&1 | tail -4"}}
+{"type": "tool_result", "content": "auth middleware\n  ✓ accepts valid token (3ms)\n  ✓ rejects expired token\n  ✓ rejects tampered signature\n  ✗ accepts boundary-exact token (auth.spec.ts:42)\n  ✗ accepts leeway token (auth.spec.ts:67)\nTests: 4 passed, 2 failed"}
+{"type": "assistant", "content": "4/6 pass now. Two remaining failures need a clock-skew leeway parameter. Next acceptance check for auth: pnpm test src/auth/auth.spec.ts 6/6. Parking auth, addressing rate-limit tangent."}
+{"type": "tool_use", "name": "Edit", "input": {"file_path": "src/middleware/rate-limit.ts", "old_string": "const key = `rl:${req.ip}`;", "new_string": "const routeKey = opts?.routeId ? `:${opts.routeId}` : '';\nconst key = `rl:${req.ip}${routeKey}`;"}}
+{"type": "tool_result", "content": "Edit applied."}
+{"type": "assistant", "content": "Rate-limit key now includes optional routeId. Sliding window stays; per-route isolation added. Next check: rate-limit per-route override test passes."}
+{"type": "tool_use", "name": "Bash", "input": {"command": "pnpm test src/middleware/rate-limit.spec.ts 2>&1 | tail -3"}}
+{"type": "tool_result", "content": "rate limiter\n  ✓ global IP limiter works\n  ✓ per-route key is isolated\nTests: 2 passed, 0 failed"}
+{"type": "assistant", "content": "Rate-limit tangent resolved. Returning to auth thread: still need leeway parameter in src/auth/middleware.ts. Next acceptance check for auth thread: pnpm test src/auth/auth.spec.ts 6/6."}
