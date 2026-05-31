@@ -114,6 +114,13 @@ def main(argv: list[str]) -> int:
     }
     first_run = True
     for ev in spec.get("evals", []):
+        # Deferred evals carry a null/absent prompt — intentional placeholders
+        # that are not run yet. Skip them rather than passing None to subprocess
+        # (which crashes with "expected str ... not NoneType"). The grader skips
+        # them by the same rule, so no snapshot is expected for them.
+        if not isinstance(ev.get("prompt"), str):
+            print(f"skip {args.skill}/{ev.get('name', ev.get('id'))} (deferred — no prompt)")
+            continue
         runs = []
         for k in range(args.runs):
             transcript = run_eval(ev["prompt"])

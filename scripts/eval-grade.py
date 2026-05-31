@@ -88,6 +88,10 @@ def grade_skill(skill_dir: Path, errors: list[str], *, check_fresh: bool) -> boo
         if stored and stored != skill_md_sha256(skill_dir):
             print(f"WARN {skill_dir.name}: snapshot stale (SKILL.md changed); regenerate")
     for ev in spec.get("evals", []):
+        # Deferred evals (null/absent prompt) are not run by eval-run.py, so no
+        # snapshot exists for them — skip rather than flagging a missing snapshot.
+        if not isinstance(ev.get("prompt"), str):
+            continue
         runs = snapshot.get("evals", {}).get(str(ev["id"]), {}).get("runs", [])
         if not runs:
             errors.append(f"{skill_dir.name} eval {ev['id']}: no snapshot runs")
