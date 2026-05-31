@@ -25,3 +25,4 @@ docs/superpowers/
 docs/ROADMAP.md
 __pycache__/
 *.pyc
+.claude/workflows/
