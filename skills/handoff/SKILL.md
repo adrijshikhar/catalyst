@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Use when ending a session, switching context, approaching context limits, before /clear or /compact, when starting a fresh session that may have a prior handoff to resume, when context appears degraded, when briefing a subagent for an isolated subtask, when orchestrating multi-stage work as a pipeline, or when a session has braided across multiple threads that need to be forked into isolated self-contained work streams. Operates in five modes — WRITE (save state on the way out), READ (resume cleanly on the way in), RECOVER (rebuild state when degraded), BRIEF (produce inline minimum-viable context for a subagent), and SPLIT (fork a braided session into N self-contained briefs with user confirmation) — plus a PIPELINE orchestration that uses BRIEF as the briefing primitive across decompose → route → dispatch → synthesize. Feature-keyed via a three-tier ladder (explicit name → git branch → legacy single-slot), so parallel feature work doesn't clobber state. Use this skill liberally for any session that produced non-trivial decisions, any subagent dispatch that needs scoped context, any multi-stage task with distinct phases or concerns, or any session where work drifted across multiple distinct threads.
+description: Use when ending a session, switching context, approaching context limits, before /clear or /compact, when starting a fresh session that may have a prior handoff to resume, when context appears degraded, when briefing a subagent for an isolated subtask, when orchestrating multi-stage work as a pipeline, or when a session has braided across multiple threads that need to be forked into isolated self-contained work streams. Operates in six modes — WRITE (save state on the way out), READ (resume cleanly on the way in), RECOVER (rebuild state when degraded), REGROUND (mid-session read-only re-injection), BRIEF (produce inline minimum-viable context for a subagent), and SPLIT (fork a braided session into N self-contained briefs with user confirmation) — plus a PIPELINE orchestration that uses BRIEF as the briefing primitive across decompose → route → dispatch → synthesize. Feature-keyed via a three-tier ladder (explicit name → git branch → legacy single-slot), so parallel feature work doesn't clobber state. Use this skill liberally for any session that produced non-trivial decisions, any subagent dispatch that needs scoped context, any multi-stage task with distinct phases or concerns, or any session where work drifted across multiple distinct threads.
 ---
 
 # Handoff
@@ -279,12 +279,12 @@ For each confirmed thread, in sequence:
 2. Determine the key: the user-confirmed slug is a **tier-1 explicit key** for that thread. The "main" thread may reuse the current branch key.
 3. Build the typed brief per the shared schema. Include:
    - The thread's own `state.decisions`, `state.rejected_paths`, `state.open_risks`, `state.next_acceptance_check`.
-   - A `shared_context` slice with decisions and files that are genuinely cross-cutting (copied verbatim into EACH brief — true isolation; no pointer-only trick here).
-   - `files_read_first` scoped to this thread's work.
+   - Any cross-cutting decisions are **copied** into each relevant brief's `state.decisions` array verbatim — true isolation, no new fields. Shared files are **copied** into each relevant brief's `files_read_first` array. Each brief stays a normal, schema-valid brief that happens to duplicate the shared slice; there is no `shared_context` field or extra top-level key.
+   - `files_read_first` scoped to this thread's work (plus any shared-file copies from the step above).
 4. Write to a temp file. Run `python3 "$SCR/handoff-validate.py" <tmp>.json`; fix every reported field and re-run until it prints `handoff-validate: OK`.
 5. Move the validated file to `<store>/<key>.json` (where `<store>` = `bash "$SCR/handoff-dir.sh"`).
 
-Shared context is **copied** into each brief. Each brief must be independently resumable — the consumer of thread B must not need thread A's brief on disk.
+Each brief must be independently resumable — the consumer of thread B must not need thread A's brief on disk. The duplication of shared decisions across briefs is intentional: it makes each brief a self-sufficient context packet.
 
 ### Step 4 — One combined fork entry
 

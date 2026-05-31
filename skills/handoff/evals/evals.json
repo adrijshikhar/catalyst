@@ -262,14 +262,15 @@
         }
       ],
       "assertions": [
-        "Chat response contains a thread proposal with at least 2 named threads before any JSON file is written",
+        "Chat response contains a thread proposal with at least 2 named threads",
         "Chat response names 'feat-jwt-expiry' (or jwt-expiry) as one proposed thread",
         "Chat response names 'feat-rate-limit' (or rate-limit) as another proposed thread",
         "Chat response states the next acceptance check for the auth thread (auth.spec.ts 6/6 or equivalent)",
         "Chat response states the next acceptance check for the rate-limit thread (per-route override test or equivalent)",
-        "The proposal section appears BEFORE the confirmation paragraph in the response (skill waited for confirm)",
-        ".claude/handoffs/feat-jwt-expiry.json does NOT exist before the confirmation paragraph",
-        ".claude/handoffs/feat-rate-limit.json does NOT exist before the confirmation paragraph"
+        {
+          "type": "model",
+          "assertion": "The response proposes at least 2 named threads (with keys feat-jwt-expiry and feat-rate-limit) AND explicitly states it will NOT write any brief files until the user confirms — no brief files are written as part of the proposal."
+        }
       ]
     },
     {
@@ -290,10 +291,12 @@
         "`python3 scripts/handoff-validate.py .claude/handoffs/feat-rate-limit.json` exits 0",
         ".claude/handoffs/feat-jwt-expiry.json state.next_acceptance_check contains '6/6' or 'auth.spec.ts'",
         ".claude/handoffs/feat-rate-limit.json state.next_acceptance_check contains 'per-route' or 'rate-limit'",
-        ".claude/handoffs/feat-jwt-expiry.json state.decisions contains '<=' or 'jose' (auth-specific decision)",
-        ".claude/handoffs/feat-rate-limit.json state.decisions contains 'sliding window' (rate-limit-specific decision)",
-        ".claude/handoffs/feat-jwt-expiry.json contains 'src/auth/middleware.ts' (files_read_first or shared context)",
-        ".claude/handoffs/feat-rate-limit.json contains 'src/middleware/rate-limit.ts' (files_read_first or shared context)"
+        ".claude/handoffs/feat-jwt-expiry.json state.decisions array contains '<=' or 'jose' (auth-specific decision copied into this brief)",
+        ".claude/handoffs/feat-rate-limit.json state.decisions array contains 'sliding window' (rate-limit-specific decision copied into this brief)",
+        ".claude/handoffs/feat-jwt-expiry.json files_read_first contains 'src/auth/middleware.ts'",
+        ".claude/handoffs/feat-rate-limit.json files_read_first contains 'src/middleware/rate-limit.ts'",
+        ".claude/handoffs/feat-jwt-expiry.json does NOT contain a top-level 'shared_context' key (schema-valid: no extra fields)",
+        ".claude/handoffs/feat-rate-limit.json does NOT contain a top-level 'shared_context' key (schema-valid: no extra fields)"
       ]
     },
     {

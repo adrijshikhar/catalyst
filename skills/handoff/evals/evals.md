@@ -30,8 +30,8 @@ tier-3 (no-git fallback) uses `<store>/HANDOFF.json`. READ renders via `python3 
 | 10 | pipeline-anti-self-grade | Generator and evaluator are SEPARATE subagents; evaluator gets contract + artifact only (no generator transcript) |
 | 11 | pipeline-gan-loop | GAN-inspired iteration loop with bounded iterations + scoring threshold + stall surfacing |
 | 13 | fresh-session-resumes-from-brief | Real-world dogfood: subagent reads `catalyst-dogfood-build.json` via `handoff-render.py`, quotes the next acceptance check, surfaces locked decisions + a rejected path, and lists the dogfood plan steps in order. Anti-context-bleed check: PROJECT_STATE.md is NOT auto-read. |
-| 14 | split-proposes-and-confirms | SPLIT mode proposes ≥2 named threads from `split-two-thread-session.jsonl` and writes NO briefs before user confirms; proposal lists at least thread names + next-check per thread |
-| 15 | split-writes-self-contained | After confirm, `feat-jwt-expiry.json` + `feat-rate-limit.json` both exist, each passes `handoff-validate.py` exit-0, each carries its own `next_acceptance_check` + a `shared_context` slice |
+| 14 | split-proposes-and-confirms | SPLIT mode proposes ≥2 named threads from `split-two-thread-session.jsonl` and explicitly states it will NOT write brief files until confirmed; model-grade asserts proposal names feat-jwt-expiry + feat-rate-limit and declares write-freeze |
+| 15 | split-writes-self-contained | After confirm, `feat-jwt-expiry.json` + `feat-rate-limit.json` both exist, each passes `handoff-validate.py` exit-0, each carries its own `next_acceptance_check`; shared decisions are copied into each brief's `state.decisions` and shared files into `files_read_first` — no `shared_context` field (schema-valid) |
 | 16 | split-one-fork-narrative | Exactly ONE combined entry is prepended to `.claude/PROJECT_STATE.md` naming both `feat-jwt-expiry` and `feat-rate-limit`; first line of file remains `# Project state` |
 | 17 | split-resume-isolation | `handoff-render.py feat-rate-limit` renders a complete, self-sufficient brief without requiring `feat-jwt-expiry.json` to be present (model-grade: brief is independently resumable) |
 | — | typed-brief-validates | A WRITE-produced `<key>.json` passes `python3 scripts/handoff-validate.py <key>.json` exit-0 (required fields incl. worktree provenance). Asserted inline in evals 0, 1, 4. |
@@ -100,7 +100,7 @@ catalyst/                       (workspace, gitignored)
 - GAN loop running on binary-pass-fail task → not directly tested in v0.3; relies on PIPELINE's "abort on trivial" heuristic
 - Fresh session auto-reading PROJECT_STATE.md when brief says "do NOT load by default" → `fresh-session-resumes-from-brief` (id 13) catches via file-absence assertion
 - SPLIT writing briefs before user confirms thread proposal → `split-proposes-and-confirms` (id 14) catches via file-absence assertion pre-confirm
-- SPLIT producing briefs that omit `next_acceptance_check` or `shared_context` → `split-writes-self-contained` (id 15) catches via `handoff-validate.py` exit-0 + contains check
+- SPLIT producing briefs that omit `next_acceptance_check`, or fail to copy shared decisions into `state.decisions` / shared files into `files_read_first` → `split-writes-self-contained` (id 15) catches via `handoff-validate.py` exit-0 + contains checks; also catches any brief that adds a forbidden `shared_context` top-level key (schema: `additionalProperties: false`)
 - SPLIT writing multiple PROJECT_STATE.md entries instead of one combined fork entry → `split-one-fork-narrative` (id 16) catches via line-count + header assertion
 - SPLIT brief for thread B depending on thread A being present to be readable → `split-resume-isolation` (id 17) catches via model-grade self-sufficiency check
 
