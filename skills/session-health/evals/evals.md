@@ -9,9 +9,9 @@ Binding contract for session-health v0.7. Evals defined before SKILL.md or hooks
 
 ---
 
-## Capability evals (12)
+## Capability evals (13)
 
-### Per-turn signals (UserPromptSubmit hook) — 7 evals
+### Per-turn signals (UserPromptSubmit hook) — 8 evals
 
 | ID | Name | What it proves |
 |----|------|----------------|
@@ -22,6 +22,7 @@ Binding contract for session-health v0.7. Evals defined before SKILL.md or hooks
 | 4  | contradiction-flagged | Hook fired against a transcript where a stated decision contradicts a PROJECT_STATE.md entry surfaces the conflict explicitly |
 | 5  | approaching-effective-window | Transcript at ~55% of a model's *effective* window triggers a per-turn degradation alert; old behavior (firing only at 75% of *advertised* window) is replaced — this eval proves the recalibrated threshold |
 | 6  | reground-recipe | A degradation alert's recommended next step contains the literal `/catalyst:handoff reground` |
+| 12 | degradation-recipe-offers-split | A degradation alert's additionalContext contains BOTH `/catalyst:handoff reground` AND `/catalyst:handoff split`, proving both recovery options are surfaced side-by-side (suggest-only) |
 
 ### Session-end patterns (Stop hook) — 5 evals
 
@@ -75,6 +76,8 @@ Every per-turn alert and every session-end pattern detection MUST include a reco
 3. References a concrete tool action or command for pattern-based detections
 
 Eval ID 6 (`reground-recipe`) asserts the literal string `/catalyst:handoff reground` appears in any degradation alert.
+
+Eval ID 12 (`degradation-recipe-offers-split`) asserts that BOTH `/catalyst:handoff reground` AND `/catalyst:handoff split` appear in the same degradation alert additionalContext, proving the split recovery option is offered alongside reground (suggest-only).
 
 ---
 

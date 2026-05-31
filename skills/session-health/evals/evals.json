@@ -186,6 +186,20 @@
       ]
     },
     {
+      "id": 12,
+      "name": "degradation-recipe-offers-split",
+      "source": "new",
+      "category": "capability",
+      "prompt": "Set env CATALYST_SH_ADVERTISED_TOKENS=200000. Invoke hooks/UserPromptSubmit-session-health.sh with input JSON pointing transcript_path to skills/session-health/evals/fixtures/transcript-warn-effective.jsonl (context-pressure scenario at WARN level). Save the hook's stdout to hook-out-split.json. The additionalContext must contain BOTH the literal string '/catalyst:handoff reground' AND the literal string '/catalyst:handoff split'.",
+      "files": [],
+      "assertions": [
+        "hook-out-split.json exists",
+        "hook-out-split.json parsed-with-jq contains hookSpecificOutput.additionalContext",
+        "additionalContext contains '/catalyst:handoff reground' (existing reground option still present)",
+        "additionalContext contains '/catalyst:handoff split' (new split option offered alongside reground)"
+      ]
+    },
+    {
       "id": "deferred-01",
       "name": "instruction-fade",
       "source": "ported-fpd",
