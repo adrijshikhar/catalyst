@@ -109,27 +109,23 @@ _sh_strong_frac_pct() {
 # ── Token counting ────────────────────────────────────────────────────────────
 
 # sh_count_tokens <transcript_file>
-# Estimates token count. Uses tiktoken when CATALYST_TIKTOKEN=1 and tiktoken
-# is importable; otherwise falls back to chars÷4 heuristic.
+# Returns the context size from the LAST assistant turn's .message.usage:
+#   input_tokens + cache_read_input_tokens + cache_creation_input_tokens
+# (output_tokens excluded — they don't consume the input context window)
+# Returns 0 when no usage field is present (caller treats 0 as "suppress").
+# Fails-open: returns 0 when jq is absent or the file is unreadable.
+# NOTE: CATALYST_TIKTOKEN no longer affects this signal; tiktoken counted
+# transcript-FILE bytes (over-counted to tens of millions after compaction).
 sh_count_tokens() {
   local transcript_file="$1"
   [ -f "$transcript_file" ] || { echo "0"; return 0; }
-  if [ "${CATALYST_TIKTOKEN:-0}" = "1" ] && python3 -c "import tiktoken" 2>/dev/null; then
-    python3 -c "
-import tiktoken, sys, os
-try:
-    enc = tiktoken.get_encoding('cl100k_base')
-    data = open(sys.argv[1]).read()
-    print(len(enc.encode(data)))
-except Exception:
-    chars = os.path.getsize(sys.argv[1])
-    print((chars + 3) // 4)
-" "$transcript_file" 2>/dev/null || echo "0"
-  else
-    local total_chars
-    total_chars=$(wc -c < "$transcript_file" 2>/dev/null | tr -d ' ' || echo "0")
-    echo $(( (total_chars + 3) / 4 ))
-  fi
+  command -v jq >/dev/null 2>&1 || { echo "0"; return 0; }
+  jq -s '
+    [ .[] | select((.message.usage // .usage) != null) ] | last
+    | (.message.usage // .usage)
+    | ((.input_tokens // 0) + (.cache_read_input_tokens // 0) + (.cache_creation_input_tokens // 0))
+    // 0
+  ' "$transcript_file" 2>/dev/null || echo "0"
 }
 
 # ── Threshold computation ─────────────────────────────────────────────────────
