@@ -73,7 +73,14 @@ fi
 
 # ── Signal 1 + 2: context level ───────────────────────────────────────────────
 USED_TOKENS=$(sh_count_tokens "$TRANSCRIPT_PATH")
-CTX_LEVEL=$(sh_classify "$USED_TOKENS")
+ADV=$(_sh_advertised_tokens)
+# Untrustworthy (absent usage → 0, or absurd > advertised×2): suppress the
+# context signal entirely; fall through to the other signals. Never log it.
+if [ "$USED_TOKENS" -le 0 ] || [ "$USED_TOKENS" -gt $(( ADV * 2 )) ]; then
+  CTX_LEVEL="none"
+else
+  CTX_LEVEL=$(sh_classify "$USED_TOKENS")
+fi
 
 # Compute effective window and thresholds for the alert message
 EFF_WIN=$(sh_effective_window)

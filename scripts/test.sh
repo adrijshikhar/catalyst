@@ -23,6 +23,9 @@ bash tests/sh/test_hook_smoke.sh
 echo "== count-tokens smoke =="
 bash tests/sh/test_count_tokens.sh
 
+echo "== token count from last-assistant usage =="
+bash tests/sh/test_token_count.sh
+
 echo "== session-health Stop output schema =="
 bash tests/sh/test_session_health_stop_output.sh
 

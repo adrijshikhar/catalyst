@@ -38,6 +38,13 @@ missing lib). The shared library is sourced, not executed.
 
 ## Per-turn signals (UserPromptSubmit hook)
 
+Token source: the **last assistant turn's `.message.usage`** field
+(`input_tokens + cache_read_input_tokens + cache_creation_input_tokens`).
+When no usage is present (e.g. fresh session, or post-compaction turn without
+a usage field), the context signal is suppressed (falls through to other signals).
+A sanity ceiling suppresses the signal when the reported value exceeds
+`advertised × 2` (guards against implausibly large values).
+
 Urgency order — exactly ONE alert fires per turn (single-alert bar):
 
 | Priority | Signal | Threshold | Alert + recipe |
@@ -153,7 +160,7 @@ inside the project dir (enforced by the hook).
 | `CATALYST_SH_EFFECTIVE_FRAC` | `0.70` | Fraction of advertised window that is effective |
 | `CATALYST_SH_WARN_FRAC` | `0.50` | Fraction of effective window for WARN alert |
 | `CATALYST_SH_STRONG_FRAC` | `0.70` | Fraction of effective window for STRONG alert |
-| `CATALYST_TIKTOKEN` | unset | Set to `1` to use tiktoken instead of chars÷4 heuristic |
+| `CATALYST_TIKTOKEN` | unset | Deprecated for context signal (no longer has effect); reserved for future use |
 
 ## Commands
 
@@ -174,11 +181,12 @@ A generic alert gets ignored. "Be careful" is not a next step.
 
 **Good — specific alert with exact recipe:**
 ```
-CONTEXT WARN: transcript is ~76,525 tokens (effective window 140,000 tok;
+CONTEXT WARN: transcript is ~82,000 tokens (effective window 140,000 tok;
 warn threshold 70,000 tok). Approaching the effective context limit —
 run /catalyst:handoff reground to checkpoint progress.
 ```
-The agent can act on this immediately.
+Token count is read from the last assistant turn's `.message.usage`
+(input + cache_read + cache_creation). The agent can act on this immediately.
 
 ## When NOT to use
 
