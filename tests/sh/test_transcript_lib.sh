@@ -27,4 +27,28 @@ printf '%s' "$out" | grep -q 'rc=0' && echo "PASS fail-open malformed" || { echo
 out=$(sh_normalize_transcript "$FIX/does-not-exist.jsonl"; echo "rc=$?")
 printf '%s' "$out" | grep -q 'rc=0' && echo "PASS fail-open missing" || { echo "FAIL fail-open missing"; fail=1; }
 
+# Mixed good/bad line: bad line mid-stream must not truncate the tail.
+_mixed_tmp=$(mktemp /tmp/test_transcript_XXXXXX.jsonl)
+printf '%s\n' \
+  '{"type":"assistant","timestamp":"2026-06-17T10:00:00Z","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"/repo/x.ts"}}]}}' \
+  'not json' \
+  '{"type":"assistant","timestamp":"2026-06-17T10:00:02Z","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"/repo/y.ts"}}]}}' \
+  > "$_mixed_tmp"
+_mixed_out=$(sh_normalize_transcript "$_mixed_tmp")
+rm -f "$_mixed_tmp"
+echo "$_mixed_out" | jq -e 'select(.type=="tool_use" and .input.file_path=="/repo/x.ts")' >/dev/null 2>&1 \
+  && echo "PASS mixed good/bad: x.ts recovered" || { echo "FAIL mixed good/bad: x.ts not found"; fail=1; }
+echo "$_mixed_out" | jq -e 'select(.type=="tool_use" and .input.file_path=="/repo/y.ts")' >/dev/null 2>&1 \
+  && echo "PASS mixed good/bad: y.ts recovered" || { echo "FAIL mixed good/bad: y.ts not found (tail truncated)"; fail=1; }
+
+# tool_result with ARRAY content: array must be joined into a string.
+_arr_tmp=$(mktemp /tmp/test_transcript_XXXXXX.jsonl)
+printf '%s\n' \
+  '{"type":"user","timestamp":"2026-06-17T10:00:03Z","message":{"content":[{"type":"tool_result","content":[{"type":"text","text":"old_string not found"}]}]}}' \
+  > "$_arr_tmp"
+_arr_out=$(sh_normalize_transcript "$_arr_tmp")
+rm -f "$_arr_tmp"
+echo "$_arr_out" | jq -e 'select(.type=="tool_result") | .content | test("old_string not found")' >/dev/null 2>&1 \
+  && echo "PASS tool_result array content joined" || { echo "FAIL tool_result array content: got $(echo "$_arr_out" | jq -r 'select(.type=="tool_result") | .content')"; fail=1; }
+
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }
