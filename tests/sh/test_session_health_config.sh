@@ -7,7 +7,7 @@ fail=0
 
 run_eff() {  # args: project_dir ; echoes sh_effective_window in a clean subshell
   ( unset CATALYST_SH_ADVERTISED_TOKENS CATALYST_SH_EFFECTIVE_FRAC CATALYST_SH_PATTERN_WINDOW
-    [ -n "${2:-}" ] && export $2
+    [ -n "${2:-}" ] && export "$2"
     CLAUDE_PROJECT_DIR="$1"; export CLAUDE_PROJECT_DIR
     . "$LIB"; sh_effective_window )
 }
@@ -33,6 +33,12 @@ T3="$(mktemp -d)"; mkdir -p "$T3/.claude"
 printf '%s' '{"session_health":{"pattern_window":42}}' > "$T3/.claude/catalyst.json"
 gotw=$( unset CATALYST_SH_PATTERN_WINDOW; CLAUDE_PROJECT_DIR="$T3"; export CLAUDE_PROJECT_DIR; . "$LIB"; _sh_pattern_window )
 [ "$gotw" = "42" ] && echo "PASS json pattern_window -> $gotw" || { echo "FAIL pattern_window: want 42 got $gotw"; fail=1; }
+
+# 6) effective_frac from json: advertised 1000000 × 0.50 = 500000
+T4="$(mktemp -d)"; mkdir -p "$T4/.claude"
+printf '%s' '{"session_health":{"advertised_tokens":1000000,"effective_frac":0.50}}' > "$T4/.claude/catalyst.json"
+got=$(run_eff "$T4" ""); [ "$got" = "500000" ] && echo "PASS json effective_frac -> $got" || { echo "FAIL json effective_frac: want 500000 got $got"; fail=1; }
+rm -rf "${T4:?}"
 
 rm -rf "${T1:?}" "${T2:?}" "${T3:?}"
 [ "$fail" -eq 0 ] && echo "test_session_health_config: ALL PASS" || echo "test_session_health_config: FAILURES"

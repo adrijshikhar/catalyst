@@ -71,12 +71,22 @@ fi
 
 # ── Internal: read effective-window config from env ───────────────────────────
 
+# _sh_config_json <section> <key>
+# Echoes .<section>.<key> from $CLAUDE_PROJECT_DIR/.claude/catalyst.json as a raw
+# scalar, or empty string when jq is absent / the file is missing or malformed /
+# the key is absent or null. Fail-open: never errors, never prints "null".
+_sh_config_json() {
+  local section="$1" key="$2"
+  local cfg="${CLAUDE_PROJECT_DIR:-}/.claude/catalyst.json"
+  [ -f "$cfg" ] || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  jq -r --arg s "$section" --arg k "$key" '.[$s][$k] // empty' "$cfg" 2>/dev/null || true
+}
+
 _sh_advertised_tokens() {
-  local adv="${CATALYST_SH_ADVERTISED_TOKENS:-200000}"
-  # Guard: treat empty, non-numeric, or non-positive values as the default.
-  # A non-numeric value (e.g. "abc") would otherwise slip past `[ -le 0 ]`
-  # (which errors and is silenced) and then abort downstream `$(( adv * ... ))`
-  # under `set -u`, silently suppressing all context alerts.
+  local adv="${CATALYST_SH_ADVERTISED_TOKENS:-}"
+  [ -n "$adv" ] || adv="$(_sh_config_json session_health advertised_tokens)"
+  [ -n "$adv" ] || adv=200000
   case "$adv" in
     ''|*[!0-9]*) adv=200000 ;;
   esac
@@ -88,7 +98,9 @@ _sh_advertised_tokens() {
 # Scoping to recent activity prevents long/compacted sessions from tripping
 # patterns on old, already-resolved churn.
 _sh_pattern_window() {
-  local w="${CATALYST_SH_PATTERN_WINDOW:-100}"
+  local w="${CATALYST_SH_PATTERN_WINDOW:-}"
+  [ -n "$w" ] || w="$(_sh_config_json session_health pattern_window)"
+  [ -n "$w" ] || w=100
   case "$w" in ''|*[!0-9]*) w=100 ;; esac
   [ "$w" -le 0 ] 2>/dev/null && w=100
   echo "$w"
@@ -104,18 +116,23 @@ sh_recent_tool_events() {
 _sh_effective_frac_pct() {
   # Returns integer percentage (0-100) to avoid floating point in POSIX sh.
   # CATALYST_SH_EFFECTIVE_FRAC is a decimal like "0.70"; convert to int pct.
-  local frac="${CATALYST_SH_EFFECTIVE_FRAC:-0.70}"
-  # Multiply by 100 via awk using -v to prevent shell injection.
+  local frac="${CATALYST_SH_EFFECTIVE_FRAC:-}"
+  [ -n "$frac" ] || frac="$(_sh_config_json session_health effective_frac)"
+  [ -n "$frac" ] || frac="0.70"
   awk -v f="$frac" 'BEGIN { printf "%d", f * 100 }'
 }
 
 _sh_warn_frac_pct() {
-  local frac="${CATALYST_SH_WARN_FRAC:-0.50}"
+  local frac="${CATALYST_SH_WARN_FRAC:-}"
+  [ -n "$frac" ] || frac="$(_sh_config_json session_health warn_frac)"
+  [ -n "$frac" ] || frac="0.50"
   awk -v f="$frac" 'BEGIN { printf "%d", f * 100 }'
 }
 
 _sh_strong_frac_pct() {
-  local frac="${CATALYST_SH_STRONG_FRAC:-0.70}"
+  local frac="${CATALYST_SH_STRONG_FRAC:-}"
+  [ -n "$frac" ] || frac="$(_sh_config_json session_health strong_frac)"
+  [ -n "$frac" ] || frac="0.70"
   awk -v f="$frac" 'BEGIN { printf "%d", f * 100 }'
 }
 
