@@ -78,16 +78,17 @@ where quality actually starts to slip.
 
 ## Session-end failure patterns (Stop hook)
 
-Scans the full transcript once at session end. All 6 patterns from the OpenDev paper:
+Scans the last `CATALYST_SH_PATTERN_WINDOW` tool events (default 100) of the transcript
+at session end. All 6 patterns from the OpenDev paper:
 
 | Pattern | Signal | Recovery recipe |
 |---------|--------|-----------------|
 | `repeated-tool-call` | Same Bash/Read/Grep input ≥3× in last 5 turns | "Loop on '…'. Try different approach." |
-| `edit-mismatch` | ≥2 `old_string not found` errors in the transcript | "Re-Read the file before next Edit." |
+| `edit-mismatch` | ≥2 `old_string not found` errors in-window; names the failing file(s) | "Re-Read the file before next Edit." |
 | `stale-read` | Edit on F where F was Written between last Read and this Edit | "Re-Read F — modified since last Read." |
 | `recovery-spiral` | ≥3 consecutive re-Reads of previously-seen files | "Run `/catalyst:handoff reground` or `/clear` + handoff Resume." |
 | `instruction-fade` | Same first 80 chars of user message repeated ≥2× in last 10 turns | "Re-state instruction in fresh session (handoff RECOVER)." |
-| `context-drowning` | Any tool_result content >10KB | "For next big read, dispatch a subagent instead of inlining." |
+| `context-drowning` | Any tool_result content >10KB; names the producing tool + KB | "For next big read, dispatch a subagent instead of inlining." |
 
 All detections are appended to `.claude/session-health.log` with timestamp + session ID
 + pattern + recovery recipe.
@@ -143,7 +144,8 @@ the other (suggest-only; which to use is the agent's choice).
     "repeated_tool_call_window_turns": 5,
     "stale_read_max_turns": 15,
     "edit_mismatch_count": 2,
-    "recovery_spiral_count": 3
+    "recovery_spiral_count": 3,
+    "pattern_window": 100
   },
   "log_path": ".claude/session-health.log"
 }
@@ -160,6 +162,7 @@ inside the project dir (enforced by the hook).
 | `CATALYST_SH_EFFECTIVE_FRAC` | `0.70` | Fraction of advertised window that is effective |
 | `CATALYST_SH_WARN_FRAC` | `0.50` | Fraction of effective window for WARN alert |
 | `CATALYST_SH_STRONG_FRAC` | `0.70` | Fraction of effective window for STRONG alert |
+| `CATALYST_SH_PATTERN_WINDOW` | `100` | Tool-event window for Stop pattern matchers |
 | `CATALYST_TIKTOKEN` | unset | Deprecated for context signal (no longer has effect); reserved for future use |
 
 ## Commands

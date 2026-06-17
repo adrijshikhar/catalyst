@@ -94,4 +94,11 @@ else
   echo "FAIL context-drowning did not fire: $out4"; fail=1
 fi
 
+# 5) Stop summary must say "recent activity (last N tool calls)" not "this session"
+if printf '%s' "$out" | grep -q 'recent activity (last [0-9]* tool calls)'; then
+  echo "PASS Stop summary says 'recent activity (last N tool calls)'"
+else
+  echo "FAIL Stop summary still says 'this session': $out"; fail=1
+fi
+
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }
