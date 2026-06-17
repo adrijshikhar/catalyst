@@ -184,6 +184,7 @@ Both Stop hooks fire independently; neither's `additionalContext` overwrites the
 | Token counting | Char-count heuristic (chars / 4). Opt-in tiktoken via `CATALYST_TIKTOKEN=1` + Python + tiktoken. |
 | Pattern addition | New patterns ship in `Stop-session-health.sh` + `session-health-signals.sh`. Each gets an entry in `enabled_patterns` config + a SKILL.md row. |
 | Composition | Both hooks compose additively. settings.json `.hooks.UserPromptSubmit` / `.hooks.Stop` are arrays — multiple entries fire in order. |
+| Canonical config | `.claude/catalyst.json` (optional) is the single config source for hook knobs; per-skill sections (`session_health`, `verify_gate`). Precedence: env > json > default. Absent file = defaults. |
 
 *(Session-degradation-watch and failure-pattern-detector are retired — unified under **Session-health conventions** above. Brain-bridge was retired 2026-06-17; source archived in the private projects repo at `catalyst/archived/brain-bridge/`.)*
 

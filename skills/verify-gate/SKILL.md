@@ -51,6 +51,22 @@ Create `.claude/verify-gate.json` to override the default rules:
 
 The hook matches `writes_to` against the basename of the file being written. Multiple `requires_read_of` entries are OR'd — any one of them satisfies the rule.
 
+### Configuration — `.claude/catalyst.json`
+
+verify-gate reads its config from the `verify_gate` section of `.claude/catalyst.json`, falling back to the legacy `.claude/verify-gate.json` (deprecated, supported one release) and then built-in defaults. `overreliance_min_bytes` resolves env > json > `4000`.
+
+```json
+{
+  "verify_gate": {
+    "claims": [ { "writes_to": "test-results.json", "requires_read_of": ["test-output.log"] } ],
+    "evidence_freshness_minutes": 10,
+    "overreliance_min_bytes": 4000
+  }
+}
+```
+
+**Migration:** move the contents of an existing `.claude/verify-gate.json` under a `verify_gate` key in `.claude/catalyst.json`.
+
 ## Commands
 
 | Command | What it does |
