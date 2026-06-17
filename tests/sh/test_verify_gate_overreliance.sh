@@ -239,6 +239,22 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# A4: evidence scan must read the REAL nested transcript shape.
+# ---------------------------------------------------------------------------
+VG="$REPO_ROOT/hooks/PreToolUse-verify-gate.sh"
+NOW_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+mk_fixture() { sed "s#2026-06-17T10:00:00Z#$NOW_ISO#g" "$1"; }
+EV="$TMP/ev.jsonl"; mk_fixture "$REPO_ROOT/tests/sh/fixtures/vg-evidence-read.jsonl" > "$EV"
+NO="$TMP/no.jsonl"; mk_fixture "$REPO_ROOT/tests/sh/fixtures/vg-no-evidence.jsonl" > "$NO"
+ev_event() { jq -n --arg t "$1" '{transcript_path:$t,tool_name:"Write",tool_input:{file_path:"test-results.json",content:"all pass"}}'; }
+
+# Evidence WAS read → ALLOW (exit 0)
+ev_event "$EV" | bash "$VG" >/dev/null 2>&1 && echo "PASS A4 allow-when-evidence-read" || { echo "FAIL A4: blocked despite evidence Read"; fail=1; }
+# Evidence NOT read → DENY (exit 2)
+rc=0; ev_event "$NO" | bash "$VG" >/dev/null 2>&1 || rc=$?
+[ "$rc" -eq 2 ] && echo "PASS A4 deny-when-no-evidence" || { echo "FAIL A4: expected deny(2), got $rc"; fail=1; }
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }
