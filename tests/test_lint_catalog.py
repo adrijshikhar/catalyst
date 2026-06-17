@@ -14,11 +14,11 @@ _spec.loader.exec_module(lint)
 class TestCatalogCounts(unittest.TestCase):
     def test_count_skills_matches_dirs_with_skill_md(self):
         n = lint.count_skills(ROOT)
-        self.assertGreaterEqual(n, 7)  # current shipped skill count (8→7 after session-health merge)
+        self.assertGreaterEqual(n, 6)  # shipped skill count (8→7 session-health merge; 7→6 brain-bridge retired 2026-06-17)
 
     def test_count_commands_matches_md(self):
         n = lint.count_commands(ROOT)
-        self.assertGreaterEqual(n, 8)
+        self.assertGreaterEqual(n, 7)  # 8→7 after brain-bridge retired 2026-06-17
 
     def test_readme_skill_rows_match(self):
         errors: list[str] = []

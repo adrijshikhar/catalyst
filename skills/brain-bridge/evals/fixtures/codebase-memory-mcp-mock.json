@@ -1,7 +1,0 @@
-{
-  "symbols": [
-    {"name": "verifyJwt", "file": "src/auth/middleware.ts", "line": 42, "kind": "function", "score": 0.95},
-    {"name": "JwtPayload", "file": "src/auth/types.ts", "line": 8, "kind": "interface", "score": 0.78},
-    {"name": "hashPassword", "file": "src/utils/crypto.ts", "line": 5, "kind": "function", "score": 0.35}
-  ]
-}
