@@ -38,6 +38,10 @@ Each is a wager about a current model limitation. They are reviewed, not eternal
 
 10. **Determinism at the leaf.** Every graded assertion bottoms out in `exists` / `contains` / byte-equality — never model narration. Evals are written before the implementation they grade (EDD), and a new assertion must fail (red) against the bug before the fix turns it green.
 
+11. **Agree "done" before building — pre-coding contracts.** Generator and evaluator negotiate acceptance up front: what "done" means, which checks prove it, what's out of scope. Acceptance checks are explicit, verifiable, and locked before work starts — not discovered after. (This is why PIPELINE mode has a contract step and why specs carry an Acceptance section.)
+
+12. **Every primitive traces to a harness pattern and a model limitation.** A feature earns its place only by grounding in a specific [harness-engineering](https://www.anthropic.com/engineering/harness-design-long-running-apps) pattern (context resets, structured artifact handoff, specialized multi-agent, gradable rubrics, lifecycle hooks…) AND naming the model limitation it scaffolds around. No primitive is added "because it's useful" — it must map to a named pattern and a stated wager. The primitive→implementation map lives in [HARNESS.md](./HARNESS.md).
+
 ---
 
 ## Strict rules (the enforceable *what*)
@@ -88,6 +92,8 @@ Run this against every feature/change before it merges. Each item maps to a prin
 - [ ] **Suggest-only** — no auto-recovery / state mutation on the agent's behalf? (P8)
 - [ ] **Fail-open** — infra errors degrade to inert + surfaced, never block? (P9)
 - [ ] **EDD + determinism** — evals first, failed red, leaf-level assertions? (P10)
+- [ ] **Pre-coding contract** — "done" + acceptance checks defined and locked before building? (P11)
+- [ ] **Primitive grounding** — traces to a named harness pattern + a stated model limitation? (P12)
 - [ ] **Rules** — hooks/skills/security/process strict rules all satisfied?
 
 If any box is unchecked, the change is not ready.

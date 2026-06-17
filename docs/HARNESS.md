@@ -72,17 +72,7 @@ Catalyst maps directly to Anthropic's primitives:
 
 ## Design principles
 
-1. **One brief schema, many surfaces.** A session-handoff, a subagent task description, and a pipeline-stage contract are the same shape. Catalyst defines that shape once — and validates it.
-2. **Context isolation is cheap; context bleed is expensive.** Briefs cap at 30 lines for subagents. Project narrative is referenced by pointer, never inlined.
-3. **Generator ≠ evaluator.** Self-evaluation bias is measured and severe. Catalyst enforces separation as a primary anti-pattern in PIPELINE mode.
-4. **Pre-coding sprint contracts.** Generator + evaluator negotiate "done" before any work happens. Acceptance checks are explicit, verifiable, and locked.
-5. **Strip rather than accumulate.** Every primitive is a wager about a model limitation. Review yearly; retire what flagship models grow past.
-
----
-
-## When complexity earns its place
-
-Every component of every skill encodes an assumption about what the current model can't do reliably on its own. Those assumptions get stress-tested with each new flagship model — scaffolding that no longer earns its complexity gets stripped. The plugin grows opinionated about *when* to add complexity, not just *what* complexity to add.
+The design principles that shape this harness — one schema/many surfaces, no context bleed, generator ≠ evaluator, pre-coding contracts, strip rather than accumulate, and the rest — are the plugin's foundation and live in one canonical place: **[docs/PRINCIPLES.md](./PRINCIPLES.md)**. Every component of every skill encodes an assumption about what the current model can't do reliably alone; those assumptions get stress-tested at each flagship model and stripped when they no longer earn their complexity. The map above shows *what* each primitive is; PRINCIPLES.md is *why* it exists and *when* it should be retired.
 
 ---
 
