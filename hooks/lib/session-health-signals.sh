@@ -48,8 +48,6 @@
 #       → echo "KEY COUNT" if detected, else empty
 #     sh_detect_stale_read <transcript> <stale_turns>
 #       → echo "<file_path>" if detected, else empty
-#     sh_detect_contradiction <transcript> <project_state_file>
-#       → echo "<contradiction description>" if detected, else empty
 #
 #   Session-end pattern matchers (Stop) — each returns 0 if pattern found,
 #   non-zero if not; detail echoed on stdout:
@@ -67,6 +65,13 @@
 #       → echo "<tool:size>" on match
 #
 # ─────────────────────────────────────────────────────────────────────────────
+
+# Shared transcript reader (real .message.content[] shape). Sourced by callers
+# too, but guard against double-source.
+if ! declare -f sh_normalize_transcript >/dev/null 2>&1; then
+  _SH_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  . "$_SH_LIB_DIR/transcript.sh" 2>/dev/null || true
+fi
 
 # ── Internal: read effective-window config from env ───────────────────────────
 
@@ -191,7 +196,7 @@ sh_detect_repeated_tool() {
   local window="${3:-5}"
 
   local recent_tool_uses
-  recent_tool_uses=$(jq -c 'select(.type=="tool_use") | {name, input: (.input | tostring)}' "$transcript" 2>/dev/null \
+  recent_tool_uses=$(sh_normalize_transcript "$transcript" | jq -c 'select(.type=="tool_use") | {name, input: (.input | tostring)}' 2>/dev/null \
     | tail -n "$window" || echo "")
 
   if [ -z "$recent_tool_uses" ]; then
@@ -225,7 +230,7 @@ sh_detect_stale_read() {
   local transcript="$1"
   local stale_turns="${2:-15}"
 
-  jq -rs --argjson stale "$stale_turns" '
+  sh_normalize_transcript "$transcript" | jq -rs --argjson stale "$stale_turns" '
     [ .[] | select(.type=="tool_use") ] | to_entries
     | (map(select(.value.name=="Edit" and ((.value.input.file_path // "") != ""))) | last) as $edit
     | if $edit == null then empty
@@ -235,53 +240,7 @@ sh_detect_stale_read() {
               and (.key < $edit.key))) | last) as $read
         | if ($read != null) and (($edit.key - $read.key) > $stale) then $f else empty end
       end
-  ' "$transcript" 2>/dev/null | tail -1 || echo ""
-}
-
-# sh_detect_contradiction <transcript_file> <project_state_file>
-# Checks the most recent assistant message against "Decision: use X not Y"
-# lines in project_state_file. Prints a description if contradiction found,
-# empty otherwise. Uses POSIX sed with BSD and GNU word-boundary fallbacks.
-sh_detect_contradiction() {
-  local transcript="$1"
-  local project_state="$2"
-
-  if [ ! -f "$project_state" ]; then
-    return 0
-  fi
-
-  local last_assistant
-  last_assistant=$(jq -r 'select(.type=="assistant") | .content // empty' "$transcript" 2>/dev/null | tail -1)
-
-  if [ -z "$last_assistant" ]; then
-    return 0
-  fi
-
-  local result=""
-  while IFS= read -r decision; do
-    # Extract "not X" (BSD word-boundary first, GNU fallback)
-    local not_part
-    not_part=$(echo "$decision" | sed -n 's/.*[[:<:]]not[[:space:]]\{1,\}\([a-zA-Z][a-zA-Z _]*\).*/\1/p' 2>/dev/null | head -1 | tr -d '\n')
-    if [ -z "$not_part" ]; then
-      not_part=$(echo "$decision" | sed -n 's/.*\bnot[[:space:]]\{1,\}\([a-zA-Z][a-zA-Z _]*\).*/\1/p' 2>/dev/null | head -1 | tr -d '\n')
-    fi
-
-    # Extract "use X not" (BSD word-boundary first, GNU fallback)
-    local use_part
-    use_part=$(echo "$decision" | sed -n 's/.*[[:<:]]use[[:space:]]\{1,\}\([a-zA-Z][a-zA-Z _]*\)[[:space:]]\{1,\}not.*/\1/p' 2>/dev/null | head -1 | tr -d '\n')
-    if [ -z "$use_part" ]; then
-      use_part=$(echo "$decision" | sed -n 's/.*\buse[[:space:]]\{1,\}\([a-zA-Z][a-zA-Z _]*\)[[:space:]]\{1,\}not.*/\1/p' 2>/dev/null | head -1 | tr -d '\n')
-    fi
-
-    if [ -n "$not_part" ] && [ -n "$use_part" ]; then
-      if echo "$last_assistant" | grep -qiF "$not_part" && ! echo "$last_assistant" | grep -qiF "$use_part"; then
-        result="contradicts PROJECT_STATE decision: '$decision' (chat mentions '$not_part', should be '$use_part')"
-        break
-      fi
-    fi
-  done < <(grep -h "^Decision:" "$project_state" 2>/dev/null || echo "")
-
-  echo "$result"
+  ' 2>/dev/null | tail -1 || echo ""
 }
 
 # ── Session-end failure-pattern matchers (Stop hook) ─────────────────────────
@@ -296,8 +255,8 @@ sh_pattern_repeated_tool() {
   local window="${3:-5}"
 
   local result
-  result=$(jq -r 'select(.type == "tool_use") | select(.name == "Bash" or .name == "Read" or .name == "Grep") | "\(.name):\(.input.command // .input.file_path // .input.pattern // "")"' \
-    "$transcript" 2>/dev/null \
+  result=$(sh_normalize_transcript "$transcript" | jq -r 'select(.type == "tool_use") | select(.name == "Bash" or .name == "Read" or .name == "Grep") | "\(.name):\(.input.command // .input.file_path // .input.pattern // "")"' \
+    2>/dev/null \
     | tail -n "$window" \
     | sort | uniq -c | sort -rn \
     | awk -v t="$count_threshold" '$1 >= t {print $0; exit}' || echo "")
@@ -325,14 +284,14 @@ sh_pattern_edit_mismatch() {
   # `.name == "Edit"` selector matched nothing and this detector never fired.
   # "old_string not found" appears only in Edit results, so scanning all
   # tool_result content is both correct and sufficient.
-  fail_count=$(jq -r 'select(.type == "tool_result") | .content // ""' \
-    "$transcript" 2>/dev/null \
+  fail_count=$(sh_normalize_transcript "$transcript" | jq -r 'select(.type == "tool_result") | .content // ""' \
+    2>/dev/null \
     | grep -c "old_string not found" || true)
 
   if [ "$fail_count" -ge "$mismatch_threshold" ]; then
     local bad_file
-    bad_file=$(jq -r 'select(.type == "tool_use" and .name == "Edit") | .input.file_path // ""' \
-      "$transcript" 2>/dev/null | tail -1)
+    bad_file=$(sh_normalize_transcript "$transcript" | jq -r 'select(.type == "tool_use" and .name == "Edit") | .input.file_path // ""' \
+      2>/dev/null | tail -1)
     echo "$fail_count failed Edits on $bad_file"
     return 0
   fi
@@ -348,7 +307,7 @@ sh_pattern_stale_read_stop() {
   local transcript="$1"
 
   local stale_file
-  stale_file=$(jq -rn '
+  stale_file=$(sh_normalize_transcript "$transcript" | jq -rn '
     [
       foreach inputs as $row (
         {turn: 0, reads: {}, writes_since: {}, stale: null};
@@ -368,7 +327,7 @@ sh_pattern_stale_read_stop() {
         .
       )
     ] | last | .stale // empty
-  ' < "$transcript" 2>/dev/null || true)
+  ' 2>/dev/null || true)
 
   if [ -n "$stale_file" ]; then
     echo "$stale_file"
@@ -385,7 +344,7 @@ sh_pattern_recovery_spiral() {
   local spiral_count="${2:-3}"
 
   local result
-  result=$(jq -rn --argjson n "$spiral_count" '
+  result=$(sh_normalize_transcript "$transcript" | jq -rn --argjson n "$spiral_count" '
     [
       foreach inputs as $row (
         {seen: {}, streak: 0, hit: false};
@@ -402,7 +361,7 @@ sh_pattern_recovery_spiral() {
         .
       )
     ] | last | .hit
-  ' < "$transcript" 2>/dev/null || echo "false")
+  ' 2>/dev/null || echo "false")
 
   if [ "$result" = "true" ]; then
     echo "true"
@@ -446,9 +405,9 @@ sh_pattern_context_drowning() {
   local transcript="$1"
 
   local large
-  large=$(jq -r 'select(.type == "tool_result") |
-    ([.content] | flatten | map(if type == "object" then (.text // .content // (. | tostring)) else (. | tostring) end) | add // "" | length) as $len |
-    "\(.name // ""):\($len)"' "$transcript" 2>/dev/null \
+  large=$(sh_normalize_transcript "$transcript" | jq -r 'select(.type == "tool_result") |
+    (.content | length) as $len |
+    "\(.name // ""):\($len)"' 2>/dev/null \
     | awk -F: '$2 > 10240 {print $0; exit}' || echo "")
 
   if [ -n "$large" ]; then

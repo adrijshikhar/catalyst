@@ -27,7 +27,7 @@ The practical fix is harness-layer detection + structured reset. This skill dete
 ## Two-timing model
 
 ```
-UserPromptSubmit hook  ──→  per-turn: 4 signals (context-pressure at 2 levels), single most-urgent alert
+UserPromptSubmit hook  ──→  per-turn: 3 signals (context-pressure at 2 levels), single most-urgent alert
 Stop hook             ──→  session-end: 6 failure patterns, recovery recipes
                             ↓
               hooks/lib/session-health-signals.sh  (shared signal library)
@@ -44,9 +44,12 @@ Urgency order — exactly ONE alert fires per turn (single-alert bar):
 |----------|--------|-----------|----------------|
 | 1 | **context STRONG** | ≥ 0.70 × effective window | "Context critically full — run `/catalyst:handoff reground` NOW" |
 | 2 | **context WARN** | ≥ 0.50 × effective window | "Approaching effective context limit — run `/catalyst:handoff reground`" |
-| 3 | **contradiction** | Last assistant turn contradicts a `Decision:` line in `.claude/PROJECT_STATE.md` | "Conflicts with decision '…'. Verify before proceeding." |
-| 4 | **stale-read** | Edit on file F where last Read of F was >15 tool-use events ago | "Re-Read F before further edits to avoid old_string mismatch." |
-| 5 | **repeated-tool** | Same tool call ×3 in last 5 turns | "Try a different approach (different command, different file, ask user)." |
+| 3 | **stale-read** | Edit on file F where last Read of F was >15 tool-use events ago | "Re-Read F before further edits to avoid old_string mismatch." |
+| 4 | **repeated-tool** | Same tool call ×3 in last 5 turns | "Try a different approach (different command, different file, ask user)." |
+
+`contradiction` retired 2026-06-17 (brittle free-text match, low value) — see PRINCIPLES P4.
+
+`instruction-fade` kept, low-priority; review next model pass.
 
 ### Recalibrated effective-window thresholds
 
@@ -116,7 +119,6 @@ the other (suggest-only; which to use is the agent's choice).
   "repeated_tool_call_count": 3,
   "repeated_tool_call_window_turns": 5,
   "stale_read_max_turns": 15,
-  "check_contradiction_with_project_state": true,
   "log_path": ".claude/session-health.log"
 }
 ```

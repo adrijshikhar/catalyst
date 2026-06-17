@@ -11,9 +11,8 @@
 # Signals (urgency order, highest → lowest; context-pressure = one signal, 2 levels):
 #   1. context-pressure STRONG  — token count ≥ 0.70×effective window
 #   1. context-pressure WARN     — token count ≥ 0.50×effective window
-#   2. contradiction   — last assistant turn contradicts PROJECT_STATE.md
-#   3. stale-read      — Edit on file F where last Read was >15 tool-use events ago
-#   4. repeated-tool   — same tool call ×3 in last 5 turns
+#   2. stale-read      — Edit on file F where last Read was >15 tool-use events ago
+#   3. repeated-tool   — same tool call ×3 in last 5 turns
 #
 # Exit codes:
 #   0   — done; stdout is hook JSON (or empty when no signal fires)
@@ -55,7 +54,6 @@ CONFIG_FILE="$PROJECT_DIR/.claude/session-health-watch.json"
 REPEAT_COUNT=3
 REPEAT_WINDOW=5
 STALE_TURNS=15
-CHECK_CONTRADICTION=1
 LOG_PATH="$PROJECT_DIR/.claude/session-health.log"
 
 if [ -f "$CONFIG_FILE" ]; then
@@ -63,7 +61,6 @@ if [ -f "$CONFIG_FILE" ]; then
     REPEAT_COUNT=$(jq -r '.repeated_tool_call_count // 3' "$CONFIG_FILE" || echo 3)
     REPEAT_WINDOW=$(jq -r '.repeated_tool_call_window_turns // 5' "$CONFIG_FILE" || echo 5)
     STALE_TURNS=$(jq -r '.stale_read_max_turns // 15' "$CONFIG_FILE" || echo 15)
-    CHECK_CONTRADICTION=$(jq -r '.check_contradiction_with_project_state // true | if . then 1 else 0 end' "$CONFIG_FILE" || echo 1)
     RAW_LOG=$(jq -r --arg d "$PROJECT_DIR/.claude/session-health.log" '.log_path // $d' "$CONFIG_FILE" || echo "$PROJECT_DIR/.claude/session-health.log")
     # Clamp log path inside PROJECT_DIR (hook convention: never write outside project dir).
     case "$RAW_LOG" in
@@ -83,17 +80,10 @@ EFF_WIN=$(sh_effective_window)
 WARN_TOK=$(sh_warn_threshold)
 STRONG_TOK=$(sh_strong_threshold)
 
-# ── Signal 3: contradiction with PROJECT_STATE.md ─────────────────────────────
-CONTRADICTION_TEXT=""
-PROJECT_STATE="$PROJECT_DIR/.claude/PROJECT_STATE.md"
-if [ "$CHECK_CONTRADICTION" = "1" ]; then
-  CONTRADICTION_TEXT=$(sh_detect_contradiction "$TRANSCRIPT_PATH" "$PROJECT_STATE")
-fi
-
-# ── Signal 4: stale read ─────────────────────────────────────────────────────
+# ── Signal 2: stale read ─────────────────────────────────────────────────────
 STALE_FILE=$(sh_detect_stale_read "$TRANSCRIPT_PATH" "$STALE_TURNS")
 
-# ── Signal 5: repeated tool call ─────────────────────────────────────────────
+# ── Signal 3: repeated tool call ─────────────────────────────────────────────
 REPEATED_RESULT=$(sh_detect_repeated_tool "$TRANSCRIPT_PATH" "$REPEAT_COUNT" "$REPEAT_WINDOW")
 REPEATED_KEY=""
 REPEATED_CNT=0
@@ -110,8 +100,6 @@ if [ "$CTX_LEVEL" = "strong" ]; then
   ALERT="CONTEXT STRONG: transcript is ~${USED_TOKENS} tokens (effective window ${EFF_WIN} tok; strong threshold ${STRONG_TOK} tok). Context critically full — run /catalyst:handoff reground NOW before continuing, or /catalyst:handoff split if this session has braided multiple threads."
 elif [ "$CTX_LEVEL" = "warn" ]; then
   ALERT="CONTEXT WARN: transcript is ~${USED_TOKENS} tokens (effective window ${EFF_WIN} tok; warn threshold ${WARN_TOK} tok). Approaching the effective context limit — run /catalyst:handoff reground to re-ground, or /catalyst:handoff split if this session has braided multiple threads."
-elif [ -n "$CONTRADICTION_TEXT" ]; then
-  ALERT="CONTRADICTION: $CONTRADICTION_TEXT. Verify against .claude/PROJECT_STATE.md before proceeding."
 elif [ -n "$STALE_FILE" ]; then
   ALERT="STALE READ: most recent Edit on '$STALE_FILE' followed a Read >${STALE_TURNS} tool-use events ago. Re-Read '$STALE_FILE' before further edits to avoid old_string mismatch."
 elif [ -n "$REPEATED_RESULT" ] && [ "$REPEATED_CNT" -ge "$REPEAT_COUNT" ]; then
