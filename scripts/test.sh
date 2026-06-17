@@ -32,4 +32,7 @@ bash tests/sh/test_verify_gate_overreliance.sh
 echo "== session-stats reads live session-health.log =="
 bash tests/sh/test_session_stats_logs.sh
 
+echo "== transcript lib: real .message.content[] + flat + fail-open =="
+bash tests/sh/test_transcript_lib.sh
+
 echo "All checks passed."

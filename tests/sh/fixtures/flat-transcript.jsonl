@@ -1,0 +1,2 @@
+{"type":"tool_use","name":"Read","input":{"file_path":"/repo/src/a.ts"},"timestamp":"2026-06-17T10:00:00Z"}
+{"type":"tool_result","content":"old_string not found"}
