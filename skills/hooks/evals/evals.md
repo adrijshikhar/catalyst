@@ -1,6 +1,6 @@
-# EVAL DEFINITION: hook-builder skill v0.4
+# EVAL DEFINITION: hooks skill v0.4
 
-**Skill:** `hook-builder` (Catalyst v0.4)
+**Skill:** `hooks` (Catalyst v0.4)
 **Defined:** 2026-05-24 (pre-implementation — EDD)
 **Spec:** `docs/superpowers/specs/2026-05-24-tier-1-harness-primitives-design.md`
 
@@ -10,11 +10,11 @@
 
 | ID | Name | What it proves |
 |----|------|----------------|
-| 0 | install-single-precompact | `/hook-builder install PreCompact` adds entry to settings.json + copies script to .claude/hooks/ |
-| 1 | install-all-four | `/hook-builder install --all` adds all 4 lifecycle hooks idempotently |
-| 2 | uninstall-removes-cleanly | `/hook-builder uninstall PreCompact` removes settings.json entry + deletes hook script |
-| 3 | new-event-scaffold | `/hook-builder new PostToolUse my-custom-hook` produces a valid hook script template at hooks/PostToolUse-my-custom-hook.sh |
-| 4 | lint-catches-bad-matcher | `/hook-builder lint <path>` flags a hook with matcher ".*" as too broad |
+| 0 | install-single-precompact | `/hooks install PreCompact` adds entry to settings.json + copies script to .claude/hooks/ |
+| 1 | install-all-four | `/hooks install --all` adds all 4 lifecycle hooks idempotently |
+| 2 | uninstall-removes-cleanly | `/hooks uninstall PreCompact` removes settings.json entry + deletes hook script |
+| 3 | new-event-scaffold | `/hooks new PostToolUse my-custom-hook` produces a valid hook script template at hooks/PostToolUse-my-custom-hook.sh |
+| 4 | lint-catches-bad-matcher | `/hooks lint <path>` flags a hook with matcher ".*" as too broad |
 
 ## Regression evals (0)
 

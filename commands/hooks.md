@@ -2,7 +2,7 @@
 description: Manage Catalyst lifecycle hooks (PreCompact → handoff WRITE, SessionStart → handoff READ, Stop → commit backstop, UserPromptSubmit → repo orientation). Install / uninstall pre-built hooks, scaffold new ones from templates, or lint existing hooks. Routes the user's argument to the appropriate sub-action.
 ---
 
-Invoke the `hook-builder` skill.
+Invoke the `hooks` skill.
 
 Recognized sub-commands (parse `$ARGUMENT`):
 
@@ -19,4 +19,4 @@ Recognized sub-commands (parse `$ARGUMENT`):
 - `lint <path>` — Read the file and check: matcher patterns (warn if `.*` or empty), `set -euo pipefail` present, `command -v jq` check, fail-open default, naming convention (filename starts with recognized event prefix), `bash -n` syntax.
 - `status` — Read `.claude/settings.json`, list which Catalyst-known hooks are currently installed.
 
-If `$ARGUMENT` is empty or unrecognized, summarize the skill: what hook-builder does, what the four pre-built hooks accomplish, how to install. Point at `skills/hook-builder/SKILL.md` for full docs.
+If `$ARGUMENT` is empty or unrecognized, summarize the skill: what hooks does, what the four pre-built hooks accomplish, how to install. Point at `skills/hooks/SKILL.md` for full docs.

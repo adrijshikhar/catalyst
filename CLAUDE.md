@@ -139,7 +139,7 @@ Plugin-bundled hooks live in `hooks/` at the repo root. Hook scripts are install
 
 See `hooks/README.md` for the full hook protocol reference.
 
-When adding a new hook, use `/hook-builder new <Event> <name>` to scaffold from the canonical template.
+When adding a new hook, use `/hooks new <Event> <name>` to scaffold from the canonical template.
 
 ## Evaluator-library conventions
 

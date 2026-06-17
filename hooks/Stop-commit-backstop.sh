@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop-commit-backstop.sh — Catalyst hook-builder
+# Stop-commit-backstop.sh — Catalyst hooks
 #
 # Fires when the session ends. If there are uncommitted changes in the working
 # tree, surface them via a top-level `systemMessage` so the next session can

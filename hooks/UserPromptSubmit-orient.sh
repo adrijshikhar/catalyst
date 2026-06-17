@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UserPromptSubmit-orient.sh — Catalyst hook-builder
+# UserPromptSubmit-orient.sh — Catalyst hooks
 #
 # Fires on user prompt submission. Injects orientation context for FIRST prompt
 # of a session: branch name + last 5 commits. Skips injection on subsequent

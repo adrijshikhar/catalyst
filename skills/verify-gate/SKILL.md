@@ -115,7 +115,7 @@ export CATALYST_OVERRELIANCE_MIN_BYTES=2000
 ## Composition with other Catalyst skills
 
 - `handoff` writes to `.claude/handoffs/<key>.json` and `.claude/PROJECT_STATE.md`. Those paths are NOT in the default claim list, so handoff writes are never blocked by verify-gate.
-- `hook-builder` does NOT install verify-gate via `--all` — it is a separate opt-in. Use `/verify-gate install`. The two compose cleanly once both are installed.
+- `hooks` does NOT install verify-gate via `--all` — it is a separate opt-in. Use `/verify-gate install`. The two compose cleanly once both are installed.
 
 ## Model evolution
 
