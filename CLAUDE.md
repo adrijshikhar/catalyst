@@ -4,6 +4,8 @@ Repo-local conventions for [Catalyst](https://github.com/adrijshikhar/catalyst).
 
 When contributing, default to these patterns. Diverge only with a good reason (and write the reason in the commit body).
 
+> **Foundation:** [docs/PRINCIPLES.md](./docs/PRINCIPLES.md) is the plugin's constitution — core principles + strict rules + the change-validation checklist every feature is graded against. This file (CLAUDE.md) is the mechanical *how*; PRINCIPLES.md is the binding *why* and the non-negotiables. On any conflict, PRINCIPLES.md governs.
+
 ## Commit conventions
 
 Conventional commits with **mandatory scope** when the change is feature-specific. The scope names the skill or surface.

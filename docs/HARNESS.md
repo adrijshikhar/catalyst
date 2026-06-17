@@ -88,6 +88,7 @@ Every component of every skill encodes an assumption about what the current mode
 
 ## See also
 
+- [PRINCIPLES](./PRINCIPLES.md) — the plugin's foundation: core principles, strict rules, change-validation checklist
 - [README](../README.md) — install + overview
 - Each skill's `SKILL.md` under [`skills/`](../skills) — full trigger conditions + behavior
 - [Harness Engineering for Long-Running Agentic Applications](https://www.anthropic.com/engineering/harness-design-long-running-apps) — the Anthropic framework that grounds Catalyst's design
