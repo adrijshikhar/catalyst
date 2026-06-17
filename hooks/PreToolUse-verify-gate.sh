@@ -25,6 +25,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=/dev/null
+. "$SCRIPT_DIR/lib/transcript.sh" 2>/dev/null || true
+
 # Fail-open on missing jq
 if ! command -v jq >/dev/null 2>&1; then
   exit 1
@@ -88,11 +92,11 @@ scan_evidence_for_any_read() {
     REQUIRED_BASE=$(basename "$required")
     # Find Read entries matching this required file
     local READ_LINE
-    READ_LINE=$(jq -c --arg name "$REQUIRED_BASE" 'select(.type == "tool_use" and .name == "Read") | select((.input.file_path // "") | endswith($name))' < "$TRANSCRIPT_PATH" 2>/dev/null | tail -1)
+    READ_LINE=$(sh_normalize_transcript "$TRANSCRIPT_PATH" | jq -c --arg name "$REQUIRED_BASE" 'select(.type == "tool_use" and .name == "Read") | select((.input.file_path // "") | endswith($name))' 2>/dev/null | tail -1)
 
     if [ -n "$READ_LINE" ]; then
       local READ_TS
-      READ_TS=$(echo "$READ_LINE" | jq -r '.timestamp // ""')
+      READ_TS=$(echo "$READ_LINE" | jq -r '.ts // .timestamp // ""')
       if [ -z "$READ_TS" ]; then
         EVIDENCE_FOUND="$required"
         return
@@ -181,9 +185,9 @@ if [ "$OVERRELIANCE_ON" = "1" ]; then
       NOW_EPOCH=$(date -u +%s)
       WINDOW_SEC=$(( FRESHNESS_MIN * 60 ))
       # Pick the most recent Read entry from the transcript
-      LAST_READ_LINE=$(jq -c 'select(.type == "tool_use" and .name == "Read")' < "$TRANSCRIPT_PATH" 2>/dev/null | tail -1)
+      LAST_READ_LINE=$(sh_normalize_transcript "$TRANSCRIPT_PATH" | jq -c 'select(.type == "tool_use" and .name == "Read")' 2>/dev/null | tail -1)
       if [ -n "$LAST_READ_LINE" ]; then
-        READ_TS=$(echo "$LAST_READ_LINE" | jq -r '.timestamp // ""')
+        READ_TS=$(echo "$LAST_READ_LINE" | jq -r '.ts // .timestamp // ""')
         if [ -z "$READ_TS" ]; then
           # No timestamp → treat as in-window (fail-open)
           ANY_RECENT_READ="yes"
