@@ -59,19 +59,21 @@ else
   echo "PASS: no instruction-fade false-positive on null user turns"
 fi
 
-# 3) edit-mismatch must FIRE on repeated "old_string not found" tool_results.
-#    Uses the real nested .message.content[] shape (A0 wiring requirement).
-EMT="$TMP/editmiss.jsonl"
-for _ in 1 2 3; do
-  printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"src/a.ts"}}]}}' >> "$EMT"
+# 3) edit-mismatch must FIRE on repeated "old_string not found" tool_results,
+#    and must name BOTH distinct failing files (attribution regression).
+EMT="$TMP/editmiss.jsonl"; : > "$EMT"
+for f in a b; do
+  printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"src/'"$f"'.ts"}}]}}' >> "$EMT"
   printf '%s\n' '{"type":"user","message":{"content":[{"type":"tool_result","content":"Error: old_string not found in file"}]}}' >> "$EMT"
 done
 EVENT3=$(jq -n --arg t "$EMT" --arg c "$TMP" '{transcript_path:$t,session_id:"reg3",cwd:$c}')
 out3=$(printf '%s' "$EVENT3" | CLAUDE_PROJECT_DIR="$TMP" bash "$TMP/.claude/hooks/Stop-session-health.sh" 2>/dev/null) || true
-if printf '%s' "$out3" | grep -q 'edit-mismatch'; then
-  echo "PASS: edit-mismatch fires on repeated old_string-not-found results"
+if printf '%s' "$out3" | grep -q 'edit-mismatch' \
+   && printf '%s' "$out3" | grep -q 'src/a.ts' \
+   && printf '%s' "$out3" | grep -q 'src/b.ts'; then
+  echo "PASS edit-mismatch fires + names both failing files"
 else
-  echo "FAIL: edit-mismatch did not fire (dead-detector regression): $out3"; fail=1
+  echo "FAIL edit-mismatch attribution: $out3"; fail=1
 fi
 
 # 4) context-drowning detail must name the producing tool + KB, never ":<digits>".
