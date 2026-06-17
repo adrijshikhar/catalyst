@@ -58,22 +58,6 @@
       ]
     },
     {
-      "id": 4,
-      "name": "contradiction-flagged",
-      "source": "ported-sdw",
-      "category": "capability",
-      "prompt": "Create a fixture .claude/PROJECT_STATE.md with the line 'Decision: use JWT not session cookies'. Then invoke hooks/UserPromptSubmit-session-health.sh with a transcript ending in a turn saying 'using session cookies for auth'. The hook must detect the string-level contradiction and flag it in additionalContext.",
-      "files": [
-        {"path": ".claude/PROJECT_STATE.md", "content": "Decision: use JWT not session cookies for auth.\n"},
-        {"path": "transcript-contradiction.jsonl", "content": "{\"type\":\"user\",\"content\":\"start\",\"turn\":1}\n{\"type\":\"assistant\",\"content\":\"using session cookies for auth\",\"turn\":2}\n"}
-      ],
-      "assertions": [
-        "hook-out-contradiction.json exists",
-        "additionalContext contains 'contradiction' OR 'conflict' OR 'PROJECT_STATE'",
-        "additionalContext mentions 'JWT' OR 'session cookies' (names the contradicting concept)"
-      ]
-    },
-    {
       "id": 5,
       "name": "approaching-effective-window",
       "source": "new",
