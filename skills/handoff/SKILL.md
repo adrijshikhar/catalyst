@@ -171,6 +171,8 @@ The resume prompt MUST route through `/catalyst:handoff resume` — never a bare
 
 A new session has loaded with one or more briefs present, and the user wants to resume.
 
+> **Auto-resume (hook-driven):** when `SessionStart-handoff-read.sh` is installed, a session opened via `/clear` or `/compact` (source `clear`/`compact`) gets the brief's five load-bearing fields — next step, done-when, next acceptance check, open risks, files-to-read-first — auto-rendered into context, so no explicit `/handoff resume` is needed. Other sources (`startup`/`resume`) get a one-line announce instead. Run `/catalyst:handoff resume` any time for the full READ render below.
+
 1. Resolve `$SCR` (see Helper-script location), then `<store>` via `bash "$SCR/handoff-dir.sh"`. List `<store>/*.json` (fall back to `<store>/HANDOFF.json` if no keyed files exist).
 2. If multiple briefs exist:
    - Detect current branch.
