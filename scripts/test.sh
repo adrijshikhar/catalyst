@@ -29,4 +29,7 @@ bash tests/sh/test_session_health_stop_output.sh
 echo "== verify-gate over-reliance rule =="
 bash tests/sh/test_verify_gate_overreliance.sh
 
+echo "== session-stats reads live session-health.log =="
+bash tests/sh/test_session_stats_logs.sh
+
 echo "All checks passed."
