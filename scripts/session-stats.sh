@@ -29,7 +29,14 @@ HEALTH_LOG="$PROJECT_DIR/.claude/session-health.log"
 CFG="$PROJECT_DIR/.claude/session-health.json"
 if [ -f "$CFG" ] && command -v jq >/dev/null 2>&1; then
   CFG_PATH=$(jq -r '.log_path // empty' "$CFG" 2>/dev/null || true)
-  [ -n "$CFG_PATH" ] && HEALTH_LOG="$PROJECT_DIR/$CFG_PATH"
+  if [ -n "$CFG_PATH" ]; then
+    case "$CFG_PATH" in
+      *..*) ;;                                                  # traversal → keep default HEALTH_LOG
+      "$PROJECT_DIR"/*) HEALTH_LOG="$CFG_PATH" ;;               # absolute, inside project
+      /*) ;;                                                    # absolute outside project → keep default
+      ?*) HEALTH_LOG="$PROJECT_DIR/$CFG_PATH" ;;                # relative
+    esac
+  fi
 fi
 
 if [ -f "$HEALTH_LOG" ]; then

@@ -84,9 +84,12 @@ case "$ACTION" in
     if [ -f "$HOOKS_DEST_DIR/$HOOK_FILE" ]; then
       rm "$HOOKS_DEST_DIR/$HOOK_FILE"
     fi
-    # Reap the shared signal lib once no session-health hooks remain (else it's
-    # orphaned dead weight). Only the session-health hooks source it.
-    if [ -d "$HOOKS_DEST_DIR/lib" ] && ! ls "$HOOKS_DEST_DIR"/*session-health*.sh >/dev/null 2>&1; then
+    # Reap the shared lib once no hook that sources it remains.
+    # Both session-health hooks and verify-gate source lib/transcript.sh (and
+    # lib/session-health-signals.sh). Keep the dir alive while either is present.
+    if [ -d "$HOOKS_DEST_DIR/lib" ] \
+       && ! ls "$HOOKS_DEST_DIR"/*session-health*.sh >/dev/null 2>&1 \
+       && ! ls "$HOOKS_DEST_DIR"/*verify-gate*.sh >/dev/null 2>&1; then
       rm -rf "$HOOKS_DEST_DIR/lib"
     fi
     CMD="bash \$CLAUDE_PROJECT_DIR/.claude/hooks/$HOOK_FILE"

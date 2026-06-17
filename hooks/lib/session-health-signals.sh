@@ -29,10 +29,6 @@
 #   STRONG threshold (tok) = advertised × effective_frac × strong_frac.
 #   At defaults: 200000 × 0.70 × 0.70 = 98000 tokens.
 #
-# CATALYST_TIKTOKEN              (default: unset)
-#   Set to "1" to use the tiktoken Python package for exact token counting
-#   instead of the char-count heuristic (chars ÷ 4). Requires Python +
-#   tiktoken to be installed; falls back to heuristic silently if unavailable.
 #
 # ── FUNCTION INVENTORY ───────────────────────────────────────────────────────
 #
