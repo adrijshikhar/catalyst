@@ -30,6 +30,38 @@ class TestCatalogCounts(unittest.TestCase):
         lint.check_marketplace_consistency(ROOT, errors)
         self.assertEqual(errors, [])
 
+    def test_readme_missing_skill_row_is_flagged(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            for s in ("foo", "bar"):
+                (root / "skills" / s).mkdir(parents=True)
+                (root / "skills" / s / "SKILL.md").write_text("---\nname: %s\ndescription: x\n---\n" % s)
+            # README lists only foo — bar is missing.
+            (root / "README.md").write_text(
+                "## Skills\n\n| Skill | Purpose |\n|---|---|\n"
+                "| [`foo`](./skills/foo/SKILL.md) | x |\n"
+            )
+            errors: list[str] = []
+            lint.check_catalog_counts(root, errors)
+            self.assertTrue(any("bar" in e for e in errors), errors)
+
+    def test_readme_orphan_row_is_flagged(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "skills" / "foo").mkdir(parents=True)
+            (root / "skills" / "foo" / "SKILL.md").write_text("---\nname: foo\ndescription: x\n---\n")
+            # README lists foo AND a ghost skill with no dir.
+            (root / "README.md").write_text(
+                "## Skills\n\n| Skill | Purpose |\n|---|---|\n"
+                "| [`foo`](./skills/foo/SKILL.md) | x |\n"
+                "| [`ghost`](./skills/ghost/SKILL.md) | x |\n"
+            )
+            errors: list[str] = []
+            lint.check_catalog_counts(root, errors)
+            self.assertTrue(any("ghost" in e for e in errors), errors)
+
 
 if __name__ == "__main__":
     unittest.main()

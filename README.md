@@ -57,14 +57,14 @@ WRITE produces a typed, schema-validated brief; READ renders it back into a resu
 
 ## Skills
 
-| Skill | Purpose |
-|-------|---------|
-| [`handoff`](./skills/handoff/SKILL.md) | Structured context transfer for sessions, subagents, and pipelines. Six modes (WRITE / READ / RECOVER / REGROUND / SPLIT / BRIEF) plus PIPELINE orchestration. Typed JSON brief validated against a JSON Schema, feature-keyed, centralized worktree-aware store, render-on-read resume. REGROUND counters lost-in-the-middle; SPLIT forks a braided session into N self-contained briefs. |
-| [`verify-gate`](./skills/verify-gate/SKILL.md) | PreToolUse hook that blocks "claim success" writes (test-results, build-status) unless the evidence file was Read first. Solves optimistic completion bias. Plus an opt-in over-reliance rule for large unverified agent diffs. |
-| [`hooks`](./skills/hooks/SKILL.md) | Pre-built lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) that wire `handoff` into the session lifecycle. Turns Catalyst from explicit to ambient. |
-| [`evaluator-library`](./skills/evaluator-library/SKILL.md) | 6 bundled domain rubrics (code-quality, ui-design, prose, security, performance, accessibility) dispatched with anti-self-grade enforced. |
-| [`pipeline-templates`](./skills/pipeline-templates/SKILL.md) | 3 bundled executable pipeline templates (audit-then-fix, research-plan-implement-review, parallel-review-synthesize) + `/pipeline run / list / save`. |
-| [`session-health`](./skills/session-health/SKILL.md) | Two-timing detector: per-turn degradation signals with recalibrated effective-window thresholds, and a session-end scan for 6 named failure patterns with recovery recipes. |
+| Skill | Purpose | When to use |
+|-------|---------|-------------|
+| [`handoff`](./skills/handoff/SKILL.md) | Structured context transfer for sessions, subagents, and pipelines. Six modes (WRITE / READ / RECOVER / REGROUND / SPLIT / BRIEF) plus PIPELINE orchestration. Typed JSON brief validated against a JSON Schema, feature-keyed, centralized worktree-aware store, render-on-read resume. REGROUND counters lost-in-the-middle; SPLIT forks a braided session into N self-contained briefs. | Ending a session, hitting a context limit, before `/clear` or `/compact`, resuming a prior session, or briefing a subagent. |
+| [`verify-gate`](./skills/verify-gate/SKILL.md) | PreToolUse hook that blocks "claim success" writes (test-results, build-status) unless the evidence file was Read first. Solves optimistic completion bias. Plus an opt-in over-reliance rule for large unverified agent diffs. | Writing test-results / build-status / completion artifacts that downstream consumers will trust. |
+| [`hooks`](./skills/hooks/SKILL.md) | Pre-built lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) that wire `handoff` into the session lifecycle. Turns Catalyst from explicit to ambient. | Installing/uninstalling the lifecycle hooks, or making handoff ambient. |
+| [`evaluator-library`](./skills/evaluator-library/SKILL.md) | 6 bundled domain rubrics (code-quality, ui-design, prose, security, performance, accessibility) dispatched with anti-self-grade enforced. | Scoring an artifact with a fresh-context evaluator (generator ≠ evaluator), or an evaluator pipeline stage. |
+| [`pipeline-templates`](./skills/pipeline-templates/SKILL.md) | 3 bundled executable pipeline templates (audit-then-fix, research-plan-implement-review, parallel-review-synthesize) + `/pipeline run / list / save`. | Running a recurring multi-stage shape (audit, review, feature) by name instead of re-decomposing. |
+| [`session-health`](./skills/session-health/SKILL.md) | Two-timing detector: per-turn degradation signals with recalibrated effective-window thresholds, and a session-end scan for 6 named failure patterns with recovery recipes. | A long session degrading, looping, contradicting earlier decisions, or to see what went wrong at the end. |
 
 → How each skill maps to Anthropic's harness primitives, plus the design principles → **[docs/HARNESS.md](./docs/HARNESS.md)**.
 
