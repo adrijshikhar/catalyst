@@ -48,8 +48,11 @@ case "$ACTION" in
     cp "$HOOKS_SRC_DIR/$HOOK_FILE" "$HOOKS_DEST_DIR/$HOOK_FILE"
     chmod +x "$HOOKS_DEST_DIR/$HOOK_FILE"
     # Copy the shared signal library if it exists (used by session-health hooks).
+    # Copy the FILES into dest/lib (not the dir into dest/lib) so a re-install
+    # refreshes in place instead of nesting dest/lib/lib.
     if [ -d "$HOOKS_SRC_DIR/lib" ]; then
-      cp -r "$HOOKS_SRC_DIR/lib" "$HOOKS_DEST_DIR/lib"
+      mkdir -p "$HOOKS_DEST_DIR/lib"
+      cp "$HOOKS_SRC_DIR/lib/"*.sh "$HOOKS_DEST_DIR/lib/" 2>/dev/null || true
     fi
 
     CMD="bash \$CLAUDE_PROJECT_DIR/.claude/hooks/$HOOK_FILE"
