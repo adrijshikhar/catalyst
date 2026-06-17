@@ -165,6 +165,23 @@ inside the project dir (enforced by the hook).
 | `CATALYST_SH_PATTERN_WINDOW` | `100` | Tool-event window for Stop pattern matchers |
 | `CATALYST_TIKTOKEN` | unset | Deprecated for context signal (no longer has effect); reserved for future use |
 
+### Configuration — `.claude/catalyst.json`
+
+All knobs resolve **env var > `.claude/catalyst.json` > built-in default**. The file is optional; absent means defaults. The `session_health` section:
+
+| Key | Env override | Default |
+|-----|--------------|---------|
+| `advertised_tokens` | `CATALYST_SH_ADVERTISED_TOKENS` | `200000` |
+| `effective_frac` | `CATALYST_SH_EFFECTIVE_FRAC` | `0.70` |
+| `warn_frac` | `CATALYST_SH_WARN_FRAC` | `0.50` |
+| `strong_frac` | `CATALYST_SH_STRONG_FRAC` | `0.70` |
+| `pattern_window` | `CATALYST_SH_PATTERN_WINDOW` | `100` |
+
+Example (1M-context model):
+```json
+{ "session_health": { "advertised_tokens": 1000000 } }
+```
+
 ## Commands
 
 | Command | What it does |
