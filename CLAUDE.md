@@ -185,19 +185,7 @@ Both Stop hooks fire independently; neither's `additionalContext` overwrites the
 | Pattern addition | New patterns ship in `Stop-session-health.sh` + `session-health-signals.sh`. Each gets an entry in `enabled_patterns` config + a SKILL.md row. |
 | Composition | Both hooks compose additively. settings.json `.hooks.UserPromptSubmit` / `.hooks.Stop` are arrays — multiple entries fire in order. |
 
-## Brain-bridge conventions
-
-Bundled adapters live in `skills/brain-bridge/adapters/<backend>.sh`. Each is a POSIX bash + jq script reading raw backend output on stdin and printing normalized JSON to stdout.
-
-| Convention | Rule |
-|------------|------|
-| Filename | `<backend>.sh`. Backend name matches the `.claude/brain-bridge.json` `backend` field. |
-| Env contract | Reads `BB_QUERY`, `BB_RELEVANCE_THRESHOLD`, `BB_TOKEN_BUDGET`, `BB_MAX_POINTERS` from env. No CLI args. |
-| Output | Normalized JSON shape — `{query, results: [{type, ...}], token_budget_remaining}`. Result `type` ∈ {file, decision, convention, symbol}. |
-| Pointer-only rule | NEVER inline file content. Pointers only (file:line, ADR IDs, doc tags). Hard ban. |
-| Failure mode | Backend unreachable → exit non-zero AND print empty results JSON. Caller renders brief without `## Brain pointers` section (fail-open). |
-
-*(Session-degradation-watch and failure-pattern-detector are retired. Their conventions are now unified under **Session-health conventions** above.)*
+*(Session-degradation-watch and failure-pattern-detector are retired — unified under **Session-health conventions** above. Brain-bridge was retired 2026-06-17; source archived in the private projects repo at `catalyst/archived/brain-bridge/`.)*
 
 ## Commands as thin wrappers
 

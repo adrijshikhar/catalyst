@@ -66,7 +66,6 @@ Catalyst maps directly to Anthropic's primitives:
 | Pre-built evaluator rubrics (code/ui/prose/security/perf/a11y) | `evaluator-library` skill |
 | End-of-session failure-pattern surfacing | `session-health` skill (Stop hook) |
 | Executable saved pipeline templates | `pipeline-templates` skill |
-| Brain / knowledge-layer context injection (MCP) | `brain-bridge` skill |
 | Real-time degradation surfacing | `session-health` skill (UserPromptSubmit hook) |
 
 ---

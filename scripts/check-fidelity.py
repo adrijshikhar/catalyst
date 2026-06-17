@@ -2,7 +2,7 @@
 """Fidelity invariant checker.
 
 Load-bearing content (file:line pointers, fenced code, URLs, ADR/decision IDs)
-must survive a rewrite (brief rebuild, brain-bridge pointer rendering). Free
+must survive a rewrite (e.g. a handoff brief rebuild). Free
 content (prose) may change.
 
 CLI:

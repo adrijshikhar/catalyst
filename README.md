@@ -64,7 +64,6 @@ WRITE produces a typed, schema-validated brief; READ renders it back into a resu
 | [`hook-builder`](./skills/hook-builder/SKILL.md) | Pre-built lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) that wire `handoff` into the session lifecycle. Turns Catalyst from explicit to ambient. |
 | [`evaluator-library`](./skills/evaluator-library/SKILL.md) | 6 bundled domain rubrics (code-quality, ui-design, prose, security, performance, accessibility) dispatched with anti-self-grade enforced. |
 | [`pipeline-templates`](./skills/pipeline-templates/SKILL.md) | 3 bundled executable pipeline templates (audit-then-fix, research-plan-implement-review, parallel-review-synthesize) + `/pipeline run / list / save`. |
-| [`brain-bridge`](./skills/brain-bridge/SKILL.md) | MCP adapter that pulls Company Brain context into handoff PIPELINE briefs as pointers — never inlined. Configurable token budget + relevance threshold. |
 | [`session-health`](./skills/session-health/SKILL.md) | Two-timing detector: per-turn degradation signals with recalibrated effective-window thresholds, and a session-end scan for 6 named failure patterns with recovery recipes. |
 
 → How each skill maps to Anthropic's harness primitives, plus the design principles → **[docs/HARNESS.md](./docs/HARNESS.md)**.

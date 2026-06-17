@@ -1,7 +1,0 @@
-{
-  "pages": [
-    {"path": "src/auth/middleware.ts", "line_start": 42, "line_end": 78, "score": 0.91, "title": "JWT verify"},
-    {"path": "src/auth/session.ts", "line_start": 10, "line_end": 35, "score": 0.72, "title": "session create"},
-    {"path": "src/utils/crypto.ts", "line_start": 5, "line_end": 22, "score": 0.41, "title": "hash helper"}
-  ]
-}
