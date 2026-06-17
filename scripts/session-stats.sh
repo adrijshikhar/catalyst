@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/session-stats.sh — render a compact session stats report.
 # Reads the session transcript (real token usage via count-tokens.sh), plus the
-# tails of the degradation + failure-pattern logs. Pure read; no model.
+# tail of the .claude/session-health.log. Pure read; no model.
 #
 # Usage: session-stats.sh <transcript_path>
 # Env: CLAUDE_PROJECT_DIR (for log locations).
@@ -24,18 +24,17 @@ else
   echo "Approx tokens this session: (no transcript)"
 fi
 
-DEG_LOG="$PROJECT_DIR/.claude/session-degradation.log"
-if [ -f "$DEG_LOG" ]; then
-  echo "--- recent degradation alerts ---"
-  tail -n 5 "$DEG_LOG"
-else
-  echo "--- no degradation alerts ---"
+# Honor a configured log_path, else the live default.
+HEALTH_LOG="$PROJECT_DIR/.claude/session-health.log"
+CFG="$PROJECT_DIR/.claude/session-health.json"
+if [ -f "$CFG" ] && command -v jq >/dev/null 2>&1; then
+  CFG_PATH=$(jq -r '.log_path // empty' "$CFG" 2>/dev/null || true)
+  [ -n "$CFG_PATH" ] && HEALTH_LOG="$PROJECT_DIR/$CFG_PATH"
 fi
 
-FAIL_LOG="$PROJECT_DIR/.claude/failure-patterns.log"
-if [ -f "$FAIL_LOG" ]; then
-  echo "--- recent failure patterns ---"
-  tail -n 5 "$FAIL_LOG"
+if [ -f "$HEALTH_LOG" ]; then
+  echo "--- recent session-health alerts ---"
+  tail -n 5 "$HEALTH_LOG"
 else
-  echo "--- no failure patterns ---"
+  echo "--- no session-health alerts ---"
 fi
