@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SessionStart-handoff-read.sh — Catalyst hook-builder
+# SessionStart-handoff-read.sh — Catalyst hooks
 #
 # Fires on session start. Detects whether a relevant handoff brief exists
 # for the current branch. If so, injects a prompt to invoke handoff READ.

@@ -61,7 +61,7 @@ WRITE produces a typed, schema-validated brief; READ renders it back into a resu
 |-------|---------|
 | [`handoff`](./skills/handoff/SKILL.md) | Structured context transfer for sessions, subagents, and pipelines. Six modes (WRITE / READ / RECOVER / REGROUND / SPLIT / BRIEF) plus PIPELINE orchestration. Typed JSON brief validated against a JSON Schema, feature-keyed, centralized worktree-aware store, render-on-read resume. REGROUND counters lost-in-the-middle; SPLIT forks a braided session into N self-contained briefs. |
 | [`verify-gate`](./skills/verify-gate/SKILL.md) | PreToolUse hook that blocks "claim success" writes (test-results, build-status) unless the evidence file was Read first. Solves optimistic completion bias. Plus an opt-in over-reliance rule for large unverified agent diffs. |
-| [`hook-builder`](./skills/hook-builder/SKILL.md) | Pre-built lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) that wire `handoff` into the session lifecycle. Turns Catalyst from explicit to ambient. |
+| [`hooks`](./skills/hooks/SKILL.md) | Pre-built lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) that wire `handoff` into the session lifecycle. Turns Catalyst from explicit to ambient. |
 | [`evaluator-library`](./skills/evaluator-library/SKILL.md) | 6 bundled domain rubrics (code-quality, ui-design, prose, security, performance, accessibility) dispatched with anti-self-grade enforced. |
 | [`pipeline-templates`](./skills/pipeline-templates/SKILL.md) | 3 bundled executable pipeline templates (audit-then-fix, research-plan-implement-review, parallel-review-synthesize) + `/pipeline run / list / save`. |
 | [`session-health`](./skills/session-health/SKILL.md) | Two-timing detector: per-turn degradation signals with recalibrated effective-window thresholds, and a session-end scan for 6 named failure patterns with recovery recipes. |
@@ -94,7 +94,7 @@ After install, invoke skills explicitly or let Claude auto-trigger them:
 - **Explicit:** `/handoff` to write a feature-keyed brief, `/handoff resume` to load one, `/pipeline` to orchestrate multi-stage work
 - **Auto:** when you end a session, switch context, approach context limits, brief a subagent, or describe a multi-stage task, Claude triggers the right mode of `handoff`
 
-Install the lifecycle hooks (`/hook-builder install --all`) to make all of this ambient — the hooks fire the right mode without you asking. See each skill's `SKILL.md` for full trigger conditions and behavior.
+Install the lifecycle hooks (`/hooks install --all`) to make all of this ambient — the hooks fire the right mode without you asking. See each skill's `SKILL.md` for full trigger conditions and behavior.
 
 ## Why "Catalyst"
 

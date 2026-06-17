@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PreCompact-handoff-write.sh — Catalyst hook-builder
+# PreCompact-handoff-write.sh — Catalyst hooks
 #
 # Fires before Claude Code compacts the session. Triggers a handoff WRITE so
 # the brief survives the compaction. The agent reads back the brief on next

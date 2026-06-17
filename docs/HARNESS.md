@@ -62,7 +62,7 @@ Catalyst maps directly to Anthropic's primitives:
 | Gradable rubrics for subjective domains | `evaluator-library` + eval-harness contracts at `skills/*/evals/` |
 | Evidence-first writes (verify-gate.sh) | `verify-gate` skill |
 | Trust calibration / over-reliance on large unverified agent output | `verify-gate` opt-in over-reliance rule |
-| Lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) | `hook-builder` skill |
+| Lifecycle hooks (PreCompact / SessionStart / Stop / UserPromptSubmit) | `hooks` skill |
 | Pre-built evaluator rubrics (code/ui/prose/security/perf/a11y) | `evaluator-library` skill |
 | End-of-session failure-pattern surfacing | `session-health` skill (Stop hook) |
 | Executable saved pipeline templates | `pipeline-templates` skill |
