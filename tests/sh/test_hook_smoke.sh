@@ -113,8 +113,9 @@ cp "$REPO_ROOT/hooks/Stop-commit-backstop.sh" "$SCB/.claude/hooks/"
 rm -f /tmp/catalyst-scb-scb  # Clean up any lingering marker from prior runs
 out=$(printf '%s' '{"transcript_path":"","session_id":"scb","cwd":"'"$SCB"'"}' | CLAUDE_PROJECT_DIR="$SCB" bash "$SCB/.claude/hooks/Stop-commit-backstop.sh" 2>/dev/null) || { echo "FAIL Stop-commit-backstop (dirty): non-zero exit"; fail=1; }
 if printf '%s' "$out" | jq -e '.systemMessage | contains("working tree")' >/dev/null 2>&1 \
-   && ! printf '%s' "$out" | grep -qi 'session ending'; then
-  echo "PASS Stop-commit-backstop dirty-tree (reworded, no 'session ending')"
+   && ! printf '%s' "$out" | grep -qi 'session ending' \
+   && ! printf '%s' "$out" | jq -e 'has("hookSpecificOutput")' >/dev/null 2>&1; then
+  echo "PASS Stop-commit-backstop dirty-tree (reworded, no 'session ending', no hookSpecificOutput)"
 else
   echo "FAIL Stop-commit-backstop dirty-tree: expected reworded msg, got: $out"; fail=1
 fi
@@ -125,6 +126,7 @@ if [ -z "$out2" ]; then
 else
   echo "FAIL Stop-commit-backstop de-noise: re-emitted on unchanged state: $out2"; fail=1
 fi
+rm -f /tmp/catalyst-scb-scb
 rm -rf "${SCB:?}"
 
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }
