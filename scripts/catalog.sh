@@ -20,8 +20,9 @@ for f in "$SKILLS_DIR"/*/SKILL.md; do
   desc="$(awk '/^description: /{sub(/^description: /,""); print; exit}' "$f")"
   # when-to-use: first sentence (up to the first period followed by space).
   when="${desc%%\. *}"
-  # triggers: text after "Trigger phrases:" up to the next sentence boundary, if any.
+  # triggers: text after "Trigger phrases:", with the trailing "Use this skill" pushy clause trimmed off.
   trig="$(printf '%s' "$desc" | sed -n 's/.*[Tt]rigger phrases: *//p')"
+  trig="${trig%% Use this skill*}"
   [ -n "$trig" ] || trig="—"
   [ -n "$when" ] || when="—"
   if [ -f "$COMMANDS_DIR/$name.md" ]; then
