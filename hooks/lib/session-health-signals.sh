@@ -288,20 +288,22 @@ sh_pattern_edit_mismatch() {
   local transcript="$1"
   local mismatch_threshold="${2:-2}"
 
-  local fail_count
-  # tool_result rows carry no `.name` field (only content + type), so the old
-  # `.name == "Edit"` selector matched nothing and this detector never fired.
-  # "old_string not found" appears only in Edit results, so scanning all
-  # tool_result content is both correct and sufficient.
-  fail_count=$(sh_normalize_transcript "$transcript" | jq -r 'select(.type == "tool_result") | .content // ""' \
-    2>/dev/null \
-    | grep -c "old_string not found" || true)
+  local result
+  # Count "old_string not found" results in the recent window; attribute each
+  # to the Edit tool_use that preceded it (tool_result carries no file/name).
+  result=$(sh_recent_tool_events "$transcript" | jq -rs --argjson thr "$mismatch_threshold" '
+    reduce .[] as $e ({last:"?", count:0, files:[]};
+      if $e.type=="tool_use" and $e.name=="Edit" then .last = ($e.input.file_path // "?")
+      elif $e.type=="tool_result" and ((($e.content // "")|test("old_string not found")))
+        then .count += 1 | .files += [.last]
+      else . end)
+    | if .count >= $thr
+      then "\(.count) failed Edits on \(.files | map(select(. != "?")) | unique | join(", "))"
+      else "" end
+  ' 2>/dev/null || echo "")
 
-  if [ "$fail_count" -ge "$mismatch_threshold" ]; then
-    local bad_file
-    bad_file=$(sh_normalize_transcript "$transcript" | jq -r 'select(.type == "tool_use" and .name == "Edit") | .input.file_path // ""' \
-      2>/dev/null | tail -1)
-    echo "$fail_count failed Edits on $bad_file"
+  if [ -n "$result" ]; then
+    echo "$result"
     return 0
   fi
   return 1
