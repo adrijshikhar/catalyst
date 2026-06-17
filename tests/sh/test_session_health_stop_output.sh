@@ -101,4 +101,21 @@ else
   echo "FAIL Stop summary still says 'this session': $out"; fail=1
 fi
 
+# 6) edit-mismatch empty-file-list guard: when NO preceding Edit exists in-window,
+#    file list is empty → fallback to "recently edited file(s)" instead of trailing space.
+EFT="$TMP/editfail_nopreced.jsonl"; : > "$EFT"
+# Two tool_results with "old_string not found", but NO preceding Edit tool_use
+printf '%s\n' '{"type":"user","message":{"content":[{"type":"tool_result","content":"Error: old_string not found in file"}]}}' >> "$EFT"
+printf '%s\n' '{"type":"user","message":{"content":[{"type":"tool_result","content":"Error: old_string not found in file"}]}}' >> "$EFT"
+EVENT5=$(jq -n --arg t "$EFT" --arg c "$TMP" '{transcript_path:$t,session_id:"reg5",cwd:$c}')
+out5=$(printf '%s' "$EVENT5" | CLAUDE_PROJECT_DIR="$TMP" bash "$TMP/.claude/hooks/Stop-session-health.sh" 2>/dev/null) || true
+if printf '%s' "$out5" | grep -q 'edit-mismatch' \
+   && printf '%s' "$out5" | grep -q 'recently edited file(s)' \
+   && ! printf '%s' "$out5" | grep -qE 'failed Edits on *"' \
+   && ! printf '%s' "$out5" | grep -qE 'failed Edits on  ' ; then
+  echo "PASS edit-mismatch empty-file-list fallback works (no double-space, no trailing on)"
+else
+  echo "FAIL edit-mismatch empty-file-list guard: $out5"; fail=1
+fi
+
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }
