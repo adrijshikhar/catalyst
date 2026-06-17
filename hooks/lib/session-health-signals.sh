@@ -84,6 +84,23 @@ _sh_advertised_tokens() {
   echo "$adv"
 }
 
+# Pattern detection window: number of most-recent tool events Stop matchers scan.
+# Scoping to recent activity prevents long/compacted sessions from tripping
+# patterns on old, already-resolved churn.
+_sh_pattern_window() {
+  local w="${CATALYST_SH_PATTERN_WINDOW:-100}"
+  case "$w" in ''|*[!0-9]*) w=100 ;; esac
+  [ "$w" -le 0 ] 2>/dev/null && w=100
+  echo "$w"
+}
+
+# sh_recent_tool_events <transcript> [n] — last n normalized tool events.
+sh_recent_tool_events() {
+  local transcript="$1"
+  local n="${2:-$(_sh_pattern_window)}"
+  sh_normalize_transcript "$transcript" | tail -n "$n"
+}
+
 _sh_effective_frac_pct() {
   # Returns integer percentage (0-100) to avoid floating point in POSIX sh.
   # CATALYST_SH_EFFECTIVE_FRAC is a decimal like "0.70"; convert to int pct.
@@ -247,7 +264,7 @@ sh_pattern_repeated_tool() {
   local window="${3:-5}"
 
   local result
-  result=$(sh_normalize_transcript "$transcript" | jq -r 'select(.type == "tool_use") | select(.name == "Bash" or .name == "Read" or .name == "Grep") | "\(.name):\(.input.command // .input.file_path // .input.pattern // "")"' \
+  result=$(sh_recent_tool_events "$transcript" | jq -r 'select(.type == "tool_use") | select(.name == "Bash" or .name == "Read" or .name == "Grep") | "\(.name):\(.input.command // .input.file_path // .input.pattern // "")"' \
     2>/dev/null \
     | tail -n "$window" \
     | sort | uniq -c | sort -rn \
@@ -299,7 +316,7 @@ sh_pattern_stale_read_stop() {
   local transcript="$1"
 
   local stale_file
-  stale_file=$(sh_normalize_transcript "$transcript" | jq -rn '
+  stale_file=$(sh_recent_tool_events "$transcript" | jq -rn '
     [
       foreach inputs as $row (
         {turn: 0, reads: {}, writes_since: {}, stale: null};
@@ -336,7 +353,7 @@ sh_pattern_recovery_spiral() {
   local spiral_count="${2:-3}"
 
   local result
-  result=$(sh_normalize_transcript "$transcript" | jq -rn --argjson n "$spiral_count" '
+  result=$(sh_recent_tool_events "$transcript" | jq -rn --argjson n "$spiral_count" '
     [
       foreach inputs as $row (
         {seen: {}, streak: 0, hit: false};

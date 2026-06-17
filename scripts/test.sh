@@ -30,6 +30,9 @@ bash tests/sh/test_token_count.sh
 echo "== session-health Stop output schema =="
 bash tests/sh/test_session_health_stop_output.sh
 
+echo "== pattern window: Stop matchers scoped to recent tool events =="
+bash tests/sh/test_pattern_window.sh
+
 echo "== verify-gate over-reliance rule =="
 bash tests/sh/test_verify_gate_overreliance.sh
 
