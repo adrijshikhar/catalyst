@@ -167,7 +167,19 @@ def _key_path(key: str) -> Path | None:
     sanctioned escape hatch for explicit paths — this guard is key-only.
     """
     store = _hp.handoffs_dir().resolve()
-    path = (store / f"{key}.json").resolve()
+    cand = Path(key)
+    # Tolerate three caller forms without double-appending ".json":
+    #   bare slug "feat-x"            -> <store>/feat-x.json
+    #   filename  "feat-x.json"       -> <store>/feat-x.json
+    #   full path "<store>/feat-x.json" (absolute or with dirs) -> itself
+    # A bare slug (single component, no .json) is the common path; anything
+    # that already looks like a path/file is resolved as-is. The containment
+    # check below still rejects keys/paths that escape the store.
+    if cand.is_absolute() or len(cand.parts) > 1 or cand.suffix == ".json":
+        base = cand if cand.is_absolute() else (store / cand)
+        path = base.resolve()
+    else:
+        path = (store / f"{key}.json").resolve()
     try:
         path.relative_to(store)
     except ValueError:

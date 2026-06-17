@@ -135,6 +135,23 @@ class TestKeyPathContainment(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             self.assertIsNone(self._with_store(Path(d), "/etc/passwd"))
 
+    def test_dotjson_suffix_key_does_not_double_append(self):
+        # A caller passing "<key>.json" must resolve to <store>/<key>.json,
+        # NOT <store>/<key>.json.json (the fortress-session render footgun).
+        with tempfile.TemporaryDirectory() as d:
+            store = Path(d)
+            got = self._with_store(store, "feat-jwt-expiry.json")
+            self.assertEqual(got, (store / "feat-jwt-expiry.json").resolve())
+
+    def test_absolute_path_inside_store_resolves(self):
+        # A full absolute path to a brief already inside the store must resolve
+        # to itself (the skill/agent sometimes passes the path, not the key).
+        with tempfile.TemporaryDirectory() as d:
+            store = Path(d)
+            full = store / "feat-jwt-expiry.json"
+            got = self._with_store(store, str(full))
+            self.assertEqual(got, full.resolve())
+
 
 if __name__ == "__main__":
     unittest.main()
