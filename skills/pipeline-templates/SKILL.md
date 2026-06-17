@@ -1,6 +1,6 @@
 ---
 name: pipeline-templates
-description: Use when running a recurring pipeline shape (audit, multi-week feature, multi-perspective review) without re-decomposing it each time. Ships 3 bundled templates (audit-then-fix, research-plan-implement-review, parallel-review-synthesize) and supports user-saved templates at .claude/pipelines/<name>.md. Closes the loop on handoff v0.3's save-as-template step by adding execution-by-name. Trigger phrases: "/pipeline run", "/pipeline list", "save pipeline", "run a template", "audit then fix", "research-plan-implement-review", "parallel review".
+description: Use when you want to run a recurring multi-stage pipeline shape by name instead of re-decomposing it each time — an audit, a multi-week feature, a multi-perspective review. Ships 3 executable bundled templates (audit-then-fix, research-plan-implement-review, parallel-review-synthesize) and runs user-saved templates from .claude/pipelines/<name>.md. Trigger phrases: "/pipeline run", "/pipeline list", "run a saved pipeline", "save this pipeline", "audit-then-fix", "research-plan-implement-review", "parallel-review-synthesize", "run a template". Use this skill liberally whenever a task matches a pipeline you have run before, whenever someone asks for "the usual audit or review flow", or whenever you would otherwise hand-decompose a shape Catalyst already ships — re-decomposing a known pipeline is the waste this skill removes.
 ---
 
 # pipeline-templates
