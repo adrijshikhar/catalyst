@@ -75,7 +75,7 @@ RENDERED=""
 case "$SOURCE" in
   clear|compact)
     RENDERED=$(jq -r --arg src "$SOURCE" '
-      "# Resumed (auto, on /\($src)) — \(.key)\n\n"
+      "# Resumed (auto, on /\($src)) — \(.key // "—")\n\n"
       + "## Next step\n\(.resume.resume_by // "—")\n\n"
       + "## Done when\n\(.resume.done_when // "—")\n\n"
       + "## Next acceptance check\n\(.state.next_acceptance_check // "—")\n\n"
