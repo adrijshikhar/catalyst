@@ -66,7 +66,8 @@ if [ -f "$CONFIG_FILE" ]; then
     REPEATED_WINDOW=$(jq -r '.thresholds.repeated_tool_call_window_turns // 5' "$CONFIG_FILE" || echo 5)
     EDIT_MISMATCH_COUNT=$(jq -r '.thresholds.edit_mismatch_count // 2' "$CONFIG_FILE" || echo 2)
     SPIRAL_COUNT=$(jq -r '.thresholds.recovery_spiral_count // 3' "$CONFIG_FILE" || echo 3)
-    PATTERN_WINDOW=$(jq -r '.thresholds.pattern_window // empty' "$CONFIG_FILE" 2>/dev/null || true); [ -n "$PATTERN_WINDOW" ] && export CATALYST_SH_PATTERN_WINDOW="$PATTERN_WINDOW"
+    PATTERN_WINDOW=$(jq -r '.thresholds.pattern_window // empty' "$CONFIG_FILE" 2>/dev/null || true)
+    [ -n "$PATTERN_WINDOW" ] && export CATALYST_SH_PATTERN_WINDOW="$PATTERN_WINDOW"
     RAW_LOG=$(jq -r --arg d "$PROJECT_DIR/.claude/session-health.log" '.log_path // $d' "$CONFIG_FILE" || echo "$PROJECT_DIR/.claude/session-health.log")
     # Clamp log path inside PROJECT_DIR (hook convention).
     case "$RAW_LOG" in
