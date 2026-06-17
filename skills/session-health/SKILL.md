@@ -83,7 +83,7 @@ Scans the full transcript once at session end. All 6 patterns from the OpenDev p
 | Pattern | Signal | Recovery recipe |
 |---------|--------|-----------------|
 | `repeated-tool-call` | Same Bash/Read/Grep input ≥3× in last 5 turns | "Loop on '…'. Try different approach." |
-| `edit-mismatch` | ≥2 `old_string not found` errors in last 5 turns | "Re-Read the file before next Edit." |
+| `edit-mismatch` | ≥2 `old_string not found` errors in the transcript | "Re-Read the file before next Edit." |
 | `stale-read` | Edit on F where F was Written between last Read and this Edit | "Re-Read F — modified since last Read." |
 | `recovery-spiral` | ≥3 consecutive re-Reads of previously-seen files | "Run `/catalyst:handoff reground` or `/clear` + handoff Resume." |
 | `instruction-fade` | Same first 80 chars of user message repeated ≥2× in last 10 turns | "Re-state instruction in fresh session (handoff RECOVER)." |
@@ -113,7 +113,7 @@ the other (suggest-only; which to use is the agent's choice).
   additively on UserPromptSubmit; Claude Code shows both context injections. Neither
   overwrites the other.
 - **`Stop-commit-backstop.sh`** — flags uncommitted changes at session end. Both Stop
-  hooks fire independently; neither's `additionalContext` overwrites the other.
+  hooks fire independently; neither's `systemMessage` overwrites the other.
 - **`PreToolUse-verify-gate.sh`** — gate for evidence-first writes. Orthogonal;
   verify-gate denials are NOT counted as failure patterns.
 

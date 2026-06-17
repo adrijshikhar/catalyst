@@ -21,7 +21,6 @@
 # Config:
 #   .claude/session-health-watch.json  (optional; falls back to built-in defaults)
 #   CATALYST_SH_ADVERTISED_TOKENS      env var — effective window base (default 200000)
-#   CATALYST_TIKTOKEN=1                enable tiktoken-based token counting
 #   CATALYST_SH_EFFECTIVE_FRAC         effective window fraction (default 0.70)
 #   CATALYST_SH_WARN_FRAC              warn threshold fraction of effective (default 0.50)
 #   CATALYST_SH_STRONG_FRAC            strong threshold fraction of effective (default 0.70)

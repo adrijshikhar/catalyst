@@ -129,4 +129,24 @@ fi
 rm -f /tmp/catalyst-scb-scb
 rm -rf "${SCB:?}"
 
+# Regression I1: uninstall of a session-health hook must NOT reap lib/ when a
+# verify-gate hook is still present (verify-gate sources lib/transcript.sh).
+I1_DIR="$(mktemp -d)"
+(cd "$I1_DIR" && git init -q && git config user.email t@e.st && git config user.name t && echo x>f && git add -A && git commit -qm init)
+mkdir -p "$I1_DIR/.claude/hooks/lib"
+# Simulate install: session-health + verify-gate hooks and the shared lib
+touch "$I1_DIR/.claude/hooks/UserPromptSubmit-session-health.sh"
+touch "$I1_DIR/.claude/hooks/PreToolUse-verify-gate.sh"
+echo '#!/bin/sh' > "$I1_DIR/.claude/hooks/lib/transcript.sh"
+echo '{"hooks":{}}' > "$I1_DIR/.claude/settings.json"
+# Uninstall session-health — lib must survive because verify-gate is still present
+CLAUDE_PROJECT_DIR="$I1_DIR" HOOKS_SRC_DIR="$REPO_ROOT/hooks" \
+  bash "$REPO_ROOT/scripts/install-hooks.sh" uninstall UserPromptSubmit UserPromptSubmit-session-health.sh >/dev/null
+if [ -f "$I1_DIR/.claude/hooks/lib/transcript.sh" ]; then
+  echo "PASS I1: lib/transcript.sh survives session-health uninstall when verify-gate remains"
+else
+  echo "FAIL I1: lib/transcript.sh was reaped while verify-gate hook was still present"; fail=1
+fi
+rm -rf "${I1_DIR:?}"
+
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }
