@@ -74,4 +74,22 @@ else
   echo "FAIL: edit-mismatch did not fire (dead-detector regression): $out3"; fail=1
 fi
 
+# 4) context-drowning detail must name the producing tool + KB, never ":<digits>".
+BIG=$(head -c 18000 /dev/zero | tr '\0' 'x')
+CDT="$TMP/drown.jsonl"
+printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"big.txt"}}]}}' > "$CDT"
+printf '%s\n' "{\"type\":\"user\",\"message\":{\"content\":[{\"type\":\"tool_result\",\"content\":\"$BIG\"}]}}" >> "$CDT"
+EVENT4=$(jq -n --arg t "$CDT" --arg c "$TMP" '{transcript_path:$t,session_id:"reg4",cwd:$c}')
+out4=$(printf '%s' "$EVENT4" | CLAUDE_PROJECT_DIR="$TMP" bash "$TMP/.claude/hooks/Stop-session-health.sh" 2>/dev/null) || true
+if printf '%s' "$out4" | grep -q 'context-drowning'; then
+  d=$(printf '%s' "$out4" | grep -o 'Read result ~[0-9]*KB' | head -1 || true)
+  if [ -n "$d" ] && ! printf '%s' "$out4" | grep -qE 'detail=":[0-9]+"'; then
+    echo "PASS context-drowning names tool + KB ($d)"
+  else
+    echo "FAIL context-drowning detail wrong (empty tool / no KB): $out4"; fail=1
+  fi
+else
+  echo "FAIL context-drowning did not fire: $out4"; fail=1
+fi
+
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }

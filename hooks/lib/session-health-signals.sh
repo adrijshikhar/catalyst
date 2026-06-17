@@ -407,17 +407,22 @@ sh_pattern_instruction_fade() {
 }
 
 # sh_pattern_context_drowning <transcript_file>
-# Heuristic: any tool_result whose content exceeds 10KB (10240 chars).
-# Ported from failure-pattern-detector v0.5.
-# Prints "TOOL_NAME:SIZE" on match; returns 0 on match, 1 otherwise.
+# Heuristic: any tool_result >10KB in the recent window. Prints "<ToolName> result ~<KB>KB".
 sh_pattern_context_drowning() {
   local transcript="$1"
 
   local large
-  large=$(sh_normalize_transcript "$transcript" | jq -r 'select(.type == "tool_result") |
-    (.content | length) as $len |
-    "\(.name // ""):\($len)"' 2>/dev/null \
-    | awk -F: '$2 > 10240 {print $0; exit}' || echo "")
+  # Correlate each tool_result with its preceding tool_use (which carries the
+  # name) over the recent-events window; report the first >10KB result as
+  # "<ToolName> result ~<KB>KB". tool_result itself has no .name.
+  large=$(sh_recent_tool_events "$transcript" | jq -rs '
+    reduce .[] as $e ({last:"tool", hit:null};
+      if $e.type=="tool_use" then .last = ($e.name // "tool")
+      elif $e.type=="tool_result" and ((($e.content // "")|length) > 10240) and (.hit==null)
+        then .hit = {name:.last, kb: ((($e.content|length)/1024)|floor)}
+      else . end)
+    | if .hit==null then "" else "\(.hit.name) result ~\(.hit.kb)KB" end
+  ' 2>/dev/null || echo "")
 
   if [ -n "$large" ]; then
     echo "$large"
