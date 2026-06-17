@@ -19,6 +19,7 @@ python3 scripts/eval-grade.py
 
 echo "== hook functional smoke =="
 bash tests/sh/test_hook_smoke.sh
+bash tests/sh/test_install_hooks_lib.sh
 
 echo "== count-tokens smoke =="
 bash tests/sh/test_count_tokens.sh
