@@ -201,6 +201,9 @@ def filter_gitignored(paths: list[Path], errors: list[str]) -> list[Path]:
 # README skill-table rows look like:  | [`skill-name`](./skills/...) | ... |
 _README_SKILL_ROW_RE = re.compile(r"^\|\s*\[`[^`]+`\]\(\./skills/", re.MULTILINE)
 
+# Capture the skill NAME from a README skill-table row: | [`name`](./skills/...)
+_README_SKILL_NAME_RE = re.compile(r"^\|\s*\[`([^`]+)`\]\(\./skills/", re.MULTILINE)
+
 
 def count_skills(root: Path) -> int:
     return sum(1 for _ in (root / "skills").glob("*/SKILL.md"))
@@ -216,12 +219,21 @@ def check_catalog_counts(root: Path, errors: list[str]) -> None:
     if not readme.exists():
         return
     text = readme.read_text(encoding="utf-8")
-    rows = len(_README_SKILL_ROW_RE.findall(text))
-    skills = count_skills(root)
-    if rows != skills:
+    readme_names = set(_README_SKILL_NAME_RE.findall(text))
+    skill_names = {p.parent.name for p in (root / "skills").glob("*/SKILL.md")}
+    missing = skill_names - readme_names
+    orphan = readme_names - skill_names
+    if missing:
         fail(
-            f"README.md: skills-table has {rows} rows but {skills} SKILL.md files exist — "
-            "update the table",
+            "README.md: skills-table missing rows for: "
+            + ", ".join(sorted(missing))
+            + " — add them",
+            errors,
+        )
+    if orphan:
+        fail(
+            "README.md: skills-table has rows for non-existent skills: "
+            + ", ".join(sorted(orphan)),
             errors,
         )
 
