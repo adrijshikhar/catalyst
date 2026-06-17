@@ -11,6 +11,8 @@
 set -euo pipefail
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+INPUT="$(cat)"
+SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // ""' 2>/dev/null || true)
 
 if ! git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
   exit 0
@@ -22,10 +24,19 @@ if [ -z "$UNCOMMITTED" ]; then
   exit 0
 fi
 
-CTX="Session ending with uncommitted changes:
+# De-noise: emit only when the dirty-state fingerprint changed since last turn.
+SID=$(printf '%s' "${SESSION_ID:-}" | tr -c 'a-zA-Z0-9_.-' '_')
+MARKER="/tmp/catalyst-scb-${SID:-nosession}"
+HASH=$(printf '%s' "$UNCOMMITTED" | cksum | awk '{print $1}')
+if [ -f "$MARKER" ] && [ "$(cat "$MARKER" 2>/dev/null)" = "$HASH" ]; then
+  exit 0
+fi
+printf '%s' "$HASH" > "$MARKER" 2>/dev/null || true
+
+CTX="Uncommitted changes in the working tree:
 
 $UNCOMMITTED
 
-Consider invoking the handoff skill in WRITE mode to preserve session state, then commit the changes manually or in the next session."
+Consider invoking the handoff skill in WRITE mode to preserve session state, then commit."
 
 jq -n --arg ctx "$CTX" '{systemMessage: $ctx}'
