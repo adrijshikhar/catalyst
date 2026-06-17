@@ -42,25 +42,26 @@ TRANSCRIPT="$P2/transcript.jsonl"
 printf '{"type":"tool_use","name":"Read","input":{"file_path":"test-output.log"},"timestamp":"%s"}\n' "$STALE_TS" > "$TRANSCRIPT"
 out=$( printf '%s' '{"tool_name":"Write","tool_input":{"file_path":"'"$P2"'/test-results.json","content":"x"},"transcript_path":"'"$TRANSCRIPT"'"}' \
   | CLAUDE_PROJECT_DIR="$P2" bash "$HOOK" 2>/dev/null || true )
-if printf '%s' "$out" | grep -q "7"; then
+if printf '%s' "$out" | grep -q "7-minute"; then
   echo "PASS T2: legacy verify-gate.json used (freshness 7 surfaced in stale message)"
 else
-  echo "FAIL T2: expected 7 in stale message, got: $out"; fail=1
+  echo "FAIL T2: expected 7-minute in stale message, got: $out"; fail=1
 fi
 
-# Test 3: overreliance_min_bytes from catalyst.json config
-# Config specifies min_bytes 99999. A 50-byte non-claim write with overreliance ON.
-# Since 50 < 99999, it should NOT trigger the overreliance gate (no output, exit 0).
+# Test 3: overreliance_min_bytes read from json: a >=4000-byte non-claim write is ALLOWED
+#    when json sets min_bytes 99999, but GATED when no config (default 4000) proves the json value is read.
 P3="$(mktemp -d)"; mkdir -p "$P3/.claude"
+BIG=$(printf 'x%.0s' $(seq 1 4001))
 printf '%s' '{"verify_gate":{"overreliance_min_bytes":99999}}' > "$P3/.claude/catalyst.json"
-out=$( printf '%s' '{"tool_name":"Write","tool_input":{"file_path":"'"$P3"'/notes.txt","content":"short"},"transcript_path":""}' \
-  | CATALYST_VERIFY_OVERRELIANCE=1 CLAUDE_PROJECT_DIR="$P3" bash "$HOOK" 2>/dev/null || true )
-if [ -z "$out" ]; then
-  echo "PASS T3: overreliance_min_bytes from json (50-byte write below 99999 threshold allowed)"
-else
-  echo "FAIL T3: expected no output for small write, got: $out"; fail=1
-fi
+ev=$(jq -nc --arg fp "$P3/notes.txt" --arg c "$BIG" '{tool_name:"Write",tool_input:{file_path:$fp,content:$c},transcript_path:""}')
+out=$( printf '%s' "$ev" | CATALYST_VERIFY_OVERRELIANCE=1 CLAUDE_PROJECT_DIR="$P3" bash "$HOOK" 2>/dev/null || true )
+[ -z "$out" ] && echo "PASS json min_bytes 99999 (large write allowed)" || { echo "FAIL json min_bytes high: expected no output, got: $out"; fail=1; }
+P3b="$(mktemp -d)"; mkdir -p "$P3b/.claude"
+ev2=$(jq -nc --arg fp "$P3b/notes.txt" --arg c "$BIG" '{tool_name:"Write",tool_input:{file_path:$fp,content:$c},transcript_path:""}')
+out2=$( printf '%s' "$ev2" | CATALYST_VERIFY_OVERRELIANCE=1 CLAUDE_PROJECT_DIR="$P3b" bash "$HOOK" 2>/dev/null || true )
+[ -n "$out2" ] && echo "PASS default min_bytes 4000 (large write gated)" || { echo "FAIL default min_bytes: expected gating output, got empty"; fail=1; }
+rm -rf "${P3:?}" "${P3b:?}"
 
-rm -rf "${P1:?}" "${P2:?}" "${P3:?}"
+rm -rf "${P1:?}" "${P2:?}"
 [ "$fail" -eq 0 ] && echo "test_verify_gate_config: ALL PASS" || echo "test_verify_gate_config: FAILURES"
 exit $fail

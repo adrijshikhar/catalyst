@@ -10,7 +10,8 @@
 #   1 — infra error (fail-open: Claude Code ignores hook)
 #
 # Config:
-#   $CLAUDE_PROJECT_DIR/.claude/verify-gate.json — project overrides
+#   $CLAUDE_PROJECT_DIR/.claude/catalyst.json (.verify_gate section) — primary config source
+#   $CLAUDE_PROJECT_DIR/.claude/verify-gate.json — legacy fallback
 #   Falls back to built-in defaults if missing.
 #
 # Opt-in rules (env-var gated, default OFF):
@@ -36,7 +37,8 @@ fi
 
 INPUT="$(cat)"
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-CONFIG_FILE="$PROJECT_DIR/.claude/verify-gate.json"
+CATALYST_CONFIG_FILE="$PROJECT_DIR/.claude/catalyst.json"
+LEGACY_CONFIG_FILE="$PROJECT_DIR/.claude/verify-gate.json"
 
 # Built-in default rules
 DEFAULT_CONFIG='{
@@ -47,10 +49,17 @@ DEFAULT_CONFIG='{
   "evidence_freshness_minutes": 10
 }'
 
-if [ -f "$CONFIG_FILE" ]; then
-  CONFIG=$(cat "$CONFIG_FILE")
-else
-  CONFIG="$DEFAULT_CONFIG"
+# Precedence: catalyst.json .verify_gate > legacy verify-gate.json > built-in default.
+CONFIG=""
+if [ -f "$CATALYST_CONFIG_FILE" ]; then
+  CONFIG=$(jq -c '.verify_gate // empty' "$CATALYST_CONFIG_FILE" 2>/dev/null || true)
+fi
+if [ -z "$CONFIG" ]; then
+  if [ -f "$LEGACY_CONFIG_FILE" ]; then
+    CONFIG=$(cat "$LEGACY_CONFIG_FILE")
+  else
+    CONFIG="$DEFAULT_CONFIG"
+  fi
 fi
 
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // ""')
@@ -171,7 +180,9 @@ fi
 # ---------------------------------------------------------------------------
 OVERRELIANCE_ON="${CATALYST_VERIFY_OVERRELIANCE:-0}"
 if [ "$OVERRELIANCE_ON" = "1" ]; then
-  MIN_BYTES="${CATALYST_OVERRELIANCE_MIN_BYTES:-4000}"
+  MIN_BYTES="${CATALYST_OVERRELIANCE_MIN_BYTES:-}"
+  [ -n "$MIN_BYTES" ] || MIN_BYTES=$(echo "$CONFIG" | jq -r '.overreliance_min_bytes // 4000' 2>/dev/null || echo 4000)
+  case "$MIN_BYTES" in ''|*[!0-9]*) MIN_BYTES=4000 ;; esac
 
   # Measure the write payload size
   # Write: tool_input.content; Edit: tool_input.new_string
