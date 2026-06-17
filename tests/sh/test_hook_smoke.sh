@@ -149,4 +149,43 @@ else
 fi
 rm -rf "${I1_DIR:?}"
 
+# Regression: SessionStart-handoff-read auto-RENDERS (not announces) the brief
+# when source=clear/compact and a branch-keyed brief exists. Guards the
+# lifecycle-collapse feature: the user must not need a third /handoff resume.
+SSR="$(mktemp -d)"
+( cd "$SSR" && git init -q && git config user.email t@e.st && git config user.name t \
+  && echo x > f.txt && git add f.txt && git commit -qm init && git branch -m lifecycle-test )
+mkdir -p "$SSR/.claude/hooks" "$SSR/.claude/handoffs"
+cp "$REPO_ROOT/hooks/SessionStart-handoff-read.sh" "$SSR/.claude/hooks/"
+cat > "$SSR/.claude/handoffs/lifecycle-test.json" <<'JSON'
+{
+  "schema_version": "1",
+  "key": "lifecycle-test",
+  "mode": "WRITE",
+  "resume": { "resume_by": "RESUME_BY_MARKER step", "done_when": "DONE_WHEN_MARKER" },
+  "state": {
+    "next_acceptance_check": "ACCEPT_MARKER",
+    "open_risks": ["RISK_MARKER one"]
+  },
+  "files_read_first": [ { "path": "READ_PATH_MARKER.md", "why": "WHY_MARKER" } ],
+  "files_skip": [],
+  "timestamp": "2026-06-17T00:00:00Z"
+}
+JSON
+ssr_out=$(printf '%s' '{"source":"clear","session_id":"ssr","cwd":"'"$SSR"'"}' \
+  | CLAUDE_PROJECT_DIR="$SSR" bash "$SSR/.claude/hooks/SessionStart-handoff-read.sh" 2>/dev/null) \
+  || { echo "FAIL SessionStart render-on-clear: non-zero exit"; fail=1; }
+ssr_ctx=$(printf '%s' "$ssr_out" | jq -r '.hookSpecificOutput.additionalContext // ""' 2>/dev/null)
+if printf '%s' "$ssr_ctx" | grep -q 'RESUME_BY_MARKER' \
+   && printf '%s' "$ssr_ctx" | grep -q 'DONE_WHEN_MARKER' \
+   && printf '%s' "$ssr_ctx" | grep -q 'ACCEPT_MARKER' \
+   && printf '%s' "$ssr_ctx" | grep -q 'RISK_MARKER' \
+   && printf '%s' "$ssr_ctx" | grep -q 'READ_PATH_MARKER' \
+   && ! printf '%s' "$ssr_ctx" | grep -qi 'if the user wants to resume'; then
+  echo "PASS SessionStart render-on-clear (5 fields rendered, no announce)"
+else
+  echo "FAIL SessionStart render-on-clear: expected rendered fields, got: $ssr_ctx"; fail=1
+fi
+rm -rf "${SSR:?}"
+
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }

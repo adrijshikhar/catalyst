@@ -1,6 +1,6 @@
 ---
 name: hooks
-description: Use when installing Catalyst's pre-built lifecycle hooks (PreCompact → handoff WRITE, SessionStart → surface existing brief, Stop → flag uncommitted work, UserPromptSubmit → inject repo orientation), uninstalling them, scaffolding new hooks, or linting hook scripts. Turns Catalyst from explicit-only to ambient — handoff modes fire on lifecycle events instead of waiting for user invocation. Trigger phrases: "install hooks", "wire up handoff", "ambient mode", "/hooks", "hook scaffold", "hook lint".
+description: Use when installing Catalyst's pre-built lifecycle hooks (PreCompact → handoff WRITE, SessionStart → auto-render brief on clear/compact (one-line announce on startup/resume), Stop → flag uncommitted work, UserPromptSubmit → inject repo orientation), uninstalling them, scaffolding new hooks, or linting hook scripts. Turns Catalyst from explicit-only to ambient — handoff modes fire on lifecycle events instead of waiting for user invocation. Trigger phrases: "install hooks", "wire up handoff", "ambient mode", "/hooks", "hook scaffold", "hook lint".
 ---
 
 # hooks
@@ -12,7 +12,7 @@ The skill that wires Catalyst into Claude Code's lifecycle. Without hooks, `hand
 | Hook | Event | What it triggers |
 |------|-------|------------------|
 | `PreCompact-handoff-write.sh` | About to `/compact` | Surfaces context asking Claude to invoke handoff WRITE before compaction destroys state |
-| `SessionStart-handoff-read.sh` | New session opens | Detects `<branch>.json` in the centralized handoffs store (worktree-aware), prompts Claude to invoke handoff READ |
+| `SessionStart-handoff-read.sh` | New session opens | Detects `<branch>.json` in the centralized handoffs store (worktree-aware). On `clear`/`compact` auto-renders the brief's five load-bearing fields into context (no `/handoff resume` needed); on `startup`/`resume` prompts Claude to invoke handoff READ |
 | `Stop-commit-backstop.sh` | Session ending | Flags any uncommitted git changes via additionalContext so next session can pick up |
 | `UserPromptSubmit-orient.sh` | First user prompt of a session | Injects branch + last 5 commits as orientation context (only once per session) |
 
