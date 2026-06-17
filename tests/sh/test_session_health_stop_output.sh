@@ -15,6 +15,7 @@ fail=0
 mkdir -p "$TMP/.claude/hooks/lib"
 cp "$HOOK" "$TMP/.claude/hooks/"
 cp "$REPO_ROOT/hooks/lib/session-health-signals.sh" "$TMP/.claude/hooks/lib/"
+cp "$REPO_ROOT/hooks/lib/transcript.sh" "$TMP/.claude/hooks/lib/"
 
 # 1) Detection path: a transcript with the same Bash command repeated → fires
 #    repeated-tool-call. Output must be valid Stop schema.
@@ -59,12 +60,11 @@ else
 fi
 
 # 3) edit-mismatch must FIRE on repeated "old_string not found" tool_results.
-#    Regression for the dead-detector bug: the old jq selected
-#    `.name == "Edit"`, but tool_result rows carry no `.name`, so it never fired.
+#    Uses the real nested .message.content[] shape (A0 wiring requirement).
 EMT="$TMP/editmiss.jsonl"
 for _ in 1 2 3; do
-  printf '%s\n' '{"type":"tool_use","name":"Edit","input":{"file_path":"src/a.ts"}}' >> "$EMT"
-  printf '%s\n' '{"type":"tool_result","content":"Error: old_string not found in file"}' >> "$EMT"
+  printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"src/a.ts"}}]}}' >> "$EMT"
+  printf '%s\n' '{"type":"user","message":{"content":[{"type":"tool_result","content":"Error: old_string not found in file"}]}}' >> "$EMT"
 done
 EVENT3=$(jq -n --arg t "$EMT" --arg c "$TMP" '{transcript_path:$t,session_id:"reg3",cwd:$c}')
 out3=$(printf '%s' "$EVENT3" | CLAUDE_PROJECT_DIR="$TMP" bash "$TMP/.claude/hooks/Stop-session-health.sh" 2>/dev/null) || true
