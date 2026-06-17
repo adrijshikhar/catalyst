@@ -58,7 +58,7 @@
 #     sh_pattern_instruction_fade <transcript>
 #       → echo "<instruction snippet>" on match
 #     sh_pattern_context_drowning <transcript>
-#       → echo "<tool:size>" on match
+#       → echo "<ToolName> result ~<KB>KB" on match
 #
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -298,7 +298,7 @@ sh_pattern_edit_mismatch() {
         then .count += 1 | .files += [.last]
       else . end)
     | if .count >= $thr
-      then "\(.count) failed Edits on \(.files | map(select(. != "?")) | unique | join(", "))"
+      then (.files | map(select(. != "?")) | unique) as $f | "\(.count) failed Edits on \(if ($f|length)==0 then "recently edited file(s)" else ($f|join(", ")) end)"
       else "" end
   ' 2>/dev/null || echo "")
 
