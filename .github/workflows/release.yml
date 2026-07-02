@@ -1,8 +1,8 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
+  # Auto-release on push to main is DISABLED — run manually via workflow_dispatch.
+  # (Re-enable by restoring the `push: branches: [main]` trigger below.)
   workflow_dispatch:
 
 permissions:
