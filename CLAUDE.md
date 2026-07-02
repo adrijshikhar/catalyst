@@ -217,26 +217,24 @@ Argument handling pattern (from `commands/handoff.md`):
 
 ## Release pipeline
 
-Auto-bump on push to `main`:
+**Auto-release on push to `main` is DISABLED.** `.github/workflows/release.yml` is
+`workflow_dispatch`-only — it no longer fires on merge. Version bumps are manual.
 
-1. `.github/workflows/release.yml` fires on push (skip on `[skip ci]` in commit subject)
-2. `scripts/release.sh`:
-   - Reads `.claude-plugin/plugin.json` `.version`
-   - Bumps the patch: `MAJOR.MINOR.PATCH+1`
-   - Writes back, commits with `chore: bump version to X.Y.Z [skip ci]`
-   - Tags `vX.Y.Z` and pushes both the commit + the tag
-   - Retries up to 3x on non-fast-forward
-3. `gh release create vX.Y.Z --generate-notes` produces a GitHub Release
+To cut a release:
 
-**For minor or major bumps:** hand-edit `.claude-plugin/plugin.json` to set the version, then push. The next auto-patch will continue from the new base.
+1. Hand-edit `.claude-plugin/plugin.json` to set the target version (`MAJOR.MINOR.PATCH`).
+2. Merge that change to `main` via PR (won't trigger any release).
+3. Run the pipeline manually when you want the tag + GitHub Release:
+   ```bash
+   gh workflow run release.yml -R adrijshikhar/catalyst --ref main
+   ```
+   `scripts/release.sh` bumps the patch, commits `chore: bump version to X.Y.Z [skip ci]`,
+   tags `vX.Y.Z`, pushes both, then `gh release create` generates notes.
 
-**Manual escape hatch:** if push-driven trigger doesn't fire (rare GitHub Actions glitch), run:
-```bash
-gh workflow run ci.yml -R adrijshikhar/catalyst --ref main
-gh workflow run release.yml -R adrijshikhar/catalyst --ref main
-```
-
-**Loop prevention:** the workflow's job-level `if` guards on `head_commit.message`, and `release.sh` re-checks the last commit subject. Two layers of `[skip ci]` defense.
+**Re-enabling auto-release:** restore the `push: branches: [main]` trigger in
+`release.yml`. The loop guards remain intact — the job-level `if` skips the CI's
+own bump commits (by `github-actions[bot]` committer identity) and any `[skip ci]`
+subject, so two layers of loop defense are ready if the push trigger returns.
 
 ## Gitignore conventions
 
