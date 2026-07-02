@@ -5,6 +5,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -179,6 +180,33 @@ class TestDriftFiles(unittest.TestCase):
     def test_no_files_read_first_no_warning(self):
         out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
         self.assertNotIn("MISSING", out)
+
+
+_NOW = datetime(2026, 6, 20, 10, 0, 0, tzinfo=timezone.utc)  # 21 days after fixture ts (2026-05-30)
+
+
+class TestDriftAge(unittest.TestCase):
+    def test_stale_brief_warns(self):
+        out = hr.render(_valid(), current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", now=_NOW)
+        self.assertIn("!! STALE", out)
+
+    def test_fresh_brief_no_stale(self):
+        fresh = _valid()
+        fresh["timestamp"] = "2026-06-20T09:00:00Z"  # 1h before _NOW
+        out = hr.render(fresh, current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", now=_NOW)
+        self.assertNotIn("STALE", out)
+
+    def test_no_clock_no_stale(self):
+        out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertNotIn("STALE", out)
+
+    def test_unparseable_timestamp_fails_open(self):
+        bad = _valid(); bad["timestamp"] = "not-a-date"
+        out = hr.render(bad, current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", now=_NOW)
+        self.assertNotIn("STALE", out)
 
 
 if __name__ == "__main__":
