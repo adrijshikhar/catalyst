@@ -47,6 +47,32 @@ def _bullets(label: str, items: list | None) -> str:
     return f"{label}:\n{lines}\n"
 
 
+def _missing_files(obj: dict) -> list[str]:
+    """Return files_read_first paths that no longer exist.
+
+    Absolute paths are checked as-is — briefs legitimately point outside the
+    worktree (e.g. at a sibling docs repo). Relative paths resolve against the
+    recorded worktree root, NEVER cwd: a brief resumed from a linked worktree
+    must resolve against the tree it was written in.
+    """
+    wt_root = ((obj.get("state") or {}).get("worktree") or {}).get("root", "")
+    missing: list[str] = []
+    for f in obj.get("files_read_first") or []:
+        p = f.get("path", "")
+        if not p:
+            continue
+        cand = Path(p)
+        if not cand.is_absolute():
+            cand = Path(wt_root) / cand
+        try:
+            exists = cand.exists()
+        except OSError:
+            exists = True  # fail open — don't warn on an un-stattable path
+        if not exists:
+            missing.append(p)
+    return missing
+
+
 def render(obj: dict, current_branch: str | None, current_common_dir: str | None) -> str:
     key = obj.get("key", "?")
     resume = obj.get("resume", {})
@@ -76,6 +102,11 @@ def render(obj: dict, current_branch: str | None, current_common_dir: str | None
         out.append(
             f"!! BRANCH MISMATCH: brief is for '{state.get('branch')}', "
             f"you're on '{current_branch}' — confirm before resuming."
+        )
+
+    for mp in _missing_files(obj):
+        out.append(
+            f"!! MISSING: {mp} — referenced file no longer exists; verify before resuming."
         )
 
     out.append(f"# Resume — {key}")
