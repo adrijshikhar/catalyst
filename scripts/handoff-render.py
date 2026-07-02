@@ -16,6 +16,7 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -73,7 +74,29 @@ def _missing_files(obj: dict) -> list[str]:
     return missing
 
 
-def render(obj: dict, current_branch: str | None, current_common_dir: str | None) -> str:
+def _stale_hours() -> float:
+    try:
+        return float(os.environ.get("CATALYST_HANDOFF_STALE_HOURS", "24"))
+    except ValueError:
+        return 24.0
+
+
+def _stale_note(timestamp: str, now: datetime) -> str | None:
+    """Return a STALE warning if the brief is older than the threshold, else None."""
+    try:
+        ts = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return None  # fail open — unparseable timestamp: no age signal
+    hours = (now - ts).total_seconds() / 3600.0
+    if hours < _stale_hours():
+        return None
+    agestr = f"{int(round(hours))}h" if hours < 48 else f"{int(hours // 24)}d"
+    return (f"!! STALE: brief written ~{agestr} ago ({timestamp}) — "
+            f"diff current git state before resuming.")
+
+
+def render(obj: dict, current_branch: str | None = None,
+           current_common_dir: str | None = None, now: datetime | None = None) -> str:
     key = obj.get("key", "?")
     resume = obj.get("resume", {})
     state = obj.get("state", {})
@@ -103,6 +126,11 @@ def render(obj: dict, current_branch: str | None, current_common_dir: str | None
             f"!! BRANCH MISMATCH: brief is for '{state.get('branch')}', "
             f"you're on '{current_branch}' — confirm before resuming."
         )
+
+    if now is not None:
+        stale = _stale_note(obj.get("timestamp", ""), now)
+        if stale:
+            out.append(stale)
 
     for mp in _missing_files(obj):
         out.append(
@@ -227,6 +255,15 @@ def main(argv: list[str]) -> int:
         reground = False
         rest = argv[1:]
 
+    now = datetime.now(timezone.utc)
+    if "--now" in rest:
+        i = rest.index("--now")
+        try:
+            now = datetime.strptime(rest[i + 1], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        except (IndexError, ValueError):
+            pass
+        del rest[i:i + 2]
+
     if len(rest) >= 2 and rest[0] == "--file":
         path: Path | None = Path(rest[1])
     elif len(rest) == 1:
@@ -249,7 +286,7 @@ def main(argv: list[str]) -> int:
     branch, common = _current(cwd)
     if common and not Path(common).is_absolute():
         common = str((cwd / common).resolve())
-    print(render(obj, branch, common))
+    print(render(obj, branch, common, now=now))
     return 0
 
 
