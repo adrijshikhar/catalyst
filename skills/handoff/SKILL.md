@@ -76,7 +76,7 @@ The brief is a typed JSON document validated against the bundled `brief.schema.j
   "state": {
     "branch": "<branch>", "next_acceptance_check": "<next concrete check>",
     "worktree": { "root": "<$CLAUDE_PROJECT_DIR>", "is_linked": false, "git_common_dir": "<absolute shared .git — git rev-parse --path-format=absolute --git-common-dir>" },
-    "diff_summary": "<optional>", "tests": [{"cmd": "...", "result": "pass"}],
+    "head_sha": "<git rev-parse HEAD, optional>", "diff_summary": "<optional>", "tests": [{"cmd": "...", "result": "pass"}],
     "commands": [], "decisions": [], "rejected_paths": [], "open_risks": []
   },
   "files_read_first": [{"path": "...", "why": "..."}],
@@ -109,6 +109,8 @@ git rev-parse --path-format=absolute --git-common-dir   # state.worktree.git_com
 Record `state.worktree.git_common_dir` as the **absolute SHARED common dir**. The READ renderer compares it against the resuming session's `git rev-parse --git-common-dir`, so they must be the *same* value.
 
 > **Caution:** In a linked worktree, do **not** use `--absolute-git-dir` — it returns the worktree-private dir (`…/.git/worktrees/<name>`), which will NOT match the renderer's `--git-common-dir` and fires a false `REPO MISMATCH`. Use `--path-format=absolute --git-common-dir` (Git ≥ 2.31). Older Git fallback: `cd "$(git rev-parse --git-common-dir)" && pwd`. In the main checkout both resolve to the same `…/.git`.
+
+- Record the current commit as `state.head_sha`: `git rev-parse HEAD` (enables the READ-side "commits since brief written" drift signal). Omit only when not in a git repo.
 
 From the session transcript, also note: tests run (pass/fail), commands that materially advanced the work, decisions that affect what the next session should do (not every decision — history belongs in the narrative), paths tried and rejected, open risks, the next concrete acceptance check.
 
@@ -185,7 +187,13 @@ A new session has loaded with one or more briefs present, and the user wants to 
 6. Confirm: "Resumed from `<key>`. Next acceptance check: <quote from brief>. Starting now."
 7. The selected key becomes the sticky session key.
 
-If the brief's timestamp is more than ~24h old, diff against current git state before resuming — the working tree may have moved.
+`handoff-render.py` now performs three automatic READ-time drift checks (all fail-open, all deterministic):
+
+- **`!! MISSING: <path>`** — a `files_read_first` path no longer exists (absolute checked as-is; relative resolved against the recorded worktree root). Verify before resuming; the brief may point at moved/deleted files.
+- **`!! STALE: brief written ~<age> ago …`** — the brief is older than `CATALYST_HANDOFF_STALE_HOURS` (default 24h). Diff current git state before resuming.
+- **`- Commits since brief written: <N>`** (Summary block) — how far HEAD moved since WRITE, when the brief recorded `state.head_sha`. A diverged sha shows `Brief HEAD <sha> not in current history` instead.
+
+Warning order: REPO MISMATCH > BRANCH MISMATCH > STALE > MISSING, then the resume body.
 
 ---
 

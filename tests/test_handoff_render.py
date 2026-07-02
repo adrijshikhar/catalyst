@@ -5,6 +5,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -151,6 +152,80 @@ class TestKeyPathContainment(unittest.TestCase):
             full = store / "feat-jwt-expiry.json"
             got = self._with_store(store, str(full))
             self.assertEqual(got, full.resolve())
+
+
+class TestDriftFiles(unittest.TestCase):
+    def test_missing_relative_file_warns(self):
+        obj = _valid()
+        obj["state"]["worktree"]["root"] = "/definitely/not/here"
+        obj["files_read_first"] = [{"path": "ghost.md", "why": "x"}]
+        out = hr.render(obj, current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertIn("!! MISSING: ghost.md", out)
+
+    def test_missing_absolute_file_checked_as_is(self):
+        obj = _valid()
+        obj["files_read_first"] = [{"path": "/no/such/abs.md", "why": "x"}]
+        out = hr.render(obj, current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertIn("!! MISSING: /no/such/abs.md", out)
+
+    def test_existing_relative_file_no_warning(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "here.md").write_text("x")
+            obj = _valid()
+            obj["state"]["worktree"]["root"] = d
+            obj["files_read_first"] = [{"path": "here.md", "why": "x"}]
+            out = hr.render(obj, current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+            self.assertNotIn("MISSING", out)
+
+    def test_no_files_read_first_no_warning(self):
+        out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertNotIn("MISSING", out)
+
+
+_NOW = datetime(2026, 6, 20, 10, 0, 0, tzinfo=timezone.utc)  # 21 days after fixture ts (2026-05-30)
+
+
+class TestDriftAge(unittest.TestCase):
+    def test_stale_brief_warns(self):
+        out = hr.render(_valid(), current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", now=_NOW)
+        self.assertIn("!! STALE", out)
+
+    def test_fresh_brief_no_stale(self):
+        fresh = _valid()
+        fresh["timestamp"] = "2026-06-20T09:00:00Z"  # 1h before _NOW
+        out = hr.render(fresh, current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", now=_NOW)
+        self.assertNotIn("STALE", out)
+
+    def test_no_clock_no_stale(self):
+        out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertNotIn("STALE", out)
+
+    def test_unparseable_timestamp_fails_open(self):
+        bad = _valid(); bad["timestamp"] = "not-a-date"
+        out = hr.render(bad, current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", now=_NOW)
+        self.assertNotIn("STALE", out)
+
+
+class TestDriftCommits(unittest.TestCase):
+    def test_commits_since_shown(self):
+        obj = _valid(); obj["state"]["head_sha"] = "abc1234"
+        out = hr.render(obj, current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", commits_since=3, sha_in_history=True)
+        self.assertIn("Commits since brief written: 3", out)
+
+    def test_diverged_sha_note(self):
+        obj = _valid(); obj["state"]["head_sha"] = "abc1234def5678"
+        out = hr.render(obj, current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", commits_since=None, sha_in_history=False)
+        self.assertIn("not in current history", out)
+
+    def test_no_head_sha_no_line(self):
+        out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertNotIn("Commits since", out)
+        self.assertNotIn("not in current history", out)
 
 
 if __name__ == "__main__":

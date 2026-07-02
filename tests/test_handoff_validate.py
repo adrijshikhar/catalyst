@@ -46,5 +46,15 @@ class TestValidate(unittest.TestCase):
         self.assertTrue(any("mode" in e for e in hv.validate(obj)))
 
 
+class TestHeadShaField(unittest.TestCase):
+    def test_head_sha_valid_is_accepted(self):
+        obj = _load("brief-valid.json"); obj["state"]["head_sha"] = "a1b2c3d"
+        self.assertEqual(hv.validate(obj), [])
+
+    def test_head_sha_bad_pattern_rejected(self):
+        obj = _load("brief-valid.json"); obj["state"]["head_sha"] = "XYZ!!"
+        self.assertTrue(any("head_sha" in e for e in hv.validate(obj)))
+
+
 if __name__ == "__main__":
     unittest.main()

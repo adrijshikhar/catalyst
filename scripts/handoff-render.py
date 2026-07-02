@@ -16,6 +16,7 @@ import json
 import os
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -47,7 +48,56 @@ def _bullets(label: str, items: list | None) -> str:
     return f"{label}:\n{lines}\n"
 
 
-def render(obj: dict, current_branch: str | None, current_common_dir: str | None) -> str:
+def _missing_files(obj: dict) -> list[str]:
+    """Return files_read_first paths that no longer exist.
+
+    Absolute paths are checked as-is — briefs legitimately point outside the
+    worktree (e.g. at a sibling docs repo). Relative paths resolve against the
+    recorded worktree root, NEVER cwd: a brief resumed from a linked worktree
+    must resolve against the tree it was written in.
+    """
+    wt_root = ((obj.get("state") or {}).get("worktree") or {}).get("root", "")
+    missing: list[str] = []
+    for f in obj.get("files_read_first") or []:
+        p = f.get("path", "")
+        if not p:
+            continue
+        cand = Path(p)
+        if not cand.is_absolute():
+            cand = Path(wt_root) / cand
+        try:
+            exists = cand.exists()
+        except OSError:
+            exists = True  # fail open — don't warn on an un-stattable path
+        if not exists:
+            missing.append(p)
+    return missing
+
+
+def _stale_hours() -> float:
+    try:
+        return float(os.environ.get("CATALYST_HANDOFF_STALE_HOURS", "24"))
+    except ValueError:
+        return 24.0
+
+
+def _stale_note(timestamp: str, now: datetime) -> str | None:
+    """Return a STALE warning if the brief is older than the threshold, else None."""
+    try:
+        ts = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return None  # fail open — unparseable timestamp: no age signal
+    hours = (now - ts).total_seconds() / 3600.0
+    if hours < _stale_hours():
+        return None
+    agestr = f"{int(round(hours))}h" if hours < 48 else f"{int(hours // 24)}d"
+    return (f"!! STALE: brief written ~{agestr} ago ({timestamp}) — "
+            f"diff current git state before resuming.")
+
+
+def render(obj: dict, current_branch: str | None = None,
+           current_common_dir: str | None = None, now: datetime | None = None,
+           commits_since: int | None = None, sha_in_history: bool = True) -> str:
     key = obj.get("key", "?")
     resume = obj.get("resume", {})
     state = obj.get("state", {})
@@ -78,6 +128,16 @@ def render(obj: dict, current_branch: str | None, current_common_dir: str | None
             f"you're on '{current_branch}' — confirm before resuming."
         )
 
+    if now is not None:
+        stale = _stale_note(obj.get("timestamp", ""), now)
+        if stale:
+            out.append(stale)
+
+    for mp in _missing_files(obj):
+        out.append(
+            f"!! MISSING: {mp} — referenced file no longer exists; verify before resuming."
+        )
+
     out.append(f"# Resume — {key}")
     out.append(f"\n## Resume prompt\n> {prompt}")
     out.append(f"\n## Summary")
@@ -90,6 +150,12 @@ def render(obj: dict, current_branch: str | None, current_common_dir: str | None
     out.append(f"- Next acceptance check: {state.get('next_acceptance_check', '?')}")
     if state.get("diff_summary"):
         out.append(f"- Diff: {state['diff_summary']}")
+    if commits_since is not None:
+        out.append(f"- Commits since brief written: {commits_since}")
+    elif (state.get("head_sha")) and not sha_in_history:
+        out.append(
+            f"- Brief HEAD {state['head_sha'][:7]} not in current history — tree diverged since WRITE."
+        )
     body = ""
     body += _bullets("Decisions", state.get("decisions"))
     body += _bullets("Rejected paths", state.get("rejected_paths"))
@@ -146,7 +212,7 @@ def render_reground(obj: dict) -> str:
     return "\n".join(out) + "\n"
 
 
-def _current(cwd: Path) -> tuple[str | None, str | None]:
+def _current(cwd: Path) -> tuple[str | None, str | None, str | None]:
     def g(a: list[str]) -> str | None:
         try:
             r = subprocess.run(
@@ -156,7 +222,29 @@ def _current(cwd: Path) -> tuple[str | None, str | None]:
         except (OSError, subprocess.TimeoutExpired):
             return None
 
-    return g(["branch", "--show-current"]), g(["rev-parse", "--git-common-dir"])
+    return (g(["branch", "--show-current"]),
+            g(["rev-parse", "--git-common-dir"]),
+            g(["rev-parse", "HEAD"]))
+
+
+def _commits_since(cwd: Path, brief_sha: str) -> tuple[int | None, bool]:
+    """(count, in_history). count None when unknown; in_history False only when
+    the brief sha is definitively NOT an ancestor of HEAD."""
+    try:
+        anc = subprocess.run(["git", "merge-base", "--is-ancestor", brief_sha, "HEAD"],
+                             cwd=cwd, capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return None, True
+    if anc.returncode == 1:
+        return None, False          # sha not in current history — diverged
+    if anc.returncode != 0:
+        return None, True           # unknown sha / git error — say nothing
+    try:
+        cnt = subprocess.run(["git", "rev-list", "--count", f"{brief_sha}..HEAD"],
+                             cwd=cwd, capture_output=True, text=True, timeout=5)
+        return (int(cnt.stdout.strip()), True) if cnt.returncode == 0 else (None, True)
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return None, True
 
 
 def _key_path(key: str) -> Path | None:
@@ -196,6 +284,15 @@ def main(argv: list[str]) -> int:
         reground = False
         rest = argv[1:]
 
+    now = datetime.now(timezone.utc)
+    if "--now" in rest:
+        i = rest.index("--now")
+        try:
+            now = datetime.strptime(rest[i + 1], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        except (IndexError, ValueError):
+            pass
+        del rest[i:i + 2]
+
     if len(rest) >= 2 and rest[0] == "--file":
         path: Path | None = Path(rest[1])
     elif len(rest) == 1:
@@ -215,10 +312,15 @@ def main(argv: list[str]) -> int:
         print(render_reground(obj))
         return 0
     cwd = Path.cwd()
-    branch, common = _current(cwd)
+    branch, common, head = _current(cwd)
     if common and not Path(common).is_absolute():
         common = str((cwd / common).resolve())
-    print(render(obj, branch, common))
+    commits_since, sha_in_history = None, True
+    brief_sha = (obj.get("state") or {}).get("head_sha")
+    if brief_sha and head:
+        commits_since, sha_in_history = _commits_since(cwd, brief_sha)
+    print(render(obj, branch, common, now=now,
+                 commits_since=commits_since, sha_in_history=sha_in_history))
     return 0
 
 
