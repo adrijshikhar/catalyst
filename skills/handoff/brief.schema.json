@@ -40,7 +40,8 @@
         "commands": {"type": "array", "items": {"type": "string"}},
         "decisions": {"type": "array", "items": {"type": "string"}},
         "rejected_paths": {"type": "array", "items": {"type": "string"}},
-        "open_risks": {"type": "array", "items": {"type": "string"}}
+        "open_risks": {"type": "array", "items": {"type": "string"}},
+        "head_sha": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"}
       }
     },
     "files_read_first": {"type": "array", "items": {"type": "object", "additionalProperties": false,

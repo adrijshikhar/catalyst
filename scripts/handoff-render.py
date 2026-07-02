@@ -96,7 +96,8 @@ def _stale_note(timestamp: str, now: datetime) -> str | None:
 
 
 def render(obj: dict, current_branch: str | None = None,
-           current_common_dir: str | None = None, now: datetime | None = None) -> str:
+           current_common_dir: str | None = None, now: datetime | None = None,
+           commits_since: int | None = None, sha_in_history: bool = True) -> str:
     key = obj.get("key", "?")
     resume = obj.get("resume", {})
     state = obj.get("state", {})
@@ -149,6 +150,12 @@ def render(obj: dict, current_branch: str | None = None,
     out.append(f"- Next acceptance check: {state.get('next_acceptance_check', '?')}")
     if state.get("diff_summary"):
         out.append(f"- Diff: {state['diff_summary']}")
+    if commits_since is not None:
+        out.append(f"- Commits since brief written: {commits_since}")
+    elif (state.get("head_sha")) and not sha_in_history:
+        out.append(
+            f"- Brief HEAD {state['head_sha'][:7]} not in current history — tree diverged since WRITE."
+        )
     body = ""
     body += _bullets("Decisions", state.get("decisions"))
     body += _bullets("Rejected paths", state.get("rejected_paths"))
@@ -205,7 +212,7 @@ def render_reground(obj: dict) -> str:
     return "\n".join(out) + "\n"
 
 
-def _current(cwd: Path) -> tuple[str | None, str | None]:
+def _current(cwd: Path) -> tuple[str | None, str | None, str | None]:
     def g(a: list[str]) -> str | None:
         try:
             r = subprocess.run(
@@ -215,7 +222,29 @@ def _current(cwd: Path) -> tuple[str | None, str | None]:
         except (OSError, subprocess.TimeoutExpired):
             return None
 
-    return g(["branch", "--show-current"]), g(["rev-parse", "--git-common-dir"])
+    return (g(["branch", "--show-current"]),
+            g(["rev-parse", "--git-common-dir"]),
+            g(["rev-parse", "HEAD"]))
+
+
+def _commits_since(cwd: Path, brief_sha: str) -> tuple[int | None, bool]:
+    """(count, in_history). count None when unknown; in_history False only when
+    the brief sha is definitively NOT an ancestor of HEAD."""
+    try:
+        anc = subprocess.run(["git", "merge-base", "--is-ancestor", brief_sha, "HEAD"],
+                             cwd=cwd, capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return None, True
+    if anc.returncode == 1:
+        return None, False          # sha not in current history — diverged
+    if anc.returncode != 0:
+        return None, True           # unknown sha / git error — say nothing
+    try:
+        cnt = subprocess.run(["git", "rev-list", "--count", f"{brief_sha}..HEAD"],
+                             cwd=cwd, capture_output=True, text=True, timeout=5)
+        return (int(cnt.stdout.strip()), True) if cnt.returncode == 0 else (None, True)
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return None, True
 
 
 def _key_path(key: str) -> Path | None:
@@ -283,10 +312,15 @@ def main(argv: list[str]) -> int:
         print(render_reground(obj))
         return 0
     cwd = Path.cwd()
-    branch, common = _current(cwd)
+    branch, common, head = _current(cwd)
     if common and not Path(common).is_absolute():
         common = str((cwd / common).resolve())
-    print(render(obj, branch, common, now=now))
+    commits_since, sha_in_history = None, True
+    brief_sha = (obj.get("state") or {}).get("head_sha")
+    if brief_sha and head:
+        commits_since, sha_in_history = _commits_since(cwd, brief_sha)
+    print(render(obj, branch, common, now=now,
+                 commits_since=commits_since, sha_in_history=sha_in_history))
     return 0
 
 
