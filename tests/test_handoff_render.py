@@ -209,5 +209,24 @@ class TestDriftAge(unittest.TestCase):
         self.assertNotIn("STALE", out)
 
 
+class TestDriftCommits(unittest.TestCase):
+    def test_commits_since_shown(self):
+        obj = _valid(); obj["state"]["head_sha"] = "abc1234"
+        out = hr.render(obj, current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", commits_since=3, sha_in_history=True)
+        self.assertIn("Commits since brief written: 3", out)
+
+    def test_diverged_sha_note(self):
+        obj = _valid(); obj["state"]["head_sha"] = "abc1234def5678"
+        out = hr.render(obj, current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", commits_since=None, sha_in_history=False)
+        self.assertIn("not in current history", out)
+
+    def test_no_head_sha_no_line(self):
+        out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertNotIn("Commits since", out)
+        self.assertNotIn("not in current history", out)
+
+
 if __name__ == "__main__":
     unittest.main()
