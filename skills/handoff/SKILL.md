@@ -76,7 +76,7 @@ The brief is a typed JSON document validated against the bundled `brief.schema.j
   "state": {
     "branch": "<branch>", "next_acceptance_check": "<next concrete check>",
     "worktree": { "root": "<$CLAUDE_PROJECT_DIR>", "is_linked": false, "git_common_dir": "<absolute shared .git — git rev-parse --path-format=absolute --git-common-dir>" },
-    "diff_summary": "<optional>", "tests": [{"cmd": "...", "result": "pass"}],
+    "head_sha": "<git rev-parse HEAD, optional>", "diff_summary": "<optional>", "tests": [{"cmd": "...", "result": "pass"}],
     "commands": [], "decisions": [], "rejected_paths": [], "open_risks": []
   },
   "files_read_first": [{"path": "...", "why": "..."}],
