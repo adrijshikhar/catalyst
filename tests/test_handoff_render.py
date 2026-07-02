@@ -153,5 +153,33 @@ class TestKeyPathContainment(unittest.TestCase):
             self.assertEqual(got, full.resolve())
 
 
+class TestDriftFiles(unittest.TestCase):
+    def test_missing_relative_file_warns(self):
+        obj = _valid()
+        obj["state"]["worktree"]["root"] = "/definitely/not/here"
+        obj["files_read_first"] = [{"path": "ghost.md", "why": "x"}]
+        out = hr.render(obj, current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertIn("!! MISSING: ghost.md", out)
+
+    def test_missing_absolute_file_checked_as_is(self):
+        obj = _valid()
+        obj["files_read_first"] = [{"path": "/no/such/abs.md", "why": "x"}]
+        out = hr.render(obj, current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertIn("!! MISSING: /no/such/abs.md", out)
+
+    def test_existing_relative_file_no_warning(self):
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "here.md").write_text("x")
+            obj = _valid()
+            obj["state"]["worktree"]["root"] = d
+            obj["files_read_first"] = [{"path": "here.md", "why": "x"}]
+            out = hr.render(obj, current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+            self.assertNotIn("MISSING", out)
+
+    def test_no_files_read_first_no_warning(self):
+        out = hr.render(_valid(), current_branch="feat/jwt-expiry", current_common_dir="/repo/.git")
+        self.assertNotIn("MISSING", out)
+
+
 if __name__ == "__main__":
     unittest.main()
