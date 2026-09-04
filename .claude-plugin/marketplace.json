@@ -1,0 +1,14 @@
+{
+  "name": "catalyst",
+  "owner": {
+    "name": "Adrij Shikhar",
+    "url": "https://github.com/adrijshikhar"
+  },
+  "plugins": [
+    {
+      "name": "catalyst",
+      "source": "./",
+      "description": "Catalyst — harness engineering for coding agents: typed context handoffs and the lifecycle hooks that fire them."
+    }
+  ]
+}

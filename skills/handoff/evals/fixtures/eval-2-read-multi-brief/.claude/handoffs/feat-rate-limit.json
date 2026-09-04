@@ -1,0 +1,47 @@
+{
+  "schema_version": "1",
+  "key": "feat-rate-limit",
+  "timestamp": "2026-05-22T18:20:00Z",
+  "mode": "WRITE",
+  "resume": {
+    "done_when": "Existing rate-limit tests pass AND new per-route override test passes.",
+    "resume_by": "Add a per-route override to src/middleware/rate-limit.ts.",
+    "prompt": "run python3 scripts/handoff-render.py feat-rate-limit and continue. next acceptance check: rate-limit middleware accepts a per-route override."
+  },
+  "state": {
+    "branch": "feat/rate-limit",
+    "next_acceptance_check": "pnpm test src/middleware/rate-limit.spec.ts passes including the new test.",
+    "worktree": {
+      "root": "/workspace/project",
+      "is_linked": false,
+      "git_common_dir": "/workspace/project/.git"
+    },
+    "diff_summary": "1 file, +24/-2 in src/middleware/",
+    "decisions": [
+      "sliding window stays",
+      "per-route override is opt-in via decorator"
+    ],
+    "rejected_paths": [
+      "token-bucket \u2014 too heavy for our use case"
+    ],
+    "open_risks": [
+      "Decorator stacking semantics with auth middleware unverified"
+    ]
+  },
+  "files_read_first": [
+    {
+      "path": "src/middleware/rate-limit.ts",
+      "why": "primary edit target for per-route override"
+    }
+  ],
+  "files_skip": [
+    {
+      "path": ".claude/PROJECT_STATE.md",
+      "why": "historical context only"
+    },
+    {
+      "path": "src/auth/*",
+      "why": "unrelated to rate-limit feature"
+    }
+  ]
+}

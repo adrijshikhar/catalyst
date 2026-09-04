@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "key": "feat-jwt-expiry",
+  "timestamp": "2026-05-23T10:00:00Z",
+  "mode": "WRITE",
+  "resume": {
+    "done_when": "unknown \u2014 brief is stale",
+    "resume_by": "Run RECOVER to reconstruct a fresh brief from git log and transcript."
+  },
+  "state": {
+    "branch": "feat/jwt-expiry",
+    "next_acceptance_check": "unknown \u2014 brief is stale from before the degradation",
+    "worktree": {
+      "root": "/workspace/project",
+      "is_linked": false,
+      "git_common_dir": "/workspace/project/.git"
+    }
+  }
+}

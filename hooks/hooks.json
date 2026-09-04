@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/PreCompact-handoff-write.sh\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 10,
+            "command": "\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/SessionStart-handoff-read.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

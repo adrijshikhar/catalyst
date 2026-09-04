@@ -1,0 +1,25 @@
+{
+  "schema_version": "1",
+  "key": "catalyst-read-drift",
+  "timestamp": "2026-07-07T18:32:09Z",
+  "mode": "WRITE",
+  "resume": {
+    "done_when": "v0.6.21 released with drift-validation evals recorded in skills/handoff/evals/evals.log.",
+    "resume_by": "Run /catalyst:handoff resume, then close the loop on #69: behavioral evals, evals.log record, release.",
+    "prompt": "run /catalyst:handoff resume and continue. next acceptance check: python3 -m unittest tests.test_handoff_render passes."
+  },
+  "state": {
+    "branch": "main",
+    "next_acceptance_check": "python3 -m unittest tests.test_handoff_render passes with TestDriftFiles, TestDriftAge and TestDriftCommits green.",
+    "worktree": {
+      "root": "/workspace/catalyst",
+      "is_linked": false,
+      "git_common_dir": "/workspace/catalyst/.git"
+    },
+    "head_sha": "82de465a0e5058d6a67799306394682b30cdda3c",
+    "decisions": [
+      "READ-time drift checks are fail-open and deterministic (PRINCIPLES P9, P10)",
+      "Warning order is REPO MISMATCH > BRANCH MISMATCH > STALE > MISSING > resume body"
+    ]
+  }
+}

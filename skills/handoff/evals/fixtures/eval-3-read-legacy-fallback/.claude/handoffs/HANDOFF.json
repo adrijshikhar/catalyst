@@ -1,0 +1,27 @@
+{
+  "schema_version": "1",
+  "key": "HANDOFF",
+  "timestamp": "2026-05-20T22:00:00Z",
+  "mode": "WRITE",
+  "resume": {
+    "done_when": "No console.log calls left in src/.",
+    "resume_by": "Clean up the leftover console.log statements in src/utils/logger.ts.",
+    "prompt": "run python3 scripts/handoff-render.py --file .claude/handoffs/HANDOFF.json and continue. next acceptance check: grep -rn console.log src/ returns no production matches."
+  },
+  "state": {
+    "branch": "main",
+    "next_acceptance_check": "grep -rn console.log src/ returns no production matches.",
+    "worktree": {
+      "root": "/workspace/project",
+      "is_linked": false,
+      "git_common_dir": "/workspace/project/.git"
+    },
+    "diff_summary": "4 files"
+  },
+  "files_read_first": [
+    {
+      "path": "src/utils/logger.ts",
+      "why": "primary cleanup target"
+    }
+  ]
+}

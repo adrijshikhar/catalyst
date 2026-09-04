@@ -1,0 +1,27 @@
+{
+  "schema_version": "1",
+  "key": "feat-jwt-expiry",
+  "timestamp": "2026-06-28T10:00:00Z",
+  "mode": "WRITE",
+  "resume": {
+    "done_when": "src/auth/auth.spec.ts:42-78 all 6 pass.",
+    "resume_by": "Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.",
+    "prompt": "run /catalyst:handoff resume and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6."
+  },
+  "state": {
+    "branch": "main",
+    "next_acceptance_check": "pnpm test src/auth/auth.spec.ts passes 6/6.",
+    "worktree": {
+      "root": "/workspace/project",
+      "is_linked": false,
+      "git_common_dir": "/workspace/project/.git"
+    },
+    "decisions": [
+      "lib is jose (not jsonwebtoken)",
+      "comparison is <= (not <)"
+    ],
+    "open_risks": [
+      "Clock skew not yet addressed"
+    ]
+  }
+}

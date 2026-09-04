@@ -1,0 +1,7 @@
+{
+  "schema_version": "1", "key": "k", "timestamp": "2026-05-30T10:00:00Z", "mode": "WRITE",
+  "resume": {"done_when": "d", "resume_by": "r"},
+  "state": {"branch": "b", "next_acceptance_check": "c",
+    "worktree": {"root": "/r", "is_linked": false, "git_common_dir": "/r/.git"}},
+  "state_packet": {"oops": true}
+}
