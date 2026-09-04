@@ -276,5 +276,51 @@ class TestMarketplaceDescription(unittest.TestCase):
             self.assertNotIn("for Claude Code", desc)
 
 
+
+class TestRootPluginManifest(unittest.TestCase):
+    """Antigravity CLI reads a root plugin.json. It must never carry an Agent
+    Plugins $schema: Codex would then drop every hook (openai/codex #37027)."""
+
+    def _root(self, d, manifest, claude_version="0.1.0"):
+        root = Path(d)
+        if manifest is not None:
+            (root / "plugin.json").write_text(json.dumps(manifest), encoding="utf-8")
+        cp = root / ".claude-plugin"; cp.mkdir()
+        (cp / "plugin.json").write_text(json.dumps({"name": "catalyst", "version": claude_version}), encoding="utf-8")
+        return root
+
+    def _valid(self):
+        return {"name": "catalyst", "version": "0.1.0", "description": "d"}
+
+    def test_valid_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            errors = []
+            lint.check_root_plugin_manifest(errors, root=self._root(d, self._valid()))
+            self.assertEqual(errors, [])
+
+    def test_missing_is_an_error(self):
+        with tempfile.TemporaryDirectory() as d:
+            errors = []
+            lint.check_root_plugin_manifest(errors, root=self._root(d, None))
+            self.assertTrue(any("plugin.json: missing" in e for e in errors), errors)
+
+    def test_schema_key_forbidden(self):
+        with tempfile.TemporaryDirectory() as d:
+            m = self._valid(); m["$schema"] = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
+            errors = []
+            lint.check_root_plugin_manifest(errors, root=self._root(d, m))
+            self.assertTrue(any("37027" in e for e in errors), errors)
+
+    def test_version_drift_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            errors = []
+            lint.check_root_plugin_manifest(errors, root=self._root(d, self._valid(), claude_version="0.1.1"))
+            self.assertTrue(any("drift" in e for e in errors), errors)
+
+    def test_real_tree_passes(self):
+        errors = []
+        lint.check_root_plugin_manifest(errors, root=ROOT)
+        self.assertEqual(errors, [])
+
 if __name__ == "__main__":
     unittest.main()

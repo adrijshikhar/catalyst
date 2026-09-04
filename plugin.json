@@ -1,0 +1,5 @@
+{
+  "name": "catalyst",
+  "version": "0.1.0",
+  "description": "Catalyst — harness engineering for coding agents: typed context handoffs and the lifecycle hooks that fire them."
+}

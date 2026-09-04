@@ -95,15 +95,23 @@ copilot plugin marketplace add adrijshikhar/catalyst
 copilot plugin install catalyst@catalyst
 ```
 
-### Antigravity, Gemini CLI, Cursor, Kiro and other agents
+### Antigravity CLI
+
+Skills and slash-commands-as-skills through Antigravity's own plugin format (a root `plugin.json`). Antigravity's hook events (`PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, `Stop`) have no session-start or compaction event, so Catalyst's two hooks cannot run there; invoke `handoff` by trigger phrase. Install from a local checkout:
+
+```bash
+git clone https://github.com/adrijshikhar/catalyst && agy plugin install ./catalyst
+```
+
+### Gemini CLI, Cursor, Kiro and other agents
 
 Skills only, no hooks yet. The [`skills`](https://github.com/vercel-labs/skills) CLI installs `handoff` and `hooks` into the agent's skills directory:
 
 ```bash
-npx skills add adrijshikhar/catalyst --agent antigravity-cli
+npx skills add adrijshikhar/catalyst --agent gemini-cli
 ```
 
-Replace `antigravity-cli` with `antigravity`, `gemini-cli`, `cursor`, `kiro-cli`, or `'*'` for every agent the CLI detects. The handoff scripts need Python 3. Windsurf has no skills or plugin system and is not supported.
+Replace `gemini-cli` with `cursor`, `kiro-cli`, `antigravity` (the IDE), or `'*'` for every agent the CLI detects. The handoff scripts need Python 3. Windsurf has no skills or plugin system and is not supported.
 
 ### Rollback
 
