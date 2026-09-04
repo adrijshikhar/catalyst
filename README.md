@@ -97,11 +97,13 @@ copilot plugin install catalyst@catalyst
 
 ### Antigravity CLI
 
-Skills and slash-commands-as-skills through Antigravity's own plugin format (a root `plugin.json`). Antigravity's hook events (`PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, `Stop`) have no session-start or compaction event, so Catalyst's two hooks cannot run there; invoke `handoff` by trigger phrase. Install from a local checkout:
+Skills and slash-commands-as-skills through Antigravity's own plugin format (a root `plugin.json`). Antigravity's hook events (`PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, `Stop`) have no session-start or compaction event, so Catalyst's two hooks cannot run there; invoke `handoff` by trigger phrase.
 
 ```bash
-git clone https://github.com/adrijshikhar/catalyst && agy plugin install ./catalyst
+agy plugin install https://github.com/adrijshikhar/catalyst
 ```
+
+`agy` clones the repo itself. A local path works too (`agy plugin install ./catalyst`); the `owner/repo` shorthand does not.
 
 ### Gemini CLI, Cursor, Kiro and other agents
 
