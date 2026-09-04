@@ -217,13 +217,14 @@ Argument handling pattern (from `commands/handoff.md`):
 
 ## Plugin manifest + marketplace
 
-One manifest: `.claude-plugin/plugin.json`. Codex and Copilot read it as a legacy-format
-manifest. There is deliberately **no** root Agent Plugins `plugin.json`: Codex excludes hooks
+Two manifests. `.claude-plugin/plugin.json` is read by Claude Code, and by Codex and Copilot as a
+legacy-format manifest. Root `plugin.json` is Antigravity CLI's (name, version, description) and is
+deliberately **schema-less** — lint fails on a `$schema` key — because a root Agent Plugins manifest
+makes Codex exclude hooks
 from Agent Plugins-format packages (`openai/codex` PR #37027, still on main), and Catalyst's
 hooks are the product. Re-adding the standard is a one-file change once that boundary lifts —
 check `codex-rs/core-plugins/src/loader.rs` for the `PluginManifestFormat::AgentPlugin` hook
-gate before doing so. `scripts/release.sh` bumps the one manifest through a loop so a second
-can be added.
+gate before doing so. `scripts/release.sh` bumps both manifests; lint asserts their `version` fields are equal.
 
 Host support statements must never outrun evidence (P2): Claude Code and Codex run the two hooks (Codex only after the user's one-time `/hooks` trust step); Copilot is Claude-format compatible per VS Code docs and stays "unverified" in every doc until a live run proves it; every other host is unsupported until Codex allows hooks in Agent Plugins packages; slash commands are Claude Code only.
 

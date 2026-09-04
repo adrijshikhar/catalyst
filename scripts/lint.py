@@ -239,6 +239,55 @@ def check_catalog_counts(root: Path, errors: list[str]) -> None:
         )
 
 
+# --- Root plugin.json (Antigravity CLI) --------------------------------------
+# Antigravity CLI reads a root `plugin.json` (name required) and `skills/`; it
+# converts `commands/` to skills and looks for hooks only at a root `hooks.json`,
+# so it never touches hooks/hooks.json. Codex classifies a root plugin.json
+# WITHOUT an Agent Plugins `$schema` as unrelated and keeps reading
+# .claude-plugin/plugin.json — which is what keeps Codex's hooks alive. A
+# `$schema` key here would flip Codex into Agent Plugins mode and silently
+# drop every hook (openai/codex PR #37027). Lint makes that a build failure.
+
+_ROOT_MANIFEST_REQUIRED = ("name", "version", "description")
+
+
+def check_root_plugin_manifest(errors: list[str], root: Path | None = None) -> None:
+    base = root or ROOT
+    path = base / "plugin.json"
+    if not path.exists():
+        fail("plugin.json: missing — Antigravity CLI needs a root manifest (name, version, description)", errors)
+        return
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        fail(f"plugin.json: invalid JSON — {exc}", errors)
+        return
+    if not isinstance(data, dict):
+        fail("plugin.json: must be a JSON object", errors)
+        return
+    if "$schema" in data:
+        fail(
+            "plugin.json: `$schema` is forbidden — a root Agent Plugins manifest makes Codex drop "
+            "every hook (openai/codex PR #37027). Keep this file schema-less.",
+            errors,
+        )
+    for key in _ROOT_MANIFEST_REQUIRED:
+        if not isinstance(data.get(key), str) or not data.get(key):
+            fail(f"plugin.json: missing or non-string required field `{key}`", errors)
+    claude = base / ".claude-plugin" / "plugin.json"
+    if claude.exists():
+        try:
+            cv = json.loads(claude.read_text(encoding="utf-8")).get("version")
+        except json.JSONDecodeError:
+            return
+        if data.get("version") != cv:
+            fail(
+                f"manifest version drift — plugin.json = {data.get('version')}, "
+                f".claude-plugin/plugin.json = {cv} (scripts/release.sh bumps both; never hand-edit one)",
+                errors,
+            )
+
+
 def check_marketplace_consistency(root: Path, errors: list[str]) -> None:
     mp = root / ".claude-plugin" / "marketplace.json"
     pj = root / ".claude-plugin" / "plugin.json"
@@ -483,7 +532,7 @@ def main() -> int:
             for p in d.rglob("*"):
                 if p.is_file() and p.suffix in TEXT_SUFFIXES:
                     scan_targets.append(p)
-    for doc in ("README.md", "CLAUDE.md"):
+    for doc in ("README.md", "CLAUDE.md", "plugin.json"):
         p = ROOT / doc
         if p.exists():
             scan_targets.append(p)
@@ -519,6 +568,7 @@ def main() -> int:
     # Catalog / drift gate (Task 2)
     check_catalog_counts(ROOT, errors)
     check_marketplace_consistency(ROOT, errors)
+    check_root_plugin_manifest(errors)
 
     if errors:
         print("Catalyst lint: FAILED", file=sys.stderr)

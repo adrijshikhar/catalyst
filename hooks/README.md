@@ -32,7 +32,7 @@ Hooks never block. If a hook cannot run (jq missing, shared libraries absent) it
 
 ## Delivery — one declaration file
 
-Catalyst ships one hook declaration file, `hooks/hooks.json`, in Claude Code's plugin layout. Codex reads `.claude-plugin/plugin.json` as a legacy manifest and loads the same file; VS Code and Copilot CLI read the Claude format too. Codex excludes hooks from Agent Plugins-format packages (`openai/codex` PR #37027), which is why Catalyst carries no root `plugin.json`.
+Catalyst ships one hook declaration file, `hooks/hooks.json`, in Claude Code's plugin layout. Codex reads `.claude-plugin/plugin.json` as a legacy manifest and loads the same file; VS Code and Copilot CLI read the Claude format too. Codex excludes hooks from Agent Plugins-format packages (`openai/codex` PR #37027), which is why the root `plugin.json` (read by Antigravity CLI) carries no `$schema` — lint forbids it. Antigravity looks for hooks only at a root `hooks.json`, which does not exist, so it never loads this file; its hook events have no session-start or compaction equivalent anyway.
 
 | Hosts | File | Notes |
 |---|---|---|
