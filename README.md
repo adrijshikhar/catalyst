@@ -28,10 +28,9 @@
 
 **Catalyst takes its name from chemistry.** A catalyst facilitates a reaction — makes it faster and more reliable — without being consumed by it.
 
-This plugin is a catalyst for **human–AI collaboration**. It sits between you and Claude and smooths how you work together, then steps out of the way. In practice, it:
+This plugin is a catalyst for **human–AI collaboration**. It sits between you and the agent and smooths how you work together, then steps out of the way. In practice, it:
 
 - **carries context across sessions** — so nothing gets re-explained after a `/compact`
-- **blocks premature "it's done" claims** — no success without evidence
 - **keeps subagents on-scope** — the right minimum context, no bleed
 
 Under the hood, Catalyst is grounded in **[harness engineering](https://www.anthropic.com/engineering/harness-design-long-running-apps)** — the architectural patterns Anthropic itself uses to ship reliable agentic applications. It treats Claude not as a single chat but as a system that needs scaffolding for context resets, structured artifact handoffs, multi-agent orchestration, and explicit evaluator/generator separation.
@@ -71,7 +70,9 @@ Catalyst ships in Claude Code's plugin layout, which Codex and GitHub Copilot al
 |---|---|---|---|
 | Claude Code | yes | active | `/plugin marketplace add adrijshikhar/catalyst` then `/plugin install catalyst@catalyst` |
 | Codex | yes | active after a one-time trust step: inside Codex run `/hooks`, trust the two `catalyst@catalyst` entries; until then Codex lists them but does not run them | `codex plugin marketplace add adrijshikhar/catalyst` then `codex plugin add catalyst@catalyst` |
-| VS Code (GitHub Copilot), Copilot CLI | yes | Claude-format compatible per VS Code docs; unverified | install from the marketplace; `.claude-plugin/marketplace.json` is read by Copilot CLI |
+| VS Code (GitHub Copilot), Copilot CLI | yes | Claude-format compatible per VS Code docs; unverified | `copilot plugin marketplace add adrijshikhar/catalyst` then `copilot plugin install catalyst@catalyst` — unverified, Copilot CLI reads `.claude-plugin/marketplace.json` |
+| Cursor | skills only, by copy | none | copy `skills/handoff` and `skills/hooks` into your project's `.cursor/skills/` (Cursor also reads `.claude/skills/`); no plugin manifest is shipped for Cursor yet |
+| Windsurf | not supported | none | no plugin or skills system; the handoff scripts need Python and a hook-capable host |
 
 Slash commands (`/catalyst:handoff` and friends) are Claude Code only; on every other host invoke the skills by trigger phrase.
 

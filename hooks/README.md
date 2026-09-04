@@ -79,8 +79,6 @@ A hook with nothing to say exits 0 with no output. A hook that speaks emits vali
 
 ## See also
 
-- `Catalyst Tier 1 spec`
 - [Claude Code hooks docs](https://code.claude.com/docs/en/agent-sdk/hooks.md)
 - [Anthropic CWC pattern (reference impl)](https://github.com/anthropics/cwc-long-running-agents)
-- [Agent Plugins specification](https://agent-plugins.org/specification)
 - [Codex hooks docs](https://developers.openai.com/codex/hooks)
