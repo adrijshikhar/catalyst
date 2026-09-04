@@ -242,7 +242,7 @@ def check_catalog_counts(root: Path, errors: list[str]) -> None:
 # --- Root plugin.json (Antigravity CLI) --------------------------------------
 # Antigravity CLI reads a root `plugin.json` (name required) and `skills/`; it
 # converts `commands/` to skills and looks for hooks only at a root `hooks.json`,
-# so it never touches hooks/hooks.json. Codex classifies a root plugin.json
+# and reads a ROOT hooks.json. Codex classifies a root plugin.json
 # WITHOUT an Agent Plugins `$schema` as unrelated and keeps reading
 # .claude-plugin/plugin.json — which is what keeps Codex's hooks alive. A
 # `$schema` key here would flip Codex into Agent Plugins mode and silently
@@ -445,10 +445,40 @@ _MATCH_ALL = {"", "*"}
 _PLUGIN_ROOT_PATH_RE = re.compile(r"\$\{CLAUDE_PLUGIN_ROOT\}\}?/([^\"\s]+)")
 
 
+def declared_hooks_path(base: Path) -> str:
+    """The hook file path from .claude-plugin/plugin.json, else the default.
+
+    Claude Code and Codex both honour a `hooks` path string in the manifest;
+    Antigravity CLI auto-discovers a ROOT hooks.json and ignores hooks/. Declaring
+    a root hooks.json therefore serves all three from one file (verified on
+    Antigravity CLI 1.1.26 and Codex 0.153.0)."""
+    manifest = base / ".claude-plugin" / "plugin.json"
+    if manifest.exists():
+        try:
+            declared = json.loads(manifest.read_text(encoding="utf-8")).get("hooks")
+        except json.JSONDecodeError:
+            declared = None
+        if isinstance(declared, str):
+            return declared.lstrip("./") or "hooks.json"
+    return "hooks/hooks.json"
+
+
+def check_no_legacy_hooks_location(errors: list[str], root: Path | None = None) -> None:
+    """hooks/hooks.json must not reappear: Antigravity would not see it, and two
+    hook files would drift. The declared root hooks.json is the only one."""
+    base = root or ROOT
+    if (base / "hooks" / "hooks.json").exists() and declared_hooks_path(base) != "hooks/hooks.json":
+        fail(
+            "hooks/hooks.json exists but the manifest declares another path — one hook "
+            "file only; Antigravity CLI reads the root hooks.json and never hooks/",
+            errors,
+        )
+
+
 def check_hooks_json(
     errors: list[str],
     root: Path | None = None,
-    rel_path: str = "hooks/hooks.json",
+    rel_path: str | None = None,
 ) -> None:
     """Validate one Claude-schema hook declaration file.
 
@@ -457,6 +487,8 @@ def check_hooks_json(
     Absence of the file is valid; not every plugin declares hooks.
     """
     base = root or ROOT
+    if rel_path is None:
+        rel_path = declared_hooks_path(base)
     path = base / rel_path
     if not path.exists():
         return
@@ -523,6 +555,7 @@ def main() -> int:
     check_hooks(errors)
     check_no_inlined_resolver(errors)
     check_hooks_json(errors)
+    check_no_legacy_hooks_location(errors)
 
     # Deterministic breadth (Task 1)
     scan_targets = []

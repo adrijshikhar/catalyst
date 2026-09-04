@@ -5,7 +5,7 @@ description: Use for Catalyst's two plugin-native lifecycle hooks (PreCompact �
 
 # hooks
 
-Wires Catalyst into the lifecycle of Claude Code, Codex and GitHub Copilot via one `hooks/hooks.json`. Both hooks run from the plugin cache — nothing to install.
+Wires Catalyst into the lifecycle of Claude Code, Codex and GitHub Copilot via one root `hooks.json`. Both hooks run from the plugin cache — nothing to install.
 
 ## What the hooks do
 
@@ -50,7 +50,7 @@ Writes `hooks.precompact_prompt` / `hooks.sessionstart_resume` to `false` in `.c
 
 ## Composition with other Catalyst skills
 
-- Both hooks are registered by `hooks/hooks.json` — nothing is installed or uninstalled.
+- Both hooks are registered by the root `hooks.json` — nothing is installed or uninstalled.
 - `handoff` modes are what the lifecycle hooks invoke — the hooks are messengers, not a reimplementation.
 - Multiple PreToolUse / PostToolUse hooks compose: most-restrictive wins (deny > defer > ask > allow).
 

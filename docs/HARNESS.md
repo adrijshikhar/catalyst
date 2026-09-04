@@ -55,7 +55,7 @@ Catalyst maps directly to Anthropic's primitives:
 | Lost-in-the-middle mitigation (re-grounding) | `handoff` REGROUND — read-only mid-session re-injection of goal + locked decisions + next-check |
 | Structured artifact handoff (file-based, not conversational) | typed JSON brief schema, shared across all modes. `handoff-render.py --brief` enforces the 30-line subagent ceiling deterministically instead of trusting the model to self-police it |
 | Anti-self-grade + pre-coding contract (separate evaluator subagent, done agreed up front) | `handoff` BRIEF — evaluator/reviewer subagents are dispatched as a separate fresh-context Agent; the brief states `done_when` before work starts |
-| Lifecycle hooks (PreCompact / SessionStart) | `hooks` skill. Declared once in `hooks/hooks.json`, read by Claude Code, Codex and Copilot, and run from the plugin cache, so there is no copy to fall behind. `/hooks status` reports what is registered and whether the two advisory hooks are enabled |
+| Lifecycle hooks (PreCompact / SessionStart) | `hooks` skill. Declared once in a root `hooks.json`, read by Claude Code, Codex and Copilot, and run from the plugin cache, so there is no copy to fall behind. `/hooks status` reports what is registered and whether the two advisory hooks are enabled |
 
 ### Hosts
 

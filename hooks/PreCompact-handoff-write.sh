@@ -21,7 +21,7 @@ if ! command -v jq >/dev/null 2>&1; then exit 1; fi
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
 # Shared libraries live in ONE place: hooks/lib/. Hooks run from the plugin
-# tree (declared in hooks/hooks.json), so this resolves inside the plugin
+# tree (declared in hooks.json at the repo root), so this resolves inside the plugin
 # itself. Fail open, but surface the degradation — a hook that silently loses
 # its function is its own bug (P9).
 # shellcheck source=/dev/null

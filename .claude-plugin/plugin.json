@@ -1,7 +1,7 @@
 {
   "name": "catalyst",
   "version": "0.1.0",
-  "description": "Catalyst — harness engineering for coding agents: typed context handoffs and the lifecycle hooks that fire them.",
+  "description": "Catalyst \u2014 harness engineering for coding agents: typed context handoffs and the lifecycle hooks that fire them.",
   "author": {
     "name": "Adrij Shikhar",
     "url": "https://github.com/adrijshikhar"
@@ -9,6 +9,7 @@
   "homepage": "https://github.com/adrijshikhar/catalyst",
   "repository": "https://github.com/adrijshikhar/catalyst",
   "license": "MIT",
+  "hooks": "./hooks.json",
   "keywords": [
     "codex",
     "skills",

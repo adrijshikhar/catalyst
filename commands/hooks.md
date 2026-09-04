@@ -13,7 +13,7 @@ Recognized sub-commands (parse `$ARGUMENT`):
 - `lint <path>` — Read the file and check: matcher patterns (warn if `.*` or empty on a tool event), `set -euo pipefail` present, `command -v jq` check, fail-open default, naming convention (filename starts with a recognized event prefix), `bash -n` syntax.
 
 There is no `install` or `uninstall`. Catalyst's hooks are declared in the
-plugin's `hooks/hooks.json` and run from the plugin itself, so installing them
+plugin's root `hooks.json` and run from the plugin itself, so installing them
 is not a step and they cannot fall out of date. If `$ARGUMENT` is `install` or
 `uninstall`, say so and run `status` instead.
 

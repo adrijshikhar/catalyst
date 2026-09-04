@@ -82,14 +82,14 @@ class TestFileRefResolution(unittest.TestCase):
 
 
 class TestHooksJson(unittest.TestCase):
-    """hooks/hooks.json is how the plugin registers its hooks. A typo in an
+    """The declared hook file is how the plugin registers its hooks. A typo in an
     event name, a missing script, or a path that is not plugin-root-relative
     means a hook silently never fires — so lint rejects all three."""
 
     def _write(self, root, data):
         hooks = root / "hooks"
         hooks.mkdir(parents=True, exist_ok=True)
-        (hooks / "hooks.json").write_text(json.dumps(data), encoding="utf-8")
+        (root / "hooks.json").write_text(json.dumps(data), encoding="utf-8")
         return hooks
 
     def _valid(self, script_name="PreCompact-handoff-write.sh"):
@@ -105,7 +105,7 @@ class TestHooksJson(unittest.TestCase):
             script.write_text("#!/usr/bin/env bash\n")
             script.chmod(0o755)
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertEqual(errors, [])
 
     def test_unknown_event_name_rejected(self):
@@ -120,7 +120,7 @@ class TestHooksJson(unittest.TestCase):
             script.write_text("#!/usr/bin/env bash\n")
             script.chmod(0o755)
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertTrue(any("unknown hook event" in e for e in errors), errors)
             self.assertTrue(any("PreCompactt" in e for e in errors), errors)
 
@@ -129,7 +129,7 @@ class TestHooksJson(unittest.TestCase):
             root = Path(d)
             self._write(root, self._valid("does-not-exist.sh"))
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertTrue(any("does-not-exist.sh" in e for e in errors), errors)
 
     def test_command_without_plugin_root_rejected(self):
@@ -139,7 +139,7 @@ class TestHooksJson(unittest.TestCase):
                 {"type": "command", "command": "bash hooks/PreCompact-handoff-write.sh"}]}]}})
             (hooks / "PreCompact-handoff-write.sh").write_text("#!/usr/bin/env bash\n")
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertTrue(any("CLAUDE_PLUGIN_ROOT" in e for e in errors), errors)
 
     def test_sessionstart_source_list_rejected(self):
@@ -152,7 +152,7 @@ class TestHooksJson(unittest.TestCase):
                     {"type": "command", "command": '"${CLAUDE_PLUGIN_ROOT}/hooks/s.sh"'}]}]}})
             (hooks / "s.sh").write_text("#!/usr/bin/env bash\n")
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertTrue(any("SessionStart" in e and "matcher" in e for e in errors), errors)
 
     def test_non_executable_script_rejected(self):
@@ -166,12 +166,12 @@ class TestHooksJson(unittest.TestCase):
             script.write_text("#!/usr/bin/env bash\n")
             script.chmod(0o644)
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertTrue(any("not executable" in e for e in errors), errors)
 
             script.chmod(0o755)
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertEqual(errors, [])
 
     def test_command_with_trailing_argument_passes(self):
@@ -187,23 +187,22 @@ class TestHooksJson(unittest.TestCase):
             script.write_text("#!/usr/bin/env bash\n")
             script.chmod(0o755)
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertEqual(errors, [])
 
     def test_malformed_json_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            hooks = root / "hooks"; hooks.mkdir()
-            (hooks / "hooks.json").write_text("{not json", encoding="utf-8")
+            (root / "hooks.json").write_text("{not json", encoding="utf-8")
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertTrue(any("hooks.json" in e for e in errors), errors)
 
     def test_absent_file_is_not_an_error(self):
         """Not every plugin declares hooks; absence is valid."""
         with tempfile.TemporaryDirectory() as d:
             errors = []
-            lint.check_hooks_json(errors, root=Path(d))
+            lint.check_hooks_json(errors, root=Path(d), rel_path="hooks.json")
             self.assertEqual(errors, [])
 
     def _fallback_form(self, script_name):
@@ -227,12 +226,12 @@ class TestHooksJson(unittest.TestCase):
             self._write(root, self._fallback_form("PreCompact-handoff-write.sh"))
             self._script(root, "PreCompact-handoff-write.sh")
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertEqual(errors, [])
 
             self._write(root, self._fallback_form("does-not-exist.sh"))
             errors = []
-            lint.check_hooks_json(errors, root=root)
+            lint.check_hooks_json(errors, root=root, rel_path="hooks.json")
             self.assertTrue(any("missing script" in e for e in errors), errors)
 
     def test_error_labels_use_the_given_path(self):
@@ -321,6 +320,43 @@ class TestRootPluginManifest(unittest.TestCase):
         errors = []
         lint.check_root_plugin_manifest(errors, root=ROOT)
         self.assertEqual(errors, [])
+
+
+class TestLegacyHooksLocation(unittest.TestCase):
+    """Antigravity CLI reads a ROOT hooks.json and never hooks/. If the file moves
+    back under hooks/ while the manifest declares the root path, Antigravity loses
+    the hooks silently — lint must catch it."""
+
+    def _tree(self, d, declared, legacy_exists):
+        root = Path(d)
+        cp = root / ".claude-plugin"; cp.mkdir()
+        (cp / "plugin.json").write_text(json.dumps({"name": "catalyst", "hooks": declared}), encoding="utf-8")
+        if legacy_exists:
+            (root / "hooks").mkdir(exist_ok=True)
+            (root / "hooks" / "hooks.json").write_text("{}", encoding="utf-8")
+        return root
+
+    def test_legacy_file_with_root_declaration_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            errors = []
+            lint.check_no_legacy_hooks_location(errors, root=self._tree(d, "./hooks.json", True))
+            self.assertTrue(any("Antigravity" in e for e in errors), errors)
+
+    def test_no_legacy_file_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            errors = []
+            lint.check_no_legacy_hooks_location(errors, root=self._tree(d, "./hooks.json", False))
+            self.assertEqual(errors, [])
+
+    def test_declared_path_read_from_manifest(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(lint.declared_hooks_path(self._tree(d, "./hooks.json", False)), "hooks.json")
+
+    def test_real_tree_passes(self):
+        errors = []
+        lint.check_no_legacy_hooks_location(errors, root=ROOT)
+        self.assertEqual(errors, [])
+        self.assertEqual(lint.declared_hooks_path(ROOT), "hooks.json")
 
 if __name__ == "__main__":
     unittest.main()
