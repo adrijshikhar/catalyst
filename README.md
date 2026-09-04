@@ -64,25 +64,56 @@ WRITE produces a typed, schema-validated brief; READ renders it back into a resu
 
 ## Install
 
-Catalyst ships in Claude Code's plugin layout, which Codex and GitHub Copilot also read. Codex deliberately excludes hooks from Agent Plugins-format packages (`openai/codex` PR #37027), so Catalyst does not ship an Agent Plugins root manifest; it will the day that boundary lifts.
+Catalyst ships in Claude Code's plugin layout. Codex and GitHub Copilot read that layout too; every other agent gets the skills through the `skills` CLI. Hooks (auto-write on compaction, auto-render on session start) run only where the host loads them, listed per agent below. Nothing is enforced anywhere; both hooks only inject context.
 
-| Host | Skills | Hooks | Install |
-|---|---|---|---|
-| Claude Code | yes | active | `/plugin marketplace add adrijshikhar/catalyst` then `/plugin install catalyst@catalyst` |
-| Codex | yes | active after a one-time trust step: inside Codex run `/hooks`, trust the two `catalyst@catalyst` entries; until then Codex lists them but does not run them | `codex plugin marketplace add adrijshikhar/catalyst` then `codex plugin add catalyst@catalyst` |
-| VS Code (GitHub Copilot), Copilot CLI | yes | Claude-format compatible per VS Code docs; unverified | `copilot plugin marketplace add adrijshikhar/catalyst` then `copilot plugin install catalyst@catalyst` — unverified, Copilot CLI reads `.claude-plugin/marketplace.json` |
-| Cursor | skills only, by copy | none | copy `skills/handoff` and `skills/hooks` into your project's `.cursor/skills/` (Cursor also reads `.claude/skills/`); no plugin manifest is shipped for Cursor yet |
-| Windsurf | not supported | none | no plugin or skills system; the handoff scripts need Python and a hook-capable host |
+### Claude Code
 
-Slash commands (`/catalyst:handoff` and friends) are Claude Code only; on every other host invoke the skills by trigger phrase.
+Skills, hooks and slash commands. Inside Claude Code:
 
-**Rollback:** every release is a git tag (`vX.Y.Z`). To pin or roll back on Claude Code:
+```
+/plugin marketplace add adrijshikhar/catalyst
+/plugin install catalyst@catalyst
+```
+
+### Codex
+
+Skills and hooks; no slash commands (invoke the skills by trigger phrase, or `$catalyst:handoff` style skill mentions).
+
+```bash
+codex plugin marketplace add adrijshikhar/catalyst
+codex plugin add catalyst@catalyst
+```
+
+Then, once per install, inside Codex run `/hooks` and trust the two `catalyst@catalyst` entries. Until you do, Codex lists the hooks but does not run them.
+
+### GitHub Copilot (VS Code, Copilot CLI)
+
+Reads the Claude plugin layout per VS Code's docs. Unverified by the maintainer.
+
+```bash
+copilot plugin marketplace add adrijshikhar/catalyst
+copilot plugin install catalyst@catalyst
+```
+
+### Antigravity, Gemini CLI, Cursor, Kiro and other agents
+
+Skills only, no hooks yet. The [`skills`](https://github.com/vercel-labs/skills) CLI installs `handoff` and `hooks` into the agent's skills directory:
+
+```bash
+npx skills add adrijshikhar/catalyst --agent antigravity-cli
+```
+
+Replace `antigravity-cli` with `antigravity`, `gemini-cli`, `cursor`, `kiro-cli`, or `'*'` for every agent the CLI detects. The handoff scripts need Python 3. Windsurf has no skills or plugin system and is not supported.
+
+### Rollback
+
+Every release is a git tag (`vX.Y.Z`). On Claude Code:
 
 ```
 /plugin install catalyst@catalyst@<version>
 ```
 
-Releases are listed at [github.com/adrijshikhar/catalyst/releases](https://github.com/adrijshikhar/catalyst/releases).
+Releases: [github.com/adrijshikhar/catalyst/releases](https://github.com/adrijshikhar/catalyst/releases).
 
 ## Usage
 
@@ -92,7 +123,7 @@ After install, invoke skills explicitly or let Claude auto-trigger them:
 - **Diagnostics:** `/hooks status` reports which hooks are registered and whether the two advisory ones are enabled
 - **Auto:** when you end a session, switch context, approach context limits, or brief a subagent, Claude triggers the right mode of `handoff`
 
-Both hooks are active as soon as the plugin is installed on Claude Code; on Codex they run after the one-time `/hooks` trust step; on Copilot they are Claude-format compatible, unverified. Don't want the compaction suggestion or the resume announce? `/hooks disable precompact` or `/hooks disable sessionstart`. See each skill's `SKILL.md` for full trigger conditions and behavior.
+Both hooks are active as soon as the plugin is installed on Claude Code; on Codex after the one-time `/hooks` trust step. Don't want the compaction suggestion or the resume announce? `/hooks disable precompact` or `/hooks disable sessionstart`. See each skill's `SKILL.md` for full trigger conditions and behavior.
 
 ## Why "Catalyst"
 
