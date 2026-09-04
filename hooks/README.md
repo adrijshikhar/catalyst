@@ -82,3 +82,4 @@ A hook with nothing to say exits 0 with no output. A hook that speaks emits vali
 - [Claude Code hooks docs](https://code.claude.com/docs/en/agent-sdk/hooks.md)
 - [Anthropic CWC pattern (reference impl)](https://github.com/anthropics/cwc-long-running-agents)
 - [Codex hooks docs](https://developers.openai.com/codex/hooks)
+- [Agent Plugins specification](https://agent-plugins.org/specification) — the portable manifest Catalyst does not ship yet; Codex excludes hooks from that format (`openai/codex` #37027)
