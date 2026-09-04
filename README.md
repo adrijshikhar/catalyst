@@ -97,7 +97,7 @@ copilot plugin install catalyst@catalyst
 
 ### Antigravity CLI
 
-Skills and slash-commands-as-skills through Antigravity's own plugin format (a root `plugin.json`). Antigravity's hook events (`PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, `Stop`) have no session-start or compaction event, so Catalyst's two hooks cannot run there; invoke `handoff` by trigger phrase.
+Skills, slash-commands-as-skills, and the `SessionStart` hook, through Antigravity's own plugin format (a root `plugin.json` and a root `hooks.json`). Antigravity's hook events (`PreToolUse`, `PostToolUse`, `PreInvocation`, `PostInvocation`, `Stop`) have no compaction event, so the `PreCompact` hook is dropped there; `SessionStart` runs, so a brief still auto-renders when you start a session.
 
 ```bash
 agy plugin install https://github.com/adrijshikhar/catalyst

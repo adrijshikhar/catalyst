@@ -128,7 +128,7 @@ description: <when to trigger, what it does — be specific about contexts and t
 ## Hook authoring conventions
 
 Plugin-bundled hooks live in `hooks/` at the repo root and are declared natively in
-`hooks/hooks.json` — there is no per-project install step; see below.
+`hooks.json` at the repo root — there is no per-project install step; see below.
 
 | Convention | Rule |
 |------------|------|
@@ -145,8 +145,11 @@ See `hooks/README.md` for the full hook protocol reference.
 
 When adding a new hook, use `/hooks new <Event> <name>` to scaffold from the canonical template.
 
-**Plugin-shipped hooks are declared once, not installed.** `hooks/hooks.json` is read by
-Claude Code, Codex (legacy-manifest path via `.claude-plugin/plugin.json`) and GitHub Copilot.
+**Plugin-shipped hooks are declared once, not installed.** One file, `hooks.json` at the repo
+root, serves every host: Claude Code and Codex read it because `.claude-plugin/plugin.json`
+declares `"hooks": "./hooks.json"` (both honour a path string there), and Antigravity CLI
+auto-discovers a root `hooks.json` — it never looks in `hooks/`. Never move it back under
+`hooks/`: lint fails, and Antigravity would silently lose the hooks.
 `scripts/lint.py`'s `check_hooks_json` enforces: known events, `SessionStart` matcher `""`
 (match-all — matcher values for that event are exact-match over
 `startup | resume | clear | compact | fork`), the cross-host command form, and that every
@@ -182,7 +185,7 @@ falsy check is duplicating load-bearing parsing; there is no lint guard for this
 one, so it is enforced by review.
 
 **Shared bash libraries live in `hooks/lib/`, not `scripts/`.** Hooks run from the
-plugin tree (declared in `hooks/hooks.json`, commands rooted at
+plugin tree (declared in `hooks.json`, commands rooted at
 `${CLAUDE_PLUGIN_ROOT}`), so `$SCRIPT_DIR/lib/` resolves inside the plugin itself —
 no copy step, nothing to reap. A helper a hook needs must still live in `hooks/lib/`,
 not `scripts/`. `scripts/lint.py` fails the build if a hook re-inlines the store

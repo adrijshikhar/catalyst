@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/hooks-config.sh — report and toggle Catalyst's own hooks.
 #
-# Hooks are registered by hooks/hooks.json and always run from the plugin
+# Hooks are registered by hooks.json and always run from the plugin
 # cache, so there is nothing to install and nothing to drift. What a user can
 # change is whether the two ADVISORY hooks act; that lives in
 # .claude/catalyst.json, which is the only state. This script is a front door
@@ -62,7 +62,7 @@ case "${1:-status}" in
       printf '%-30s %-14s %-12s %s\n' "$1" "$2" "$3" "$state"
     done
     echo
-    echo "Registered by hooks/hooks.json — they run from the plugin, so there is nothing to install."
+    echo "Registered by hooks.json — they run from the plugin, so there is nothing to install."
     echo "Toggle the advisory two with: /catalyst:hooks disable precompact|sessionstart"
     legacy_found=0
     for f in "$PROJECT_DIR"/.claude/hooks/*.sh; do

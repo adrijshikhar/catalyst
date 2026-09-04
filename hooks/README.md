@@ -32,12 +32,12 @@ Hooks never block. If a hook cannot run (jq missing, shared libraries absent) it
 
 ## Delivery — one declaration file
 
-Catalyst ships one hook declaration file, `hooks/hooks.json`, in Claude Code's plugin layout. Codex reads `.claude-plugin/plugin.json` as a legacy manifest and loads the same file; VS Code and Copilot CLI read the Claude format too. Codex excludes hooks from Agent Plugins-format packages (`openai/codex` PR #37027), which is why the root `plugin.json` (read by Antigravity CLI) carries no `$schema` — lint forbids it. Antigravity looks for hooks only at a root `hooks.json`, which does not exist, so it never loads this file; its hook events have no session-start or compaction equivalent anyway.
+Catalyst ships one hook declaration file, `hooks.json` at the repo root, declared as `"hooks": "./hooks.json"` in `.claude-plugin/plugin.json`. Claude Code and Codex both honour that path string; Antigravity CLI auto-discovers a root `hooks.json` and never looks in `hooks/`, so one file serves all three. Codex reads `.claude-plugin/plugin.json` as a legacy manifest and loads the same file; VS Code and Copilot CLI read the Claude format too. Codex excludes hooks from Agent Plugins-format packages (`openai/codex` PR #37027), which is why the root `plugin.json` (read by Antigravity CLI) carries no `$schema` — lint forbids it. Antigravity looks for hooks only at a root `hooks.json`, which does not exist, so it never loads this file; its hook events have no session-start or compaction equivalent anyway.
 
 | Hosts | File | Notes |
 |---|---|---|
-| Claude Code, Codex | `hooks/hooks.json` | Both read this path by default with the same schema. Codex runs a plugin hook only after the user trusts it once via `/hooks` in the Codex TUI (state persists under `[hooks.state]` in `~/.codex/config.toml`); untrusted hooks are listed but inert, including under `codex exec`. |
-| VS Code (Copilot), Copilot CLI | `hooks/hooks.json` (Claude format) | Claude-format compatible per VS Code docs; unverified. |
+| Claude Code, Codex | `hooks.json` (root, declared in `.claude-plugin/plugin.json`) | Both read this path by default with the same schema. Codex runs a plugin hook only after the user trusts it once via `/hooks` in the Codex TUI (state persists under `[hooks.state]` in `~/.codex/config.toml`); untrusted hooks are listed but inert, including under `codex exec`. |
+| VS Code (Copilot), Copilot CLI | `hooks.json` (Claude format) | Claude-format compatible per VS Code docs; unverified. |
 
 Commands are written as `"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/<script>.sh"`. Codex sets both variables and textually expands both exact tokens; VS Code expands `${PLUGIN_ROOT}`; Claude Code expands `${CLAUDE_PLUGIN_ROOT}`. Exact-token replacement never matches `${PLUGIN_ROOT:-`, so the expression survives and bash resolves whichever variable the host set. Scripts run from the plugin cache: the running script is always the one that shipped with the installed version.
 
