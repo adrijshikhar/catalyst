@@ -100,6 +100,43 @@ class TestHandoffsDir(unittest.TestCase):
             self.assertTrue((repo / ".gitignore").exists())
             self.assertEqual((repo / ".gitignore").read_text(), ".catalyst/\n")
 
+    def test_existing_root_ignore_rule_is_not_duplicated(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d); _init_repo(repo)
+            ignore = repo / ".gitignore"
+            original = b"# local state\r\n/.catalyst/\r\n"
+            ignore.write_bytes(original)
+            result = self._initialize(repo)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(ignore.read_bytes(), original)
+
+    def test_later_negation_does_not_leave_state_unignored(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d); _init_repo(repo)
+            ignore = repo / ".gitignore"
+            ignore.write_text(".catalyst/\n!.catalyst/\n")
+            result = self._initialize(repo, "--tasks")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            check = subprocess.run(["git", "check-ignore", "-q", ".catalyst/tasks/task.md"], cwd=repo)
+            self.assertEqual(check.returncode, 0)
+
+    def test_lookup_legacy_and_canonical_bash_python_parity(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d); _init_repo(repo)
+            store = hp.handoffs_dir(repo)
+            legacy = repo / ".claude/handoffs/task.json"
+            legacy.parent.mkdir(parents=True); legacy.write_text("{}")
+            for canonical in (False, True):
+                if canonical:
+                    store.mkdir(parents=True); (store / "task.json").write_text("{}")
+                python_path = hp.read_path(store / "task.json", store)
+                shell_path = subprocess.run(
+                    ["bash", "-c", '. "$1"; catalyst_brief_path task "$2"',
+                     "bash", str(ROOT / "hooks/lib/config.sh"), str(repo)],
+                    capture_output=True, text=True, check=True).stdout.strip()
+                self.assertEqual(python_path.resolve(), Path(shell_path).resolve())
+
+
     def test_main_checkout(self):
         with tempfile.TemporaryDirectory() as d:
             repo = Path(d) / "repo"; repo.mkdir(); _init_repo(repo)

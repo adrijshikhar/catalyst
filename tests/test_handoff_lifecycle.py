@@ -47,6 +47,22 @@ def _brief(store: Path, key: str, branch: str, age_days: int = 0) -> Path:
 
 
 class TestList(unittest.TestCase):
+    def test_canonical_inventory_surfaces_both_stores_without_mutation(self):
+        with tempfile.TemporaryDirectory() as d:
+            repo = Path(d); _init_repo(repo)
+            store = hl._hp.handoffs_dir(repo)
+            old = _brief(repo / ".claude/handoffs", "task", "feat/task")
+            new = _brief(store, "task", "feat/task")
+            before = {p: p.read_bytes() for p in (old, new)}
+            rows = hl.collect(store, repo)
+            self.assertEqual({Path(row["path"]).resolve() for row in rows},
+                             {old.resolve(), new.resolve()})
+            output = hl.render(rows)
+            self.assertIn(".catalyst/handoffs/task.json", output)
+            self.assertIn(".claude/handoffs/task.json", output)
+            self.assertEqual(before, {p: p.read_bytes() for p in (old, new)})
+            self.assertFalse((repo / ".gitignore").exists())
+
     def test_reports_branch_liveness_and_current(self):
         with tempfile.TemporaryDirectory() as d:
             repo = Path(d) / "repo"; repo.mkdir(); _init_repo(repo)

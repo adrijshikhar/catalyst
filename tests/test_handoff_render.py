@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -253,6 +255,18 @@ class TestBrief(unittest.TestCase):
     def test_brief_preserves_all_locked_decisions(self):
         out = hr.render_brief(self._obj(6))
         self.assertIn("decision 5", out)
+
+    def test_over_budget_brief_reports_failure_and_keeps_content(self):
+        with tempfile.TemporaryDirectory() as d:
+            source = Path(d) / "brief.json"
+            source.write_text(json.dumps(self._obj(40)))
+            result = subprocess.run(
+                ["python3", str(ROOT / "scripts/handoff-render.py"), "--brief", str(source)],
+                cwd=d, capture_output=True, text=True,
+                env={**os.environ, "CATALYST_HANDOFF_BRIEF_MAX_LINES": "30"})
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("decision 39", result.stdout)
+            self.assertIn("BRIEF over cap", result.stderr)
 
     def test_brief_carries_scope_and_return_contract(self):
         obj = self._obj()
