@@ -358,5 +358,36 @@ class TestLegacyHooksLocation(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(lint.declared_hooks_path(ROOT), "hooks.json")
 
+
+class TestManifestVersions(unittest.TestCase):
+    """Four manifests carry version; release.sh bumps all, lint proves they agree,
+    and Codex's declared hooks path must match Claude's."""
+
+    def _root(self, d, versions, codex_hooks="./hooks.json"):
+        root = Path(d)
+        (root / ".claude-plugin").mkdir(); (root / ".codex-plugin").mkdir()
+        (root / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "c", "version": versions[0], "hooks": "./hooks.json"}))
+        (root / "plugin.json").write_text(json.dumps({"name": "c", "version": versions[1]}))
+        (root / ".codex-plugin" / "plugin.json").write_text(json.dumps({"name": "c", "version": versions[2], "hooks": codex_hooks}))
+        (root / "gemini-extension.json").write_text(json.dumps({"name": "c", "version": versions[3]}))
+        return root
+
+    def test_equal_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            errors = []; lint.check_manifest_versions_equal(errors, root=self._root(d, ["1.0.0"] * 4)); self.assertEqual(errors, [])
+
+    def test_drift_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            errors = []; lint.check_manifest_versions_equal(errors, root=self._root(d, ["1.0.0", "1.0.0", "1.0.1", "1.0.0"]))
+            self.assertTrue(any("drift" in e and "1.0.1" in e for e in errors), errors)
+
+    def test_codex_hooks_path_must_match_claude(self):
+        with tempfile.TemporaryDirectory() as d:
+            errors = []; lint.check_manifest_versions_equal(errors, root=self._root(d, ["1.0.0"] * 4, codex_hooks="./hooks/hooks.json"))
+            self.assertTrue(any("differs" in e for e in errors), errors)
+
+    def test_real_tree(self):
+        errors = []; lint.check_manifest_versions_equal(errors, root=ROOT); self.assertEqual(errors, [])
+
 if __name__ == "__main__":
     unittest.main()
