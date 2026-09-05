@@ -148,8 +148,10 @@ These are artifact/tool-trace behavioral evals. The current transcript-only
 Run in isolated fixture directories and use an independent evaluator with input
 files and resulting artifacts/tool traces; do not claim a transcript-grep pass
 proves these behaviors. Eval 26 needs the files[] fixture staging used by the
-subagent runner; eval-run.py does not stage those files. No new model snapshots
-have been run or seeded for this change.
+subagent runner; eval-run.py does not stage those files. The full model eval suite has not been run and no committed snapshots have been
+seeded for this change.
 
 Deterministic unittest and shell checks independently cover canonical/legacy
 storage, Git ignore initialization and BRIEF rendering without decision loss.
+
+One scratch round-trip passed on 2026-09-06 against `5cc59eb`: an independent agent generated a file-default task (37 lines) and short launch prompt; a fresh recipient used the file alone, updated Completion, and returned a short pointer. Binary artifact checks confirmed Git ignore coverage, unchanged task body/source, correct runtime evidence, and no checkpoint/narrative writes. Local artifacts: `skills/handoff-workspace/agent-roundtrip/result.json` (gitignored). This is a one-run smoke check, not pass@3 or a committed snapshot.
