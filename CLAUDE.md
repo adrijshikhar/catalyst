@@ -220,16 +220,20 @@ Argument handling pattern (from `commands/handoff.md`):
 
 ## Plugin manifest + marketplace
 
-Two manifests. `.claude-plugin/plugin.json` is read by Claude Code, and by Codex and Copilot as a
-legacy-format manifest. Root `plugin.json` is Antigravity CLI's (name, version, description) and is
-deliberately **schema-less** — lint fails on a `$schema` key — because a root Agent Plugins manifest
-makes Codex exclude hooks
-from Agent Plugins-format packages (`openai/codex` PR #37027, still on main), and Catalyst's
-hooks are the product. Re-adding the standard is a one-file change once that boundary lifts —
-check `codex-rs/core-plugins/src/loader.rs` for the `PluginManifestFormat::AgentPlugin` hook
-gate before doing so. `scripts/release.sh` bumps both manifests; lint asserts their `version` fields are equal.
+Four manifests, one truth. `.claude-plugin/plugin.json` is Claude Code's (and Copilot's, as a
+Claude-format manifest). `.codex-plugin/plugin.json` is Codex's — explicit, first in its fallback
+order, declaring the same `./hooks.json` and `./skills/`. Root `plugin.json` is Antigravity CLI's
+(name, version, description) and is deliberately **schema-less** — lint fails on a `$schema` key —
+because a root Agent Plugins manifest makes Codex exclude hooks from Agent Plugins-format packages
+(`openai/codex` PR #37027, still on main), and Catalyst's hooks are the product. Re-adding the
+standard is a one-file change once that boundary lifts — check
+`codex-rs/core-plugins/src/loader.rs` for the `PluginManifestFormat::AgentPlugin` hook gate before
+doing so. `gemini-extension.json` is Gemini CLI's and points `contextFileName` at `AGENTS.md`, the
+one instruction-tier file Catalyst ships. All four carry `version`: `scripts/release.sh` bumps all
+four and lint fails on drift; lint also fails if the Claude and Codex manifests declare different
+`hooks` paths.
 
-Host support statements must never outrun evidence (P2): Claude Code and Codex run the two hooks (Codex only after the user's one-time `/hooks` trust step); Copilot is Claude-format compatible per VS Code docs and stays "unverified" in every doc until a live run proves it; every other host is unsupported until Codex allows hooks in Agent Plugins packages; slash commands are Claude Code only.
+Host support statements must never outrun evidence (P2): Claude Code and Codex run the two hooks (Codex only after the user's one-time `/hooks` trust step); Copilot is Claude-format compatible per VS Code docs and stays "unverified" in every doc until a live run proves it; Antigravity CLI runs `SessionStart` only (no compaction event) and is verified; Gemini CLI gets skills and `AGENTS.md`, unverified; every other agent gets skills only through the `skills` CLI; slash commands are Claude Code only (Antigravity converts them to skills).
 
 `.claude-plugin/marketplace.json` makes Catalyst its own one-plugin marketplace. Install via `/plugin marketplace add adrijshikhar/catalyst && /plugin install catalyst@catalyst`.
 
