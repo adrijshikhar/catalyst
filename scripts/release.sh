@@ -20,7 +20,7 @@ set -euo pipefail
 # a second manifest can be added later without restructuring this script.
 # .claude-plugin/plugin.json is read as the source; every file in MANIFESTS is written.
 PLUGIN_JSON=".claude-plugin/plugin.json"
-MANIFESTS=(".claude-plugin/plugin.json" "plugin.json")
+MANIFESTS=(".claude-plugin/plugin.json" "plugin.json" ".codex-plugin/plugin.json" "gemini-extension.json")
 BRANCH="${GITHUB_REF_NAME:-main}"
 MAX_PUSH_RETRIES=3
 

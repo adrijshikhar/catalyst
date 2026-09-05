@@ -475,6 +475,51 @@ def check_no_legacy_hooks_location(errors: list[str], root: Path | None = None) 
         )
 
 
+# --- Manifest parity ---------------------------------------------------------
+# Four manifests carry `version`: Claude, Codex, Antigravity (root), Gemini.
+# release.sh bumps all of them; lint proves they agree, and that Codex's
+# declared hooks path matches Claude's — one hook file, one truth.
+VERSIONED_MANIFESTS = (
+    ".claude-plugin/plugin.json",
+    "plugin.json",
+    ".codex-plugin/plugin.json",
+    "gemini-extension.json",
+)
+
+
+def check_manifest_versions_equal(errors: list[str], root: Path | None = None) -> None:
+    base = root or ROOT
+    seen: dict[str, str] = {}
+    for rel in VERSIONED_MANIFESTS:
+        p = base / rel
+        if not p.exists():
+            continue
+        try:
+            seen[rel] = str(json.loads(p.read_text(encoding="utf-8")).get("version"))
+        except json.JSONDecodeError:
+            continue
+    if len(set(seen.values())) > 1:
+        fail(
+            "manifest version drift — "
+            + ", ".join(f"{k} = {v}" for k, v in seen.items())
+            + " (scripts/release.sh must bump all; never hand-edit one)",
+            errors,
+        )
+    claude = base / ".claude-plugin" / "plugin.json"
+    codex = base / ".codex-plugin" / "plugin.json"
+    if claude.exists() and codex.exists():
+        try:
+            ch = json.loads(claude.read_text(encoding="utf-8")).get("hooks")
+            xh = json.loads(codex.read_text(encoding="utf-8")).get("hooks")
+        except json.JSONDecodeError:
+            return
+        if ch != xh:
+            fail(
+                f".codex-plugin/plugin.json hooks={xh!r} differs from .claude-plugin/plugin.json hooks={ch!r} — both hosts must read the same file",
+                errors,
+            )
+
+
 def check_hooks_json(
     errors: list[str],
     root: Path | None = None,
@@ -601,6 +646,7 @@ def main() -> int:
     # Catalog / drift gate (Task 2)
     check_catalog_counts(ROOT, errors)
     check_marketplace_consistency(ROOT, errors)
+    check_manifest_versions_equal(errors)
     check_root_plugin_manifest(errors)
 
     if errors:

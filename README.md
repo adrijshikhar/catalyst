@@ -105,15 +105,23 @@ agy plugin install https://github.com/adrijshikhar/catalyst
 
 `agy` clones the repo itself. A local path works too (`agy plugin install ./catalyst`); the `owner/repo` shorthand does not.
 
-### Gemini CLI, Cursor, Kiro and other agents
+### Gemini CLI
 
-Skills only, no hooks yet. The [`skills`](https://github.com/vercel-labs/skills) CLI installs `handoff` and `hooks` into the agent's skills directory:
+Skills, plus `AGENTS.md` loaded as always-on context through the shipped `gemini-extension.json`. Gemini CLI looks for hooks at `hooks/hooks.json`, which Catalyst does not ship (the file lives at the repo root for Antigravity), so no hooks there. Unverified on a live Gemini CLI; Google is folding Gemini CLI into Antigravity CLI, which is verified above.
 
 ```bash
-npx skills add adrijshikhar/catalyst --agent gemini-cli
+gemini extensions install https://github.com/adrijshikhar/catalyst
 ```
 
-Replace `gemini-cli` with `cursor`, `kiro-cli`, `antigravity` (the IDE), or `'*'` for every agent the CLI detects. The handoff scripts need Python 3. Windsurf has no skills or plugin system and is not supported.
+### Any other agent — skills only
+
+The [`skills`](https://github.com/vercel-labs/skills) CLI installs `handoff` and `hooks` into the skills directory of any of the ~76 agents it knows (Cursor, Kiro, Windsurf, Cline, OpenCode, Roo, Zed, …):
+
+```bash
+npx skills add adrijshikhar/catalyst --agent cursor
+```
+
+Use `--agent '*'` for every agent the CLI detects on your machine, or `--agent universal` for the shared `.agents/skills/` directory. No hooks on this path; invoke `handoff` by name. The handoff scripts need Python 3.
 
 ### Rollback
 
