@@ -6,7 +6,7 @@
       "id": 0,
       "name": "write-tier-2-branch",
       "category": "capability",
-      "prompt": "Current branch is `feat/jwt-expiry` (read `.git-HEAD` if you need to confirm). The session has been debugging the JWT expiry off-by-one bug — switched `<` to `<=`, ran `pnpm test src/auth/`, 4 of 6 pass, 2 clock-skew tests fail at auth.spec.ts:42-78. Decisions in force: jose lib (not jsonwebtoken), Date.now() (not new Date()), `<=` comparison. Open risk: clock skew. Next acceptance check: 6/6 pass after adding a leeway parameter.\n\nThis is the first handoff for this project (no PROJECT_STATE.md exists yet). Write the handoff now, then explain which key tier you used and why.\n\nWrite outputs under `.claude/` at the current working directory.",
+      "prompt": "Current branch is `feat/jwt-expiry` (read `.git-HEAD` if you need to confirm). The session has been debugging the JWT expiry off-by-one bug — switched `<` to `<=`, ran `pnpm test src/auth/`, 4 of 6 pass, 2 clock-skew tests fail at auth.spec.ts:42-78. Decisions in force: jose lib (not jsonwebtoken), Date.now() (not new Date()), `<=` comparison. Open risk: clock skew. Next acceptance check: 6/6 pass after adding a leeway parameter.\n\nThis is the first handoff for this project (no PROJECT_STATE.md exists yet). Write the handoff now, then explain which key tier you used and why.\n\nWrite the checkpoint under `.catalyst/handoffs/` and the narrative under `.claude/` at the current working directory.",
       "files": [
         {
           "path": ".git-HEAD",
@@ -14,10 +14,10 @@
         }
       ],
       "assertions": [
-        "Brief was written to .claude/handoffs/feat-jwt-expiry.json (tier 2 — branch sanitized)",
-        "Brief was NOT written to .claude/handoffs/HANDOFF.json (tier 3 should not be used)",
-        "The written .claude/handoffs/feat-jwt-expiry.json is valid JSON with schema_version '1' and key 'feat-jwt-expiry'",
-        "`python3 scripts/handoff-validate.py .claude/handoffs/feat-jwt-expiry.json` exits 0 (WRITE-gate passes)",
+        "Brief was written to .catalyst/handoffs/feat-jwt-expiry.json (tier 2 — branch sanitized)",
+        "Brief was NOT written to .catalyst/handoffs/HANDOFF.json (tier 3 should not be used)",
+        "The written .catalyst/handoffs/feat-jwt-expiry.json is valid JSON with schema_version '1' and key 'feat-jwt-expiry'",
+        "`python3 scripts/handoff-validate.py .catalyst/handoffs/feat-jwt-expiry.json` exits 0 (WRITE-gate passes)",
         "Brief state.next_acceptance_check mentions the 6/6 acceptance check",
         "Brief state.branch is feat/jwt-expiry",
         "Brief state.rejected_paths names at least one rejected path (new Date() or '<')",
@@ -31,13 +31,13 @@
       "id": 1,
       "name": "write-tier-3-legacy-fallback",
       "category": "capability",
-      "prompt": "There is no git repository here. Treat this working directory as plain filesystem only — do NOT run git commands. The session has been refactoring a logger; cleaned up 4 files. Next acceptance: no console.log in src/. Write the handoff now and explain which tier you used.\n\nWrite outputs under `.claude/` at the current working directory.",
+      "prompt": "There is no git repository here. Treat this working directory as plain filesystem only — do NOT run git commands. The session has been refactoring a logger; cleaned up 4 files. Next acceptance: no console.log in src/. Write the handoff now and explain which tier you used.\n\nWrite the checkpoint under `.catalyst/handoffs/` and the narrative under `.claude/` at the current working directory.",
       "files": [],
       "assertions": [
-        "Brief was written to .claude/handoffs/HANDOFF.json (tier 3 — legacy single-slot fallback)",
-        "Brief was NOT written to .claude/handoffs/<branch>.json (no feature key resolved)",
-        "The written .claude/handoffs/HANDOFF.json is valid JSON with schema_version '1' and key 'HANDOFF'",
-        "`python3 scripts/handoff-validate.py .claude/handoffs/HANDOFF.json` exits 0 (WRITE-gate passes)",
+        "Brief was written to .catalyst/handoffs/HANDOFF.json (tier 3 — legacy single-slot fallback)",
+        "Brief was NOT written to .catalyst/handoffs/<branch>.json (no feature key resolved)",
+        "The written .catalyst/handoffs/HANDOFF.json is valid JSON with schema_version '1' and key 'HANDOFF'",
+        "`python3 scripts/handoff-validate.py .catalyst/handoffs/HANDOFF.json` exits 0 (WRITE-gate passes)",
         "Brief resume.prompt or state.next_acceptance_check mentions 'no console.log' or equivalent",
         "Chat response names tier 3 (legacy / no-git) as the resolution chosen",
         "PROJECT_STATE.md was created (still repo-level, not feature-scoped)"
@@ -95,7 +95,7 @@
       "id": 4,
       "name": "recover-degraded",
       "category": "capability",
-      "prompt": "Context has degraded. I keep re-reading files and contradicting earlier decisions. Current branch is `feat/jwt-expiry`. Reconstruct a fresh brief at the right location using whatever you can read from `.claude/` and from `git log` (treat the assumed output below as truth):\n\n```\ngit log --oneline -10\n  a4c7b2f fix(auth): switch expiry comparison to <= for boundary case\n  9e1d0aa feat(auth): migrate from jsonwebtoken to jose\ngit branch --show-current  →  feat/jwt-expiry\n```\n\nThe existing brief at `.claude/handoffs/feat-jwt-expiry.json` is stale — overwrite it with a freshly validated typed brief.\n\nDo NOT prepend anything to PROJECT_STATE.md — recovery is re-assembly, not fresh signal. Tell me what to do after you finish.",
+      "prompt": "Context has degraded. I keep re-reading files and contradicting earlier decisions. Current branch is `feat/jwt-expiry`. Reconstruct a fresh brief at the right location using whatever you can read from `.claude/` and from `git log` (treat the assumed output below as truth):\n\n```\ngit log --oneline -10\n  a4c7b2f fix(auth): switch expiry comparison to <= for boundary case\n  9e1d0aa feat(auth): migrate from jsonwebtoken to jose\ngit branch --show-current  →  feat/jwt-expiry\n```\n\nThe existing brief at `.claude/handoffs/feat-jwt-expiry.json` is stale — read it and write a freshly validated typed brief to the canonical store, preserving the legacy file.\n\nDo NOT prepend anything to PROJECT_STATE.md — recovery is re-assembly, not fresh signal. Tell me what to do after you finish.",
       "files": [
         {
           "path": ".git-HEAD",
@@ -111,8 +111,8 @@
         }
       ],
       "assertions": [
-        "Recovered brief was overwritten at .claude/handoffs/feat-jwt-expiry.json (sticky key)",
-        "`python3 scripts/handoff-validate.py .claude/handoffs/feat-jwt-expiry.json` exits 0 after recovery",
+        "Recovered brief was overwritten at .catalyst/handoffs/feat-jwt-expiry.json (sticky key)",
+        "`python3 scripts/handoff-validate.py .catalyst/handoffs/feat-jwt-expiry.json` exits 0 after recovery",
         "PROJECT_STATE.md size after recovery == size before (byte-for-byte unchanged)",
         "Recovered brief state.decisions or state.next_acceptance_check surfaces the jose, <=, and Date.now() decisions",
         "Chat response tells user to /clear and resume by running `python3 scripts/handoff-render.py feat-jwt-expiry` (or equivalent)"
@@ -241,6 +241,73 @@
         "drift_report.md exists",
         "Agent reported the absence of drift with a sentinel only it can author: 'DRIFT: clean'",
         "Renderer still produced the normal resume scaffold for a pre-drift-validation brief (back-compat): '## Resume prompt'"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "brief-native-dispatch",
+      "category": "capability",
+      "prompt": "We agreed on this side quest: inspect README.md and report the Python runtime requirement. Do not edit files. Handoff this to a subagent and report its answer. Use the native agent tool; scope and acceptance: the answer cites README.md and states the runtime requirement.",
+      "files": [],
+      "assertions": [
+        "Native agent tool dispatch occurs once with a scoped brief and return instructions; inspect the tool trace.",
+        "Returned answer cites \"README.md\" and \"Python 3\"."
+      ]
+    },
+    {
+      "id": 23,
+      "name": "brief-external-file-default",
+      "category": "capability",
+      "prompt": "We agreed on an external side quest: inspect README.md and explain the handoff lifecycle without edits. Handoff this to Codex. Use the current workspace (I have selected it). Name the task lifecycle-explanation. Generate the handoff only; do not execute the task or launch Codex.",
+      "files": [],
+      "assertions": [
+        "A uniquely named Markdown task exists under .catalyst/tasks/ with Task, Workspace, Acceptance checklist, Return instructions and an empty Completion section.",
+        "The task file contains the agreed lifecycle-explanation requirements and instructions usable without Catalyst.",
+        "The chat contains a short launch prompt pointing to the file, not the full brief; no native agent is launched.",
+        "No session checkpoint or project narrative was written; inspect filesystem writes."
+      ]
+    },
+    {
+      "id": 24,
+      "name": "brief-external-inline-opt-in",
+      "category": "capability",
+      "prompt": "Handoff this to Codex, explicitly inline: read README.md and report the runtime requirement. This is read-only, use the current workspace. Include the task and return contract in your message; no file needed.",
+      "files": [],
+      "assertions": [
+        "The final message contains the full scoped task, acceptance check and return instructions.",
+        "No task file, session checkpoint or project narrative is written; inspect filesystem writes."
+      ]
+    },
+    {
+      "id": 25,
+      "name": "brief-workspace-choice",
+      "category": "capability",
+      "prompt": "We agreed on a coding side quest: fix an expiry boundary in auth.py with a regression test, preserve token parsing. Handoff this to Codex. I have not selected where Codex should work.",
+      "files": [],
+      "assertions": [
+        "The agent offers a separate Git worktree and branch as recommended/default and the current workspace as an alternative.",
+        "No dependent task dispatch or coding starts before the workspace choice; inspect tool trace."
+      ]
+    },
+    {
+      "id": 26,
+      "name": "brief-external-completion",
+      "category": "capability",
+      "prompt": "Read task.md and execute that task. You have no Catalyst installation. Preserve everything before the Completion heading, record the result beneath it and return a short prompt pointing there.",
+      "files": [
+        {
+          "path": "source.txt",
+          "content": "Python 3\n"
+        },
+        {
+          "path": "task.md",
+          "content": "# Task: runtime-check\n\n## Task\nRead source.txt and report its exact runtime requirement. Do not change source.txt.\n\n## Workspace\nUse the current directory; read-only task.\n\n## Acceptance checklist\n- [ ] Report the exact line in source.txt.\n\n## Return instructions\nPreserve the task body; write status, checklist results and evidence under Completion. Return a short prompt pointing to this file.\n\n## Completion\n"
+        }
+      ],
+      "assertions": [
+        "The bytes before \"## Completion\" are unchanged; compare the artifact against its input.",
+        "Completion records \"Python 3\" with actual evidence and a completed acceptance checklist.",
+        "The final message points to task.md for review without claiming any code was integrated."
       ]
     }
   ]
