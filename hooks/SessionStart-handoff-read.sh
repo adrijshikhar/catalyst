@@ -12,13 +12,18 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # message below.
 if ! command -v jq >/dev/null 2>&1; then exit 1; fi
 
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
 # SessionStart stdin carries the source: startup | resume | clear | compact | fork.
 # Read it once; default to startup so a missing/garbled payload is harmless.
 INPUT="$(cat 2>/dev/null || true)"
 SOURCE="$(printf '%s' "$INPUT" | jq -r '.source // "startup"' 2>/dev/null || echo startup)"
 [ -n "$SOURCE" ] || SOURCE="startup"
+
+# Project dir: Claude Code sets CLAUDE_PROJECT_DIR; Codex and Antigravity do not,
+# but every host puts `cwd` in the hook payload. Fall back to it, then to pwd, so
+# a brief written under one agent is found when another agent opens the repo.
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)}"
+[ -n "$PROJECT_DIR" ] || PROJECT_DIR="$(pwd)"
 
 # Degraded-library branch.
 # shellcheck source=/dev/null

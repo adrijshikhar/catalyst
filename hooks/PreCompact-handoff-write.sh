@@ -18,7 +18,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # message below.
 if ! command -v jq >/dev/null 2>&1; then exit 1; fi
 
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+# Project dir: Claude Code sets CLAUDE_PROJECT_DIR; Codex and Antigravity do not,
+# but every host puts `cwd` in the hook payload. Fall back to it, then to pwd.
+INPUT="$(cat 2>/dev/null || true)"
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null || true)}"
+[ -n "$PROJECT_DIR" ] || PROJECT_DIR="$(pwd)"
 
 # Shared libraries live in ONE place: hooks/lib/. Hooks run from the plugin
 # tree (declared in hooks.json at the repo root), so this resolves inside the plugin

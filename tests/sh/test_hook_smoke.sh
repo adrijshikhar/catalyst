@@ -189,4 +189,15 @@ printf '%s' "$out" | grep -q 'Next step' \
   || echo "PASS S5-announce: resume announces without rendering"
 rm -rf "${S5:?}"
 
+# --- Cross-agent: hosts that do not set CLAUDE_PROJECT_DIR (Codex, Antigravity) pass
+# `cwd` in the payload. The brief must be found from that alone, from an unrelated pwd.
+XA="$(mktemp -d)"; git -C "$XA" init -q; git -C "$XA" checkout -q -b main 2>/dev/null || true
+mkdir -p "$XA/.claude/handoffs"
+printf '%s' '{"schema_version":"1","key":"main","timestamp":"2026-09-04T00:00:00Z","mode":"WRITE","resume":{"done_when":"d","resume_by":"XA_RESUME_MARKER"},"state":{"branch":"main","next_acceptance_check":"c","worktree":{"root":"/w","is_linked":false,"git_common_dir":"/w/.git"}}}' > "$XA/.claude/handoffs/main.json"
+out=$( cd / && printf '{"source":"clear","cwd":"%s","session_id":"xa"}' "$XA" | env -u CLAUDE_PROJECT_DIR bash "$REPO_ROOT/hooks/SessionStart-handoff-read.sh" 2>/dev/null ) || true
+printf '%s' "$out" | grep -q 'XA_RESUME_MARKER' && echo "PASS cross-agent: SessionStart finds the brief from stdin cwd" || { echo "FAIL cross-agent SessionStart (stdin cwd): $out"; fail=1; }
+out=$( cd / && printf '{"cwd":"%s","session_id":"xa"}' "$XA" | env -u CLAUDE_PROJECT_DIR bash "$REPO_ROOT/hooks/PreCompact-handoff-write.sh" 2>/dev/null ) || true
+printf '%s' "$out" | grep -q "$XA/.claude/handoffs/main.json" && echo "PASS cross-agent: PreCompact targets the brief from stdin cwd" || { echo "FAIL cross-agent PreCompact (stdin cwd): $out"; fail=1; }
+rm -rf "${XA:?}"
+
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }
