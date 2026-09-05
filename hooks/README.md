@@ -69,6 +69,13 @@ command -v catalyst_store_dir >/dev/null 2>&1 || { ...report degraded, exit 0...
 `scripts/lint.py` rejects a hook that inlines `rev-parse --git-common-dir` instead
 of calling `catalyst_store_dir`.
 
+Checkpoint writes target `<main>/.catalyst/handoffs/`. SessionStart uses
+`catalyst_brief_path` to prefer the canonical key and fall back to that key under
+`.claude/handoffs/`; it then tries the HANDOFF slot. PreCompact always names the
+canonical destination. Hooks never create directories or edit `.gitignore`:
+the handoff writer runs `handoff_paths.py --init` before writing. External task
+files live in `.catalyst/tasks/` and are not automatically resumed by these hooks.
+
 ## Testing a hook locally
 
 ```bash

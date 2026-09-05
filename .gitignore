@@ -8,6 +8,7 @@ node_modules/
 .vscode/
 *.swp
 .claude/handoffs/
+.catalyst/
 .claude/hooks/
 .claude/PROJECT_STATE.md
 .claude/HANDOFF.md

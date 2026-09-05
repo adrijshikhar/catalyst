@@ -235,16 +235,20 @@ def render_brief(obj: dict) -> str:
            f"- Acceptance check: {state.get('next_acceptance_check', '?')}"]
     if resume.get("resume_by"):
         out.append(f"- Start by: {resume['resume_by']}")
+    if obj.get("scope"):
+        out.append(f"\n## Scope\n{obj['scope']}")
     for label, items in (("Locked decisions", state.get("decisions")),
                          ("Do not retry", state.get("rejected_paths")),
                          ("Open risks", state.get("open_risks"))):
         if items:
             out.append(f"\n## {label}")
-            out.extend(f"- {x}" for x in items[:5])
+            out.extend(f"- {x}" for x in items)
     ffr = obj.get("files_read_first") or []
     if ffr:
         out.append("\n## Read first")
         out.extend(f"- {f.get('path')} — {f.get('why')}" for f in ffr)
+    if obj.get("return_instructions"):
+        out.append(f"\n## Return\n{obj['return_instructions']}")
     return "\n".join(out) + "\n"
 
 
@@ -323,7 +327,7 @@ def _key_path(key: str) -> Path | None:
         path.relative_to(store)
     except ValueError:
         return None
-    return path
+    return _hp.read_path(path, store)
 
 
 def main(argv: list[str]) -> int:

@@ -28,7 +28,7 @@ PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(printf '%s' "$INPUT" | jq -r '.cwd // empty
 # Degraded-library branch.
 # shellcheck source=/dev/null
 . "$SCRIPT_DIR/lib/config.sh" 2>/dev/null || true
-if ! command -v catalyst_store_dir >/dev/null 2>&1; then
+if ! command -v catalyst_brief_path >/dev/null 2>&1; then
   jq -n '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: "Catalyst SessionStart hook is degraded: hooks/lib/config.sh was not found beside this hook, which means the plugin cache is incomplete. Reinstall the plugin. No handoff brief was checked for this session."}}'
   exit 0
 fi
@@ -47,12 +47,11 @@ if git -C "$PROJECT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
   BRANCH=$(git -C "$PROJECT_DIR" branch --show-current 2>/dev/null || true)
 fi
 
-STORE=$(catalyst_store_dir "$PROJECT_DIR")
-LEGACY_PATH="$STORE/HANDOFF.json"
+LEGACY_PATH=$(catalyst_brief_path HANDOFF "$PROJECT_DIR")
 KEYED_PATH=""
 if [ -n "$BRANCH" ]; then
   KEY=$(echo "$BRANCH" | sed 's|/|-|g' | cut -c1-80)
-  KEYED_PATH="$STORE/$KEY.json"
+  KEYED_PATH=$(catalyst_brief_path "$KEY" "$PROJECT_DIR")
 fi
 
 EXISTS_KEYED="no"

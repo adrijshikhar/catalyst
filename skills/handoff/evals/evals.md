@@ -70,7 +70,7 @@ pass@3 = at least one of three independent dispatches satisfies all assertions f
 
 | Type | Used for | Example |
 |------|----------|---------|
-| Code (deterministic) | File existence, path checks, line counts, regex matches, byte-for-byte equality, Agent tool invocation counts, path-overlap analysis | "Brief was written to `.claude/handoffs/feat-jwt-expiry.json` and `handoff-validate.py` exits 0" |
+| Code (deterministic) | File existence, path checks, line counts, regex matches, byte-for-byte equality, Agent tool invocation counts, path-overlap analysis | "Brief was written to `.catalyst/handoffs/feat-jwt-expiry.json` and `handoff-validate.py` exits 0" |
 | Model (LLM-as-judge) | Synthesis quality, duplicate-merging, unified severity scales, brief filtering correctness, "is this one plan or two stapled reports?", evaluator-was-separate-subagent | "combined-plan.md is ONE unified plan, not two stapled reports" |
 | Human (manual) | Brief-schema round-trip — verify a BRIEF-mode brief can be promoted to a WRITE brief without field renaming (one-time per release) | n/a — interactive |
 
@@ -127,3 +127,29 @@ See `ROADMAP.md` in the private `projects/catalyst/` planning repo, "Future-work
 ## Run log
 
 Each handoff-touching commit appends a one-line entry to `evals.log` in this dir with date, commit SHA, and pass rate.
+
+## Agent task delivery (2026-09-06)
+
+The checkpoint schema remains JSON; external BRIEF files are Markdown task
+contracts and are not checkpoint snapshots. WRITE/RECOVER eval expectations now
+use `.catalyst/handoffs/`; existing READ fixture paths deliberately remain legacy
+to exercise compatibility.
+
+| ID | Behavior | Proof required |
+|----|----------|----------------|
+| 22 | Native dispatch | Tool trace shows a scoped spawn and returned result |
+| 23 | External file default | Inspect task artifact, short chat pointer, and absence of checkpoint/narrative writes |
+| 24 | Explicit inline | Full task/return contract in chat, no task file created |
+| 25 | Workspace choice | Choice offered with isolated default; no dependent execution before response |
+| 26 | Recipient completion | Byte comparison of task body; inspect completion evidence and return pointer |
+
+These are artifact/tool-trace behavioral evals. The current transcript-only
+`eval-grade.py` cannot prove negative writes, dispatch counts or byte preservation.
+Run in isolated fixture directories and use an independent evaluator with input
+files and resulting artifacts/tool traces; do not claim a transcript-grep pass
+proves these behaviors. Eval 26 needs the files[] fixture staging used by the
+subagent runner; eval-run.py does not stage those files. No new model snapshots
+have been run or seeded for this change.
+
+Deterministic unittest and shell checks independently cover canonical/legacy
+storage, Git ignore initialization and BRIEF rendering without decision loss.

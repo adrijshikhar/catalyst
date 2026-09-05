@@ -71,7 +71,7 @@ def prune(store: Path, cwd: Path, apply: bool = False) -> list[dict]:
         return cands
     print(f"Prunable briefs — branch gone and older than {PRUNE_AFTER_DAYS} days:\n")
     for c in cands:
-        print(f"  {c['key']:<32} branch {c['branch']:<28} {c['age_days']}d old")
+        print(f"  {c['path']}  branch {c['branch']}  {c['age_days']}d old")
     if not apply:
         print("\nDry run — nothing deleted. Re-run with --apply to delete these.")
         return cands

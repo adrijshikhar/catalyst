@@ -51,9 +51,10 @@ def collect(store: Path, cwd: Path) -> list[dict]:
     live = local_branches(cwd)
     cur = current_branch(cwd)
     rows: list[dict] = []
-    if not store.is_dir():
-        return rows
-    for f in sorted(store.glob("*.json")):
+    stores = [store]
+    if store == _hp.handoffs_dir(cwd):
+        stores.append(_hp.legacy_dir(store))
+    for f in sorted(f for directory in stores for f in directory.glob("*.json")):
         try:
             obj = json.loads(f.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError, ValueError):
@@ -86,7 +87,7 @@ def render(rows: list[dict]) -> str:
             note.append("orphan")
         out.append(f"{r['key']:<32} {r['branch'] or '—':<28} "
                    f"{('yes' if r['branch_exists'] else 'no'):<9} "
-                   f"{r['timestamp'] or '—':<21} {', '.join(note)}")
+                   f"{r['timestamp'] or '—':<21} {', '.join(note)}\n  {r['path']}")
     return "\n".join(out) + "\n"
 
 

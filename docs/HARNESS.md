@@ -41,7 +41,7 @@ READ renders it back into a resume prompt the next session acts on directly — 
 - Next acceptance check: expiry uses <= not <
 ```
 
-Briefs are stored once per feature key in the **main worktree** (`<main>/.claude/handoffs/<key>.json`), so every linked worktree shares one store keyed by branch — resume any feature from any worktree.
+Briefs are stored once per feature key in the **main worktree** (`<main>/.catalyst/handoffs/<key>.json`), so every linked worktree shares one store keyed by branch — resume any feature from any worktree.
 
 ---
 
@@ -51,7 +51,7 @@ Catalyst maps directly to Anthropic's primitives:
 
 | Anthropic primitive | Where Catalyst implements it |
 |---------------------|------------------------------|
-| Context resets > compaction | `handoff` WRITE/READ — fresh-agent bootstrap from `<main>/.claude/handoffs/<key>.json`. `/handoff list` and `/handoff prune` keep that store honest: one brief accretes per branch, and a merged branch leaves an orphan a recurring branch name would otherwise resolve to |
+| Context resets > compaction | `handoff` WRITE/READ — fresh-agent bootstrap from `<main>/.catalyst/handoffs/<key>.json`. `/handoff list` and `/handoff prune` keep that store honest: one brief accretes per branch, and a merged branch leaves an orphan a recurring branch name would otherwise resolve to |
 | Lost-in-the-middle mitigation (re-grounding) | `handoff` REGROUND — read-only mid-session re-injection of goal + locked decisions + next-check |
 | Structured artifact handoff (file-based, not conversational) | typed JSON brief schema, shared across all modes. `handoff-render.py --brief` enforces the 30-line subagent ceiling deterministically instead of trusting the model to self-police it |
 | Anti-self-grade + pre-coding contract (separate evaluator subagent, done agreed up front) | `handoff` BRIEF — evaluator/reviewer subagents are dispatched as a separate fresh-context Agent; the brief states `done_when` before work starts |
@@ -112,3 +112,24 @@ Every component of every skill encodes an assumption about what the current mode
 - [README](../README.md) — install + overview
 - Each skill's `SKILL.md` under [`skills/`](../skills) — full trigger conditions + behavior
 - [Harness Engineering for Long-Running Agentic Applications](https://www.anthropic.com/engineering/harness-design-long-running-apps) — the Anthropic framework that grounds Catalyst's design
+
+## Delegating a selected task
+
+BRIEF prepares the same task contract for native subagents and external agents.
+Native dispatch passes a compact scoped brief to the host's agent tool and gets
+the result back through that tool. External delivery defaults to a self-contained
+Markdown file under `<main>/.catalyst/tasks/`, with a short launch prompt. The user
+chooses separate worktree/branch (recommended) or the existing workspace for code
+changes. Inline output is an explicit override, never a size-based fallback.
+
+The external recipient preserves the task body and updates Completion with status,
+checklist evidence, changes, actual workspace and integration instructions. The
+user relays a short return prompt; the originating agent reviews actual artifacts
+before integration. No Catalyst installation is needed by the recipient.
+
+Before checkpoint/task writes, `handoff_paths.py --init` (`--tasks` for tasks)
+ensures `.catalyst/` is ignored in the main Git worktree and creates the selected
+store. Read-only commands and hooks never edit files. Outside Git, initialization
+creates no ignore file. Old `.claude/handoffs/` checkpoints remain readable, with
+canonical files preferred for duplicate keys. Existing config and narrative paths
+are unchanged. Task files do not participate in checkpoint resume or pruning.

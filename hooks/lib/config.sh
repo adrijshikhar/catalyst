@@ -3,7 +3,7 @@
 #
 #   catalyst_project_root [dir]          -> main-worktree root (parent of the
 #                                           shared .git), else dir itself
-#   catalyst_store_dir [dir]             -> <root>/.claude/handoffs
+#   catalyst_store_dir [dir]             -> <root>/.catalyst/handoffs
 #   catalyst_config_get <key> [default]  -> scalar; env > catalyst.json > default
 #   catalyst_config_json <key>           -> raw JSON value, or nothing
 #
@@ -31,7 +31,19 @@ catalyst_project_root() {
 }
 
 catalyst_store_dir() {
-  printf '%s/.claude/handoffs\n' "$(catalyst_project_root "${1:-$(pwd)}")"
+  printf '%s/.catalyst/handoffs\n' "$(catalyst_project_root "${1:-$(pwd)}")"
+}
+
+# Read compatibility only: all new writes use catalyst_store_dir.
+catalyst_brief_path() {
+  local root key="$1" path
+  root=$(catalyst_project_root "${2:-$(pwd)}")
+  case "$key" in ''|*/*|.|..) return 1 ;; esac
+  path="$root/.catalyst/handoffs/$key.json"
+  if [ ! -e "$path" ] && [ ! -L "$path" ] && [ -f "$root/.claude/handoffs/$key.json" ] && [ ! -L "$root/.claude/handoffs/$key.json" ]; then
+    path="$root/.claude/handoffs/$key.json"
+  fi
+  printf '%s\n' "$path"
 }
 
 _catalyst_config_file() {
