@@ -21,7 +21,7 @@ Every long agent session ends the same way: `/compact`, a context limit, or you 
 
 ## What Catalyst does
 
-1. **Write.** The `handoff` skill (or the `PreCompact` hook, automatically) writes a typed, schema-validated brief to `.claude/handoffs/<branch>.json` in your repo's main worktree: goal, done-when, next acceptance check, decisions with rationale, rejected paths, open risks, files to read first.
+1. **Write.** The `handoff` skill (prompted by the `PreCompact` hook when available) writes a typed, schema-validated brief to `.catalyst/handoffs/<branch>.json` in your repo's main worktree: goal, done-when, next acceptance check, decisions with rationale, rejected paths, open risks, files to read first.
 2. **Switch.** Open the same repo in any agent that has Catalyst installed. The brief is plain JSON in your tree; it does not care who wrote it.
 3. **Resume.** The `SessionStart` hook renders the brief back into the new session on Claude Code, Codex and Antigravity. Anywhere else, say `handoff resume`. Drift guards refuse a brief from another branch or repo and flag a stale one.
 
@@ -40,7 +40,7 @@ Every long agent session ends the same way: `/compact`, a context limit, or you 
 | Gemini CLI | ✓ + `AGENTS.md` as context | — | — | unverified |
 | ~76 others via the `skills` CLI | ✓ | — | — | skills only |
 
-Hooks never block anything and fail open; they only inject context. The brief is gitignored by default — commit it if the next agent runs on another machine.
+Hooks never block anything and fail open; they only inject context. Before writing, Catalyst adds `.catalyst/` to the main worktree's `.gitignore` if needed. Outside Git, it creates no ignore file. Legacy `.claude/handoffs/` briefs remain readable; new writes use `.catalyst/handoffs/`. Transfer the file explicitly if the next agent runs on another machine.
 
 ## Install
 
@@ -81,10 +81,13 @@ Requires Python 3 for the handoff scripts and `jq` for the hooks. Pin or roll ba
 
 | Skill | What it does |
 |-------|--------------|
-| [`handoff`](./skills/handoff/SKILL.md) | WRITE / READ / RECOVER / REGROUND / BRIEF. Typed JSON brief, feature-keyed, centralized worktree-aware store, drift guards on read. |
+| [`handoff`](./skills/handoff/SKILL.md) | WRITE / READ / RECOVER / REGROUND / BRIEF. Typed session checkpoints, native subagent dispatch, external task files with completion sections, shared worktree-aware storage and drift guards. |
 | [`hooks`](./skills/hooks/SKILL.md) | Status and authoring for the two hooks that fire `handoff` automatically. |
 
 ## Use
+
+- **“Handoff this to a subagent”** — prepare a scoped brief and dispatch through the host's native agent tool. Results return through that host.
+- **“Handoff this to Codex”** — create a self-contained task file under `.catalyst/tasks/` and a short launch prompt to copy. Choose a separate worktree/branch (recommended) or the current workspace for coding. The recipient needs no Catalyst installation, updates the file's Completion section and returns a short pointer for you to relay. Full inline output requires an explicit request.
 
 - `/handoff` — write a brief for the current branch; `/handoff resume` — render it; `/handoff reground` — re-inject the goal mid-session; `/handoff list` / `prune` — manage the store. Slash commands are Claude Code only; elsewhere ask for the `handoff` skill by name.
 - `/hooks status` — what is registered; `/hooks disable precompact|sessionstart` — quiet one hook.

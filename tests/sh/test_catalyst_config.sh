@@ -60,7 +60,7 @@ echo x > "$REPO/f.txt"
 git -C "$REPO" add -A
 git -C "$REPO" commit -qm init
 git -C "$REPO" worktree add -q "$TMP/wt" -b feat
-check "T7 linked worktree centralizes" "$REPO/.claude/handoffs" \
+check "T7 linked worktree centralizes" "$REPO/.catalyst/handoffs" \
   "$(bash "$CLI" store "$TMP/wt")"
 
 [ "$fail" -eq 0 ] && echo "test_catalyst_config: ALL PASS" || echo "test_catalyst_config: FAILURES"

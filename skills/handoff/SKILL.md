@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Use when ending a session, switching context, approaching context limits, before /clear or /compact, when starting a fresh session that may have a prior handoff to resume, when context appears degraded, or when briefing a subagent (including an evaluator or reviewer) for an isolated subtask. Operates in five modes — WRITE (save state on the way out), READ (resume cleanly on the way in, with drift guards), RECOVER (rebuild state when degraded), REGROUND (mid-session read-only re-injection), and BRIEF (produce inline minimum-viable context for a subagent; evaluators dispatched fresh-context, done agreed up front). Feature-keyed via a three-tier ladder (explicit name → git branch → legacy single-slot), so parallel feature work doesn't clobber state. Trigger phrases: "handoff", "/handoff", "resume", "pick up where I left off", "brief a subagent", "reground". Use this skill liberally for any session that produced non-trivial decisions and any subagent dispatch that needs scoped context.
+description: Use when handing a task to a native subagent or an external agent, ending a session, switching context, approaching compaction, resuming a prior handoff, or recovering degraded context. Five modes — WRITE saves a session checkpoint, READ resumes it, RECOVER rebuilds it, REGROUND re-injects its essentials, and BRIEF delegates a selected task with an explicit completion contract. BRIEF dispatches native subagents directly; external agents receive a self-contained task file and short launch prompt by default, with inline output only on explicit request. Trigger phrases include "handoff this to a subagent", "handoff this to Codex", "brief a subagent", "handoff", "resume", and "reground". Use this skill liberally for decisions worth preserving and isolated tasks worth delegating.
 ---
 
 # Handoff
@@ -9,9 +9,9 @@ A handoff is a **state packet** the next session or subagent can act on without 
 
 This skill implements patterns from Anthropic's [Harness Engineering for Long-Running Agentic Applications](https://www.anthropic.com/engineering/harness-design-long-running-apps) — context resets over compaction, structured artifact handoffs, pre-coding contracts, and generator ≠ evaluator separation for subagent briefs.
 
-## Why two files (and where they live)
+## Session checkpoints: two files
 
-One file cannot be both a concise re-entry prompt and a detailed project history. A handoff writes two:
+One file cannot be both a concise re-entry prompt and a detailed project history. A session WRITE writes two:
 
 | File | Purpose | Lifetime | Loaded |
 |------|---------|----------|--------|
@@ -32,9 +32,13 @@ WRITE / READ / RECOVER determine the **key** for the brief in this order:
 
 `<store>` is the **centralized handoffs dir** printed by `bash "$SCR/handoff-dir.sh"` (or `python3 "$SCR/handoff_paths.py"`): anchored at the MAIN worktree (parent of `git rev-parse --git-common-dir`). Every linked worktree shares ONE store keyed by branch — resume any feature from any worktree. Detect "in a repo?" with `git rev-parse --git-dir` succeeding, never `[ -d .git ]` (`.git` is a file in a worktree). This **supersedes** the earlier per-worktree behavior.
 
+**Canonical storage:** `<store>` is `<main>/.catalyst/handoffs/`, regardless of host. Outside Git, `<main>` is the current directory. New writes always use this path. Readers also find the same key under `<main>/.claude/handoffs/` when its canonical file is absent; old files are never automatically moved or deleted. Inventory lists both locations with paths.
+
+**Before writing state:** run `python3 "$SCR/handoff_paths.py" --init` for checkpoints, or add `--tasks` for task files. This initializes only the selected store and, in Git, ensures `.catalyst/` is in the main worktree's `.gitignore`, preserving existing contents. Failure means stop before writing and report the path/error. Outside Git, no `.gitignore` is created. Already tracked files remain tracked; never untrack user files automatically. Lookup, READ, REGROUND and hooks stay read-only. Existing `.claude/catalyst.json` config and `.claude/PROJECT_STATE.md` narrative locations are unchanged.
+
 **Sticky session key:** once a WRITE picks a key, subsequent WRITEs / RECOVERs in the same session use the same key. If the user switches branches mid-session, surface the change: "Branch switched. Future handoffs will target `<new-key>.json`. Confirm?"
 
-BRIEF mode does not persist, so it doesn't resolve a key — it may *reference* a key when telling a subagent which feature's narrative slice is relevant.
+BRIEF uses a task name, never the sticky session key. External task files live separately under `<main>/.catalyst/tasks/`; BRIEF never writes a session checkpoint or project narrative.
 
 ## Five modes (overview)
 
@@ -44,13 +48,13 @@ BRIEF mode does not persist, so it doesn't resolve a key — it may *reference* 
 | **READ** | Fresh session with brief(s) present, user wants to resume | None (loads into current context) | Current session |
 | **RECOVER** | Context degraded mid-session — re-reads, contradictions, forgotten decisions | Disk: overwrites brief for current key; does NOT prepend narrative | Current session, post-`/clear` |
 | **REGROUND** | Mid-session, recall degrading / decisions slipping into the middle | None (read-only re-injection) | Current session |
-| **BRIEF** | About to dispatch a subagent and want it to start with the right minimum context | In-memory string passed to Agent tool task description; no disk | Subagent |
+| **BRIEF** | Delegate a selected task to a subagent or external agent | Native: tool argument. External: task Markdown file by default | Task recipient; completion returns to originator |
 
-The schema for the brief is shared across all five modes. Only persistence and consumer differ.
+Session modes share the typed checkpoint schema. Native BRIEF reuses its task fields with optional `scope` and `return_instructions` strings (BRIEF-only, not checkpoint fields). External BRIEF uses the Markdown task template below.
 
 To fork a braided session into separate threads, WRITE once per thread with an explicit key: `/catalyst:handoff <key-a>`, then `/catalyst:handoff <key-b>`.
 
-Do NOT invoke for trivial sessions or one-step subtasks. Three-turn debug doesn't need a handoff. Use judgement — if there's nothing a future consumer would lose, skip the skill.
+For automatic checkpoint suggestions, skip trivial sessions with nothing to preserve. Always honor an explicit task-handoff request, including a small subtask.
 
 ---
 
@@ -60,8 +64,9 @@ The brief is a typed JSON document validated against the bundled `brief.schema.j
 
 > **Helper-script location (read this first).** The scripts (`handoff-dir.sh`, `handoff-validate.py`, `handoff-render.py`, `handoff_paths.py`) ship **inside the plugin**, NOT in the user's project. Resolve them once at the start of any mode and reuse `$SCR`:
 > ```bash
-> SCR="${CLAUDE_PLUGIN_ROOT:-.}/scripts"   # consumer project: $CLAUDE_PLUGIN_ROOT is set; inside the catalyst repo it's unset → ./scripts
+> SCR="${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/scripts"   # when the host supplies a plugin root
 > ```
+> If neither variable exists, resolve the plugin root from this loaded `skills/handoff/SKILL.md` location (two directories above its containing directory), and use its absolute `scripts` path. Do not assume the consumer project contains the scripts.
 > Then call e.g. `bash "$SCR/handoff-dir.sh"` and `python3 "$SCR/handoff-render.py" <key>`. NEVER write a bare relative `scripts/handoff-render.py` into a resume prompt or run it from the user's repo — that path does not exist there. The durable resume entry point for the next session is the slash command **`/catalyst:handoff resume`**, which re-enters this skill and resolves `$SCR` again.
 
 ```json
@@ -83,7 +88,7 @@ The brief is a typed JSON document validated against the bundled `brief.schema.j
 }
 ```
 
-Optional fields with nothing to say are **omitted**, never null/`"none"`. Unknown fields are rejected by the validator (catches typos). `mode` is `WRITE` or `RECOVER` (the persisted modes); BRIEF renders the same shape in-memory without a file.
+Optional fields with nothing to say are **omitted**, never null/`"none"`. Unknown fields are rejected by the validator (catches typos). `mode` is `WRITE` or `RECOVER` for checkpoint JSON. Native BRIEF renders a task projection without checkpoint identity; external task Markdown is not validated as checkpoint JSON.
 
 ---
 
@@ -119,7 +124,7 @@ Use the schema above. Include the Resume prompt section with paste-and-go text m
 
 ### Step 4 — Write to disk
 
-Build the typed object. Write it to a temp file and run `python3 "$SCR/handoff-validate.py" <tmp>.json`; fix every reported field and re-run until it prints `handoff-validate: OK`. Then move it to `<store>/<key>.json` (`<store>` from `"$SCR/handoff-dir.sh"`). Then prepend a narrative entry to `.claude/PROJECT_STATE.md` (unchanged — still markdown).
+Run `python3 "$SCR/handoff_paths.py" --init` and use its output as `<store>`. Build the typed object. Write it to a temp file and run `python3 "$SCR/handoff-validate.py" <tmp>.json`; fix every reported field and re-run until it prints `handoff-validate: OK`. Then move it to `<store>/<key>.json` (`<store>` from `"$SCR/handoff-dir.sh"`). Then prepend a narrative entry to `.claude/PROJECT_STATE.md` (unchanged — still markdown).
 
 If `PROJECT_STATE.md` doesn't exist, create it with this header **first**, then add the entry *below* the header:
 
@@ -174,7 +179,7 @@ A new session has loaded with one or more briefs present, and the user wants to 
 
 > **Auto-resume (hook-driven):** when `SessionStart-handoff-read.sh` is installed, a session opened via `/clear` or `/compact` (source `clear`/`compact`) gets the brief's five load-bearing fields — next step, done-when, next acceptance check, open risks, files-to-read-first — auto-rendered into context, so no explicit `/handoff resume` is needed. Other sources (`startup`/`resume`) get a one-line announce instead. Run `/catalyst:handoff resume` any time for the full READ render below.
 
-1. Resolve `$SCR` (see Helper-script location), then `<store>` via `bash "$SCR/handoff-dir.sh"`. List `<store>/*.json` (fall back to `<store>/HANDOFF.json` if no keyed files exist).
+1. Resolve `$SCR` (see Helper-script location), then `<store>` via `bash "$SCR/handoff-dir.sh"`. Run `python3 "$SCR/handoff-list.py" --json` to inventory canonical and legacy stores, including `HANDOFF.json`. For a duplicate key, the canonical file is the default; explicitly name the legacy path if the user wants that copy.
 2. If multiple briefs exist:
    - Detect current branch.
    - Surface ALL briefs. If one matches the current branch (tier-2 match), name it as the primary suggestion.
@@ -201,10 +206,10 @@ Warning order: REPO MISMATCH > BRANCH MISMATCH > STALE > MISSING, then the resum
 The current session is degraded. Symptoms: agent forgets what it was doing, re-reads files, contradicts earlier decisions, repeats rejected approaches.
 
 1. Determine key via the ladder (same as WRITE).
-2. Read existing brief at the resolved path if any.
+2. Read the existing brief via `handoff-render.py <key>` (canonical first, legacy fallback).
 3. Read most recent 2-3 entries of `.claude/PROJECT_STATE.md`.
 4. Run `git log --oneline -20` and `git diff` on the working branch.
-5. Reconstruct the typed object from git/transcript, validate it (`python3 "$SCR/handoff-validate.py" <tmp>.json`), and overwrite `<store>/<key>.json`.
+5. Run `python3 "$SCR/handoff_paths.py" --init` and use its canonical store. Reconstruct the typed object from git/transcript, validate it (`python3 "$SCR/handoff-validate.py" <tmp>.json`), and write `<store>/<key>.json`. Preserve the old copy if recovering from legacy storage.
 6. Do **not** prepend to PROJECT_STATE.md — recovery is re-assembly, not fresh signal.
 7. Tell the user: "Recovery brief written at `<store>/<key>.json`. Run `/clear`, then paste this Resume prompt OR run `/catalyst:handoff resume`:" — and ALWAYS print the literal Resume prompt verbatim right below (the Resume prompt comes from `handoff-render.py` output — paste-and-go, not a pointer).
 
@@ -244,21 +249,35 @@ It deliberately omits: `## Summary`, `Written in worktree`, BRANCH MISMATCH, REP
 
 ## Mode: BRIEF
 
-You're about to dispatch a subagent for a bounded subtask. The subagent needs the minimum context that makes its job possible — no more.
+Delegate the selected task while the originating session continues. “This” means the task just discussed; clarify only if its boundary is ambiguous. Route requests naming a subagent to native delivery, and requests naming a separate agent/session (for example Codex) to external delivery. No hook is needed. A request to prepare a brief only does not authorize dispatch.
 
-1. Identify the subtask. Make it concrete.
-2. Filter the state packet to fields relevant to that subtask. Drop fields with nothing useful to add (no "none" placeholders).
-3. Render the brief inline. It uses the same typed shape, but since it does not persist:
-   - Omit `key`, `schema_version`, and the on-disk brief path (nothing is written) — keep `files_read_first` pointers; per the anti-pattern below, pointing at paths is the whole point.
-   - The `resume` block becomes `## Task` (named for the subagent's perspective).
-4. Keep under **30 lines**. Verify it rather than eyeballing it: write the brief
-   object to a temp file and run `python3 "$SCR/handoff-render.py" --brief <tmp>.json`.
-   It renders the BRIEF shape and exits 1 with per-section line counts when the
-   render is over cap. If it fails, the subtask is too broad — re-decompose
-   before dispatching.
-5. Pass the rendered brief as the Agent tool's task-description string. Do NOT also pass project-wide narrative — point at the narrative by reference (date / section title), don't inline it.
+### Prepare the task (both paths)
 
-If the subagent needs a specific PROJECT_STATE.md entry, name it: "see PROJECT_STATE.md `## 2026-05-20 — [feat-jwt-expiry] JWT library migration` if you need the migration rationale" — never paste the entry.
+Extract objective, full agreed requirements, in/out of scope, relevant decisions and rejected paths, source files with reasons, dependencies, acceptance checks and expected return. Carry the selected conversation context that exists nowhere else; reference existing files instead of copying them. Do not include unrelated chat, secrets, or whole project history. Preserve requirements even when the task is long.
+
+### Native subagent
+
+1. Build the BRIEF object using `resume.done_when`, `resume.resume_by`, `state.next_acceptance_check`, relevant state lists and `files_read_first`. Omit checkpoint identity. Include `scope` and `return_instructions` strings: define allowed edits and require changed files, actual check results and unresolved issues on return. Include the working directory in the task instructions; do not assume it is inherited.
+2. Render with `python3 "$SCR/handoff-render.py" --brief <tmp>.json`. The native limit is **30 lines** by default. The renderer preserves all supplied decisions and reports section counts on overflow. Shorten wording, reference a supporting artifact or decompose the task; never drop requirements to pass the cap.
+3. For “handoff this to a subagent”, pass the rendered brief directly to the host's native agent-spawn tool. Select fresh/scoped context where supported. Use the host's workspace isolation for concurrent edits where available; if edits would overlap, arrange separation or sequence them before dispatch. Do not paste the whole conversation or narrative alongside the brief. If spawning is unavailable, report that and offer external delivery; do not claim dispatch occurred.
+4. Track the native task using the host's result mechanism. Continue independent parent work when possible. On return, inspect the result and relevant evidence; report completed, partial or blocked work accurately. Integrate only within the user's authorized scope.
+
+### External agent (file by default)
+
+1. For Git coding tasks, offer **separate worktree + branch (recommended default)** or **current workspace**. Honor an existing selection; otherwise wait for the choice before finalizing workspace instructions. Do not treat silence as selection. For read-only/non-Git tasks use the identified directory. Record base commit, source worktree and any required uncommitted changes: a new worktree starts from a commit, not the parent's dirty files.
+2. Read the bundled [task template](references/task-template.md) and fill it with the selected task. It must be executable without Catalyst installed. Keep every agreed requirement; **external files have no 30-line cap**. The task body specifies workspace setup, permitted actions, checks, completion ownership and integration boundaries. Leave `## Completion` empty for the recipient.
+3. Run `python3 "$SCR/handoff_paths.py" --init --tasks`. Create a unique `<task-slug>-<unique-suffix>.md` under the returned directory using **exclusive creation** (Python `Path.open("x", encoding="utf-8")`, for example). Use a filename slug, never an unchecked path from chat. On collision choose another suffix; never overwrite. If initialization/write fails, report it; do not silently switch to inline. Keep the single task file in the main worktree so linked worktrees can access it.
+4. Print only the location and a short copyable launch prompt, substituting the real absolute file path:
+
+   > Read `<absolute-task-file>`. Execute its task, follow the workspace instructions, and update only its Completion section. Return a short prompt pointing to that section for the originating agent.
+
+5. The receiving agent preserves everything before `## Completion`, records its status/checklist/evidence/integration instructions there and returns a small pointer message. No automatic cross-host notification, launch or merge. The user relays that message. The originating agent reads Completion, verifies the actual changes against the original checklist and reports readiness; completion text alone is not proof. The task file is a manually updated result, not a live status monitor.
+
+**Explicit inline override:** only if the user asks for inline/full-message output, provide the complete task and return contract in the message. Do not create a task file or initialize storage for this path. The recipient returns a structured completion message instead. The workspace-choice rules still apply.
+
+**Cross-machine use:** the user transfers the task file (and necessary artifacts). The recipient resolves the local repository and verifies the recorded base/dependencies; an inaccessible path is a blocker, not permission to invent missing context.
+
+If a recipient needs narrative rationale, reference the exact PROJECT_STATE.md entry. BRIEF never writes or updates the narrative or a session checkpoint.
 
 **Evaluator / reviewer briefs (anti-self-grade + pre-coding contract).** When the subagent's job is to grade or review an artifact:
 
@@ -298,11 +317,14 @@ session may want.
 - **Silent key-switching mid-session.** If branch changes, surface the change; don't silently retarget.
 - **Writing to tier 3 when tiers 1 or 2 are available.** Legacy fallback is for genuinely no-git cases.
 - **Auto-loading every brief in READ mode.** Always select one.
-- **BRIEF mode dumping PROJECT_STATE.md into the subagent task description.** Defeats subagent isolation.
-- **BRIEF over 30 lines.** Subtask is too broad — re-decompose.
+- **BRIEF dumping PROJECT_STATE.md into a task.** Defeats task isolation.
+- **External full brief in chat without an explicit inline request.** Default to a file and short pointer.
+- **Overwriting a task file or editing its original checklist on completion.** Use exclusive creation; record results in Completion.
+- **Assuming a worktree contains uncommitted parent changes.** Record and resolve dependencies first.
+- **Native BRIEF over budget.** Reference supporting artifacts or re-decompose; never silently truncate. External task files have no 30-line cap.
 - **Generator grading itself (self-evaluation bias).** An evaluator/reviewer brief MUST go to a separate Agent with fresh context, given the contract + artifact only (never the generator's transcript). See BRIEF.
 - **Skipping the pre-coding contract.** Generator self-defines "done", evaluator grades a moving target. Put `done_when` + the acceptance check in both briefs before work starts.
-- **Invoking the skill for trivial sessions.** Three-turn debug doesn't need this machinery.
+- **Suggesting checkpoints for trivial sessions.** Explicit task-handoff requests still use BRIEF.
 
 ---
 
@@ -362,7 +384,8 @@ Every component of this skill encodes an assumption about what the current model
 
 - **Pre-coding contract in BRIEF** assumes the generator can't self-define "done" rigorously enough.
 - **Anti-self-grade in BRIEF** assumes self-evaluation bias is severe enough to require a separate fresh-context evaluator.
-- **BRIEF mode's 30-line ceiling** assumes context bleed is severe enough to require a hard cap.
+- **Native BRIEF's 30-line ceiling** assumes dispatch context should be compact; external files preserve longer requirements. Revisit the ceiling if artifact indirection costs more than it saves.
+- **Manual external file transfer** assumes the user connects independent agent sessions. Revisit only if native cross-host task/result transport becomes available.
 - **READ-time drift guards** (MISSING / STALE / commits-since) assume the model won't notice moved files or stale state on its own.
 - **Retired 2026-09-02 (v0.7.0):** SPLIT and PIPELINE modes. Native Claude Code Agent/Workflow tooling absorbed the orchestration runtime; explicit-key WRITE covers session forking; the contract + anti-self-grade rules survived in BRIEF. Archived in the private planning repo.
 

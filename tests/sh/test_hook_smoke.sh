@@ -80,7 +80,7 @@ CWT_PARENT="$(mktemp -d)"
 CWT_LINK="$CWT_PARENT/wt"
 git -C "$CWT_MAIN_R" worktree add -q "$CWT_LINK" -b wt-store-test >/dev/null 2>&1
 got=$(bash "$REPO_ROOT/scripts/handoff-dir.sh" "$CWT_LINK")
-want="$CWT_MAIN_R/.claude/handoffs"
+want="$CWT_MAIN_R/.catalyst/handoffs"
 if [ "$got" = "$want" ]; then
   echo "PASS centralized-store from worktree"
 else
@@ -197,7 +197,19 @@ printf '%s' '{"schema_version":"1","key":"main","timestamp":"2026-09-04T00:00:00
 out=$( cd / && printf '{"source":"clear","cwd":"%s","session_id":"xa"}' "$XA" | env -u CLAUDE_PROJECT_DIR bash "$REPO_ROOT/hooks/SessionStart-handoff-read.sh" 2>/dev/null ) || true
 printf '%s' "$out" | grep -q 'XA_RESUME_MARKER' && echo "PASS cross-agent: SessionStart finds the brief from stdin cwd" || { echo "FAIL cross-agent SessionStart (stdin cwd): $out"; fail=1; }
 out=$( cd / && printf '{"cwd":"%s","session_id":"xa"}' "$XA" | env -u CLAUDE_PROJECT_DIR bash "$REPO_ROOT/hooks/PreCompact-handoff-write.sh" 2>/dev/null ) || true
-printf '%s' "$out" | grep -q "$XA/.claude/handoffs/main.json" && echo "PASS cross-agent: PreCompact targets the brief from stdin cwd" || { echo "FAIL cross-agent PreCompact (stdin cwd): $out"; fail=1; }
+printf '%s' "$out" | grep -q "$XA/.catalyst/handoffs/main.json" && echo "PASS cross-agent: PreCompact targets the brief from stdin cwd" || { echo "FAIL cross-agent PreCompact (stdin cwd): $out"; fail=1; }
+# Hooks above resolved old storage without initializing new directories or ignore rules.
+[ ! -e "$XA/.catalyst" ] && [ ! -e "$XA/.gitignore" ] \
+  && echo "PASS hooks: legacy reads are non-mutating" \
+  || { echo "FAIL hooks: read initialized state"; fail=1; }
+mkdir -p "$XA/.catalyst/handoffs"
+jq '.resume.resume_by = "CANONICAL_MARKER"' "$XA/.claude/handoffs/main.json" > "$XA/.catalyst/handoffs/main.json"
+out=$(printf '{"source":"clear","cwd":"%s"}' "$XA" | env -u CLAUDE_PROJECT_DIR bash "$REPO_ROOT/hooks/SessionStart-handoff-read.sh")
+if printf '%s' "$out" | jq -e '.hookSpecificOutput.additionalContext | contains("CANONICAL_MARKER") and (contains("XA_RESUME_MARKER") | not)' >/dev/null; then
+  echo "PASS hooks: canonical brief wins over legacy copy"
+else
+  echo "FAIL hooks: canonical precedence: $out"; fail=1
+fi
 rm -rf "${XA:?}"
 
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }

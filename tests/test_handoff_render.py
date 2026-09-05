@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -153,6 +155,27 @@ class TestKeyPathContainment(unittest.TestCase):
             got = self._with_store(store, str(full))
             self.assertEqual(got, full.resolve())
 
+    def test_legacy_key_fallback_and_canonical_precedence(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            store = root / ".catalyst/handoffs"
+            legacy = root / ".claude/handoffs/feat-x.json"
+            legacy.parent.mkdir(parents=True)
+            legacy.write_text("{}")
+            self.assertEqual(self._with_store(store, "feat-x"), legacy.resolve())
+            store.mkdir(parents=True)
+            current = store / "feat-x.json"; current.write_text("{}")
+            self.assertEqual(self._with_store(store, "feat-x"), current.resolve())
+
+    def test_legacy_fallback_rejects_symlink_escape(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            outside = root / "outside.json"; outside.write_text("{}")
+            legacy = root / ".claude/handoffs/feat-x.json"
+            legacy.parent.mkdir(parents=True); legacy.symlink_to(outside)
+            got = self._with_store(root / ".catalyst/handoffs", "feat-x")
+            self.assertNotEqual(got, outside.resolve())
+
 
 class TestDriftFiles(unittest.TestCase):
     def test_missing_relative_file_warns(self):
@@ -229,6 +252,30 @@ class TestDriftCommits(unittest.TestCase):
 
 
 class TestBrief(unittest.TestCase):
+    def test_brief_preserves_all_locked_decisions(self):
+        out = hr.render_brief(self._obj(6))
+        self.assertIn("decision 5", out)
+
+    def test_over_budget_brief_reports_failure_and_keeps_content(self):
+        with tempfile.TemporaryDirectory() as d:
+            source = Path(d) / "brief.json"
+            source.write_text(json.dumps(self._obj(40)))
+            result = subprocess.run(
+                ["python3", str(ROOT / "scripts/handoff-render.py"), "--brief", str(source)],
+                cwd=d, capture_output=True, text=True,
+                env={**os.environ, "CATALYST_HANDOFF_BRIEF_MAX_LINES": "30"})
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("decision 39", result.stdout)
+            self.assertIn("BRIEF over cap", result.stderr)
+
+    def test_brief_carries_scope_and_return_contract(self):
+        obj = self._obj()
+        obj["scope"] = "Only change the expiry check; preserve token parsing."
+        obj["return_instructions"] = "Report changed files, actual checks and remaining issues."
+        out = hr.render_brief(obj)
+        self.assertIn(obj["scope"], out)
+        self.assertIn(obj["return_instructions"], out)
+
     def _obj(self, n_decisions: int = 1):
         return {
             "schema_version": "1", "key": "feat-x",

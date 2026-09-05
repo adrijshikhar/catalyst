@@ -283,7 +283,8 @@ resume the normal dispatch afterwards.
 |---------|--------|
 | `*.log` | Generic — most logs are noise |
 | `!skills/*/evals/evals.log` | Override — eval logs are the regression trace and must be durable |
-| `.claude/handoffs/`, `.claude/HANDOFF.md`, `.claude/PROJECT_STATE.md` | Per-user/repo handoff state — never committed unless team wants shared briefs |
+| `.catalyst/` | Canonical checkpoint and external-task state; write preparation ensures this rule in the consumer Git repository |
+| `.claude/handoffs/`, `.claude/HANDOFF.md`, `.claude/PROJECT_STATE.md` | Legacy checkpoints (read compatibility) and existing narrative — never committed unless team wants shared state |
 | `.claude/catalyst.json` | Per-project config knobs — see "Configuration knobs" above |
 | `skills/*-workspace/` | Eval run scratch — outputs, graders, snapshots |
 | `.DS_Store`, `.idea/`, `.vscode/`, `*.swp` | Standard editor/OS noise |
