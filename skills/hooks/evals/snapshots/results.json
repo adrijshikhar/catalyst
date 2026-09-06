@@ -7,7 +7,17 @@
   "model": "sonnet",
   "runs_per_eval": 3,
   "n_evals": 2,
-  "evals_inputs_sha256": "80dbfc97ecdac727741cbfc588b592c2b4e232a33be066abfd219974286a6927"
+  "evals_inputs_sha256": "b2a48e0be0beeeb0149d992de11bd843a6544bf400fef00750052f66548fd024",
+  "partial_seeds": [
+   {
+    "generated_at": "2026-09-06T17:09:07Z",
+    "evals": [
+     "5",
+     "6"
+    ],
+    "commit_sha": "7dd0bd17ffa7ca5ebcef662eff8787e58ec770d8"
+   }
+  ]
  },
  "evals": {
   "3": {
@@ -65,6 +75,60 @@
      "files": {
       "bad-hook.json": "{\"matcher\": \".*\", \"command\": \"bash /tmp/x.sh\"}\n",
       "lint-output.txt": "Hook Lint Report: bad-hook.json\n\n[FAIL] Overly broad matcher\n  matcher: \".*\"\n  command: \"bash /tmp/x.sh\"\n  Issue: \".*\" matches every tool call (Read, Write, Edit, Bash, WebFetch, etc.),\n  not a specific tool. This runs the hook command on ALL tool use, which is\n  almost certainly unintended and a security/performance risk (arbitrary\n  command fires unconditionally on every action).\n  Fix: scope matcher to the intended tool name(s), e.g. \"Bash\" or\n  \"Write|Edit\", instead of the catch-all \".*\".\n\nResult: 1 issue found (1 fail, 0 warnings).\n"
+     }
+    }
+   ]
+  },
+  "5": {
+   "name": "status-report",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "5-run0.jsonl",
+     "files": {
+      "hooks-status.txt": "Catalyst hooks\n\nHOOK                           EVENT          MATCHER      STATE\nPreCompact-handoff-write.sh    PreCompact     ''           enabled\nSessionStart-handoff-read.sh   SessionStart   ''           enabled\n\nRegistered by hooks.json \u2014 they run from the plugin, so there is nothing to install.\nToggle the advisory two with: /catalyst:hooks disable precompact|sessionstart\n"
+     }
+    },
+    {
+     "run": 1,
+     "transcript_file": "5-run1.jsonl",
+     "files": {
+      "hooks-status.txt": "Catalyst hooks\n\nHOOK                           EVENT          MATCHER      STATE\nPreCompact-handoff-write.sh    PreCompact     ''           enabled\nSessionStart-handoff-read.sh   SessionStart   ''           enabled\n\nRegistered by hooks.json \u2014 they run from the plugin, so there is nothing to install.\nToggle the advisory two with: /catalyst:hooks disable precompact|sessionstart\n"
+     }
+    },
+    {
+     "run": 2,
+     "transcript_file": "5-run2.jsonl",
+     "files": {
+      "hooks-status.txt": "Catalyst hooks\n\nHOOK                           EVENT          MATCHER      STATE\nPreCompact-handoff-write.sh    PreCompact     ''           enabled\nSessionStart-handoff-read.sh   SessionStart   ''           enabled\n\nRegistered by hooks.json \u2014 they run from the plugin, so there is nothing to install.\nToggle the advisory two with: /catalyst:hooks disable precompact|sessionstart\n"
+     }
+    }
+   ]
+  },
+  "6": {
+   "name": "disable-precompact-knob",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "6-run0.jsonl",
+     "files": {
+      ".claude/catalyst.json": "{\n  \"hooks\": {\n    \"precompact_prompt\": false\n  }\n}\n"
+     }
+    },
+    {
+     "run": 1,
+     "transcript_file": "6-run1.jsonl",
+     "files": {
+      ".claude/catalyst.json": "{\n  \"hooks\": {\n    \"precompact_prompt\": false\n  }\n}\n"
+     }
+    },
+    {
+     "run": 2,
+     "transcript_file": "6-run2.jsonl",
+     "files": {
+      ".claude/catalyst.json": "{\n  \"hooks\": {\n    \"precompact_prompt\": false\n  }\n}\n"
      }
     }
    ]

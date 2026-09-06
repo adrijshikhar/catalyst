@@ -13,7 +13,7 @@ tier-3 (no-git fallback) uses `<store>/HANDOFF.json`. READ renders via `python3 
 
 ---
 
-## Capability evals (10)
+## Capability evals (18)
 
 | ID | Name | What it proves |
 |----|------|----------------|
@@ -27,6 +27,10 @@ tier-3 (no-git fallback) uses `<store>/HANDOFF.json`. READ renders via `python3 
 | 18 | read-drift-missing-file | READ surfaces `!! MISSING: <path>` for a `files_read_first` path that no longer exists (relative, resolved against `state.worktree.root`), and the agent acknowledges it (`ACK MISSING`) instead of resuming blind |
 | 19 | read-drift-stale-brief | READ surfaces `!! STALE: brief written ~10d ago (…)` for a brief 10 days older than the injected `--now`; the agent acknowledges it (`ACK STALE`) with a git-diff step |
 | 20 | read-drift-commits-since | READ shows `- Commits since brief written: N` from `state.head_sha` (real git at the repo root; sha = the #69 merge `82de465`); the agent acknowledges it (`ACK COMMITS`) and names `git log --oneline 82de465..HEAD` |
+| 22–26 | brief-* | BRIEF delivery: native dispatch, external file default, inline opt-in, workspace choice, completion round-trip (added with #10) |
+| 27 | reground-mid-session | REGROUND re-injects goal + locked decisions + files-to-keep from the brief, omits READ-only sections (no `Rejected paths`), writes nothing, dispatches nothing |
+| 28 | list-store-inventory | `list` prints every brief with branch liveness; the dead-branch brief is flagged `orphan`; the current-branch brief is named; nothing is deleted |
+| 29 | prune-dry-run-needs-confirmation | `prune` shows the orphan candidate and withholds `--apply` until the user confirms; both fixture briefs still exist afterwards |
 | — | typed-brief-validates | A WRITE-produced `<key>.json` passes `python3 scripts/handoff-validate.py <key>.json` exit-0 (required fields incl. worktree provenance). Asserted inline in evals 0, 1, 4. |
 
 ## Regression evals (1)
@@ -58,7 +62,7 @@ Historical note: the former `regression-v0.2-legacy-mode` eval was removed in th
 
 | Class | Metric | Threshold |
 |-------|--------|-----------|
-| Capability evals (10) | pass@3 | ≥ 0.90 |
+| Capability evals (18) | pass@3 | ≥ 0.90 |
 | Regression evals (1) | pass^3 | = 1.00 |
 | All combined | pass@1 | ≥ 0.75 |
 

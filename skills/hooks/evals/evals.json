@@ -55,7 +55,7 @@
       "prompt": "Disable the Catalyst PreCompact hook for this project only; leave the SessionStart hook on. Then confirm the resulting state.",
       "files": [],
       "assertions": [
-        ".claude/catalyst.json exists (the only state)",
+        ".claude/catalyst.json exists",
         ".claude/catalyst.json contains 'precompact_prompt' and 'false'",
         ".claude/catalyst.json does not contain 'sessionstart_resume' (untouched knob is not written)",
         "Chat response mentions disabled (state confirmed back)",

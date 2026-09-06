@@ -364,7 +364,7 @@
         "list-output.txt contains 'feat-jwt-expiry' and 'feat-rate-limit' (every brief inventoried)",
         "list-output.txt contains 'orphan' (the dead-branch brief is flagged)",
         "Chat response mentions feat-jwt-expiry (current-branch brief identified)",
-        ".claude/handoffs/feat-rate-limit.json exists (list never deletes)",
+        ".claude/handoffs/feat-rate-limit.json exists",
         "No PROJECT_STATE.md file was written"
       ]
     },
@@ -388,8 +388,8 @@
         }
       ],
       "assertions": [
-        ".claude/handoffs/feat-rate-limit.json exists (dry run only — nothing deleted without confirmation)",
-        ".claude/handoffs/feat-jwt-expiry.json exists (current-branch brief is never a candidate)",
+        ".claude/handoffs/feat-rate-limit.json exists",
+        ".claude/handoffs/feat-jwt-expiry.json exists",
         "Chat response mentions feat-rate-limit (the candidate is shown to the user)",
         "Chat response mentions at least one of: 'confirm', '--apply', 'apply' (asks before deleting)",
         "No PROJECT_STATE.md file was written"
