@@ -130,8 +130,7 @@ files. Deterministic grammar — anything else is UNGRADED and counts as failed:
 Model default for seeds: **Sonnet** (Haiku dry run 2026-09-06 did not invoke the skill at all
 and wrote its own JSON; Sonnet invoked `catalyst:handoff` and followed the key ladder).
 Gating: `eval-grade --enforce` fails on missing/stale snapshot, capability pass@3 < 0.90,
-regression pass^3 < 1.00. Seeded 2026-09-06 at 0.87 / 1.00 — `scripts/test.sh` runs the grader in
-report mode until the two open misses (evals 13 and 24) are fixed and pass@3 reaches 0.90.
+regression pass^3 < 1.00. Enforced in `scripts/test.sh` since the 2026-09-06 reseed (capability pass@3 = 0.93, regression pass^3 = 1.00).
 
 ## Anti-patterns caught by grading
 

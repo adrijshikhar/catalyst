@@ -64,7 +64,7 @@
       ],
       "assertions": [
         "resume_summary.md exists in the working directory",
-        "resume_summary.md mentions 'feat-jwt-expiry'",
+        "resume_summary.md mentions 'feat-jwt-expiry' or 'feat/jwt-expiry'",
         "Chat response lists feat-rate-limit as the other available brief",
         "resume_summary.md quotes the next acceptance check: '6/6'",
         "resume_summary.md names at least one of: 'jose', '<=', 'Date.now()'",
