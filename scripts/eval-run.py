@@ -13,7 +13,8 @@ Per run:
     names under skills/<skill>/evals/fixtures/ are copied in at the same relative
     path; `scripts/` is symlinked to this checkout so prompts that call
     `python3 scripts/handoff-*.py` resolve.
-  * `claude -p` runs with cwd = workspace and `--plugin-dir <this checkout>`, so
+  * `claude -p` runs with cwd = workspace, `--setting-sources project` (no user
+    settings, no user-installed plugins) and `--plugin-dir <this checkout>`, so
     the SKILL.md under test is the working tree, not the installed cache.
   * the transcript (scrubbed of $HOME) and every file the run wrote are captured.
 
@@ -139,7 +140,7 @@ def run_eval(prompt: str, ws: Path, model: str, max_turns: int) -> str:
     proc = subprocess.run(
         ["claude", "-p", prompt, "--model", model, "--output-format", "stream-json",
          "--dangerously-skip-permissions", "--max-turns", str(max_turns), "--verbose",
-         "--plugin-dir", str(ROOT)],
+         "--setting-sources", "project", "--plugin-dir", str(ROOT)],
         capture_output=True, text=True, cwd=ws,
     )
     produced = '"type":"result"' in proc.stdout
