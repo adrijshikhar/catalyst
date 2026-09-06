@@ -38,7 +38,7 @@ ROOT = Path(__file__).resolve().parent.parent
 _NEEDLE_RE = re.compile(r"'([^']+)'|\"([^\"]+)\"")
 _PATH_RE = re.compile(r"[\w./-]+\.(?:json|md|sh|txt|yaml|yml|py|ts|tsx|js|toml)\b")
 _CMD_RE = re.compile(r"`([^`]+)`\s+exits\s+0")
-_NEG_RE = re.compile(r"\bNOT\b|\bnot exist|\bNo session checkpoint|\bnot created|\babsence of", re.I)
+_NEG_RE = re.compile(r"\bNOT\s+(?:written|created|read|exist|auto-read|silently|used|be used)|\bdoes\s+NOT\s+exist|\bNo\s+[\w\s]*?\bwas\s+written|\bnot created|\babsence of", re.I)
 CAP_THRESHOLD = 0.90
 
 
@@ -145,6 +145,15 @@ def grade_assertion(assertion: str, transcript: str, files: dict[str, str] | Non
     paths = _PATH_RE.findall(a)
     subject = paths[0] if paths and _file_matches(paths[0], files) else None
     needles = [x or y for x, y in _NEEDLE_RE.findall(a)]
+    # "<file> references PostToolUse ..." / "checks for jq" / "has a TODO marker" -> bare keyword in that file
+    mk = re.match(r"^[\w./-]+\s+(?:references|checks for|has a|has an|includes|declares|defines)\s+(?:the\s+)?[`']?([\w.<>=-]{2,})", a, re.I)
+    if subject and not needles and mk:
+        content = next(c for pth, c in files.items() if _file_matches(subject, {pth: c}))
+        return mk.group(1).lower() in content.lower()
+    # "<file> indicates this is a warning or error" -> any of the severity words in that file
+    if subject and re.search(r"\b(?:warning|error)\b", low) and re.search(r"\bindicates\b|\bflags\b|\breports\b", low):
+        content = next(c for pth, c in files.items() if _file_matches(subject, {pth: c})).lower()
+        return any(w in content for w in ("warn", "error", "fail", "problem", "issue"))
     if subject and not needles and len(paths) > 1:
         needles = [p for p in paths[1:]]  # "<file> names src/utils/logger.ts"
     if subject and needles:
