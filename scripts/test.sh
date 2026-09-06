@@ -15,7 +15,7 @@ echo "== unit tests =="
 python3 -m unittest discover -s tests -v
 
 echo "== eval grade (committed snapshots) =="
-python3 scripts/eval-grade.py
+python3 scripts/eval-grade.py   # add --enforce once handoff capability pass@3 >= 0.90 (0.87 on 2026-09-06)
 
 echo "== hook functional smoke =="
 bash tests/sh/test_hook_smoke.sh

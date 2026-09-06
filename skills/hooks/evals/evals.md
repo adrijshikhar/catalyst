@@ -72,4 +72,5 @@ files. Deterministic grammar — anything else is UNGRADED and counts as failed:
 Model default for seeds: **Sonnet** (Haiku dry run 2026-09-06 did not invoke the skill at all
 and wrote its own JSON; Sonnet invoked `catalyst:handoff` and followed the key ladder).
 Gating: `eval-grade --enforce` fails on missing/stale snapshot, capability pass@3 < 0.90,
-regression pass^3 < 1.00.
+regression pass^3 < 1.00. hooks seeded 2026-09-06 at pass@3 = 1.00; the gate is repo-wide and
+waits on handoff.
