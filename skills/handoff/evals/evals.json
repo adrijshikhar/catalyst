@@ -247,10 +247,15 @@
       "name": "brief-native-dispatch",
       "category": "capability",
       "prompt": "We agreed on this side quest: inspect README.md and report the Python runtime requirement. Do not edit files. Handoff this to a subagent and report its answer. Use the native agent tool; scope and acceptance: the answer cites README.md and states the runtime requirement.",
-      "files": [],
+      "files": [
+        {
+          "path": "README.md",
+          "content": "# report-tool\n\nCommand-line report generator used for handoff evals.\n\n## Runtime requirement\n\nRequires **Python 3.11 or newer**. No other runtime is supported.\n\n## Run\n\n    python3 -m report_tool --help\n"
+        }
+      ],
       "assertions": [
         "Agent tool dispatch occurs once (scoped brief with return instructions)",
-        "Returned answer cites \"README.md\" and \"Python 3\"."
+        "Chat response contains 'README.md' and 'Python 3' (returned answer cites the source and the requirement)"
       ]
     },
     {
@@ -271,7 +276,7 @@
       "id": 24,
       "name": "brief-external-inline-opt-in",
       "category": "capability",
-      "prompt": "Handoff this to Codex, explicitly inline: read README.md and report the runtime requirement. This is read-only, use the current workspace. Include the task and return contract in your message; no file needed.",
+      "prompt": "Prepare an inline handoff brief for Codex — do not launch Codex, I will paste it myself. Task: read README.md and report the runtime requirement. Read-only, use the current workspace. Put the full task and return contract in your message; no file needed.",
       "files": [
         {
           "path": "README.md",
