@@ -314,6 +314,86 @@
         "Completion records \"Python 3\" with actual evidence and a completed acceptance checklist.",
         "Chat response mentions task.md (for review)"
       ]
+    },
+    {
+      "id": 27,
+      "name": "reground-mid-session",
+      "category": "capability",
+      "prompt": "We're mid-session on `feat/jwt-expiry` (see .git-HEAD) and my recall is drifting: I keep re-reading files and re-deriving the acceptance check. Reground me from the existing brief under .claude/handoffs/. Save the exact reground block you inject to `reground.md` in the current working directory. This is read-only: do not write or update any brief, and do not touch PROJECT_STATE.md.",
+      "files": [
+        {
+          "path": ".claude/handoffs/feat-jwt-expiry.json",
+          "content": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-05-23T23:14:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"src/auth/auth.spec.ts:42-78 all 6 pass.\",\"resume_by\":\"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-jwt-expiry and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"},\"state\":{\"branch\":\"feat/jwt-expiry\",\"next_acceptance_check\":\"pnpm test src/auth/auth.spec.ts passes 6/6.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"2 files, +18/-6 in src/auth/\",\"tests\":[{\"cmd\":\"pnpm test src/auth/auth.spec.ts\",\"result\":\"fail\"}],\"decisions\":[\"lib is jose (not jsonwebtoken)\",\"comparison is <= (not <)\",\"expiry uses Date.now() UTC ms (not new Date())\"],\"rejected_paths\":[\"< comparison \\u2014 off-by-one boundary rejection\",\"new Date() \\u2014 allocation in hot path\"],\"open_risks\":[\"Clock skew not yet addressed\"]},\"files_read_first\":[{\"path\":\"src/auth/middleware.ts\",\"why\":\"primary edit target for leeway parameter\"},{\"path\":\"src/auth/auth.spec.ts\",\"why\":\"lines 42-78 are the failing clock-skew tests\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only; brief has the binding decisions\"},{\"path\":\"src/users/*\",\"why\":\"unrelated to JWT expiry fix\"}]}"
+        },
+        {
+          "path": ".git-HEAD",
+          "content": "feat/jwt-expiry\n"
+        }
+      ],
+      "assertions": [
+        "reground.md exists",
+        "reground.md contains '6/6' (next acceptance check re-injected verbatim)",
+        "reground.md names at least one of: 'jose', '<=', 'Date.now()' (locked decisions)",
+        "reground.md contains 'src/auth/middleware.ts' (files to keep in view)",
+        "reground.md does not contain 'Rejected paths' (REGROUND omits READ-only sections)",
+        "No PROJECT_STATE.md file was written",
+        "Agent tool dispatch occurs 0 times (REGROUND is inline, no subagent)"
+      ]
+    },
+    {
+      "id": 28,
+      "name": "list-store-inventory",
+      "category": "capability",
+      "prompt": "Which handoff briefs exist in this project, and which one belongs to the current branch (`feat/jwt-expiry`, see .git-HEAD)? Run the handoff skill's list mode and save exactly what it prints to `list-output.txt`. Do not modify or delete anything.",
+      "files": [
+        {
+          "path": ".git-HEAD",
+          "content": "feat/jwt-expiry\n"
+        },
+        {
+          "path": ".claude/handoffs/feat-jwt-expiry.json",
+          "content": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-05-23T23:14:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"src/auth/auth.spec.ts:42-78 all 6 pass.\",\"resume_by\":\"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-jwt-expiry and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"},\"state\":{\"branch\":\"feat/jwt-expiry\",\"next_acceptance_check\":\"pnpm test src/auth/auth.spec.ts passes 6/6.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"2 files, +18/-6 in src/auth/\",\"tests\":[{\"cmd\":\"pnpm test src/auth/auth.spec.ts\",\"result\":\"fail\"}],\"decisions\":[\"lib is jose (not jsonwebtoken)\",\"comparison is <= (not <)\",\"expiry uses Date.now() UTC ms (not new Date())\"],\"rejected_paths\":[\"< comparison \\u2014 off-by-one boundary rejection\",\"new Date() \\u2014 allocation in hot path\"],\"open_risks\":[\"Clock skew not yet addressed\"]},\"files_read_first\":[{\"path\":\"src/auth/middleware.ts\",\"why\":\"primary edit target for leeway parameter\"},{\"path\":\"src/auth/auth.spec.ts\",\"why\":\"lines 42-78 are the failing clock-skew tests\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only; brief has the binding decisions\"},{\"path\":\"src/users/*\",\"why\":\"unrelated to JWT expiry fix\"}]}"
+        },
+        {
+          "path": ".claude/handoffs/feat-rate-limit.json",
+          "content": "{\"schema_version\":\"1\",\"key\":\"feat-rate-limit\",\"timestamp\":\"2026-05-22T18:20:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"Existing rate-limit tests pass AND new per-route override test passes.\",\"resume_by\":\"Add a per-route override to src/middleware/rate-limit.ts.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-rate-limit and continue. next acceptance check: rate-limit middleware accepts a per-route override.\"},\"state\":{\"branch\":\"feat/rate-limit\",\"next_acceptance_check\":\"pnpm test src/middleware/rate-limit.spec.ts passes including the new test.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"1 file, +24/-2 in src/middleware/\",\"decisions\":[\"sliding window stays\",\"per-route override is opt-in via decorator\"],\"rejected_paths\":[\"token-bucket \\u2014 too heavy for our use case\"],\"open_risks\":[\"Decorator stacking semantics with auth middleware unverified\"]},\"files_read_first\":[{\"path\":\"src/middleware/rate-limit.ts\",\"why\":\"primary edit target for per-route override\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only\"},{\"path\":\"src/auth/*\",\"why\":\"unrelated to rate-limit feature\"}]}"
+        }
+      ],
+      "assertions": [
+        "list-output.txt exists",
+        "list-output.txt contains 'feat-jwt-expiry' and 'feat-rate-limit' (every brief inventoried)",
+        "list-output.txt contains 'orphan' (the dead-branch brief is flagged)",
+        "Chat response mentions feat-jwt-expiry (current-branch brief identified)",
+        ".claude/handoffs/feat-rate-limit.json exists (list never deletes)",
+        "No PROJECT_STATE.md file was written"
+      ]
+    },
+    {
+      "id": 29,
+      "name": "prune-dry-run-needs-confirmation",
+      "category": "capability",
+      "prompt": "Clean up stale handoff briefs in this project. Current branch is `feat/jwt-expiry` (see .git-HEAD). Handle it the way the handoff skill's prune mode says to.",
+      "files": [
+        {
+          "path": ".git-HEAD",
+          "content": "feat/jwt-expiry\n"
+        },
+        {
+          "path": ".claude/handoffs/feat-jwt-expiry.json",
+          "content": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-05-23T23:14:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"src/auth/auth.spec.ts:42-78 all 6 pass.\",\"resume_by\":\"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-jwt-expiry and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"},\"state\":{\"branch\":\"feat/jwt-expiry\",\"next_acceptance_check\":\"pnpm test src/auth/auth.spec.ts passes 6/6.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"2 files, +18/-6 in src/auth/\",\"tests\":[{\"cmd\":\"pnpm test src/auth/auth.spec.ts\",\"result\":\"fail\"}],\"decisions\":[\"lib is jose (not jsonwebtoken)\",\"comparison is <= (not <)\",\"expiry uses Date.now() UTC ms (not new Date())\"],\"rejected_paths\":[\"< comparison \\u2014 off-by-one boundary rejection\",\"new Date() \\u2014 allocation in hot path\"],\"open_risks\":[\"Clock skew not yet addressed\"]},\"files_read_first\":[{\"path\":\"src/auth/middleware.ts\",\"why\":\"primary edit target for leeway parameter\"},{\"path\":\"src/auth/auth.spec.ts\",\"why\":\"lines 42-78 are the failing clock-skew tests\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only; brief has the binding decisions\"},{\"path\":\"src/users/*\",\"why\":\"unrelated to JWT expiry fix\"}]}"
+        },
+        {
+          "path": ".claude/handoffs/feat-rate-limit.json",
+          "content": "{\"schema_version\":\"1\",\"key\":\"feat-rate-limit\",\"timestamp\":\"2026-05-22T18:20:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"Existing rate-limit tests pass AND new per-route override test passes.\",\"resume_by\":\"Add a per-route override to src/middleware/rate-limit.ts.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-rate-limit and continue. next acceptance check: rate-limit middleware accepts a per-route override.\"},\"state\":{\"branch\":\"feat/rate-limit\",\"next_acceptance_check\":\"pnpm test src/middleware/rate-limit.spec.ts passes including the new test.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"1 file, +24/-2 in src/middleware/\",\"decisions\":[\"sliding window stays\",\"per-route override is opt-in via decorator\"],\"rejected_paths\":[\"token-bucket \\u2014 too heavy for our use case\"],\"open_risks\":[\"Decorator stacking semantics with auth middleware unverified\"]},\"files_read_first\":[{\"path\":\"src/middleware/rate-limit.ts\",\"why\":\"primary edit target for per-route override\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only\"},{\"path\":\"src/auth/*\",\"why\":\"unrelated to rate-limit feature\"}]}"
+        }
+      ],
+      "assertions": [
+        ".claude/handoffs/feat-rate-limit.json exists (dry run only — nothing deleted without confirmation)",
+        ".claude/handoffs/feat-jwt-expiry.json exists (current-branch brief is never a candidate)",
+        "Chat response mentions feat-rate-limit (the candidate is shown to the user)",
+        "Chat response mentions at least one of: 'confirm', '--apply', 'apply' (asks before deleting)",
+        "No PROJECT_STATE.md file was written"
+      ]
     }
   ]
 }
