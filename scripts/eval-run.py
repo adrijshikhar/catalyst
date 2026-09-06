@@ -5,7 +5,7 @@ NEVER runs in CI (calls a model).
 
 Usage:
     eval-run.py --skill <name> --model <sonnet|haiku|opus|...> --now "<iso8601>"
-                [--runs 3] [--only 0,3,13] [--max-turns 12]
+                [--runs 3] [--only 0,3,13] [--max-turns 30]
 
 Per run:
   * a fresh temp workspace; the eval's `files[]` fixtures are materialized;
@@ -48,8 +48,30 @@ def _scrub(text: str) -> str:
     return text.replace(_HOME, "$HOME") if _HOME and _HOME != "/" else text
 
 
+def _condense(transcript: str) -> str:
+    """Keep what the grader reads: assistant turns (text + tool_use), user turns
+    (tool results — renderer output lives there) and the final result. Drops the
+    system init and stream bookkeeping."""
+    keep = []
+    for line in transcript.splitlines():
+        try:
+            ev = json.loads(line)
+        except Exception:
+            continue
+        if ev.get("type") in ("assistant", "user", "result"):
+            keep.append(line)
+    return "\n".join(keep) + "\n"
+
+
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else ""
+
+
+def inputs_sha256(spec: dict) -> str:
+    """Hash of what the model SAW (id, prompt, files) — assertions are grading-side and
+    may be tightened without re-running; a changed prompt or fixture must re-seed."""
+    canon = [{"id": e.get("id"), "prompt": e.get("prompt"), "files": e.get("files")} for e in spec.get("evals", []) if isinstance(e.get("prompt"), str)]
+    return hashlib.sha256(json.dumps(canon, sort_keys=True).encode()).hexdigest()
 
 
 def _sh(cmd: list[str], cwd: Path = ROOT) -> str:
@@ -134,7 +156,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--now", required=True)
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--only", default="", help="comma-separated eval ids")
-    ap.add_argument("--max-turns", type=int, default=12)
+    ap.add_argument("--max-turns", type=int, default=30, help="WRITE/RECOVER flows take ~14 tool calls; 12 truncated 8/54 seed runs on 2026-09-06")
     ap.add_argument("--out", default="", help="snapshot dir override (default skills/<skill>/evals/snapshots)")
     args = ap.parse_args(argv[1:])
 
@@ -153,10 +175,11 @@ def main(argv: list[str]) -> int:
             "generated_at": args.now,
             "commit_sha": _sh(["git", "rev-parse", "HEAD"]) or "unknown",
             "skill_md_sha256": _sha(skill_dir / "SKILL.md"),
-            "evals_json_sha256": _sha(evals_json),
+            "evals_inputs_sha256": inputs_sha256(spec),
             "claude_cli_version": claude_version(),
             "model": args.model,
             "runs_per_eval": args.runs,
+            "max_turns": args.max_turns,
             "n_evals": 0,
         },
         "evals": {},
@@ -180,7 +203,7 @@ def main(argv: list[str]) -> int:
                     if looks_unauthenticated(transcript):
                         print("ERROR: child `claude` is not authenticated (login wall).", file=sys.stderr)
                         return 4
-                transcript = _scrub(transcript)
+                transcript = _scrub(_condense(transcript))
                 files = capture(ws)
             (snap_dir / f"{eid}-run{k}.jsonl").write_text(transcript, encoding="utf-8")
             runs.append({"run": k, "transcript_file": f"{eid}-run{k}.jsonl", "files": files})

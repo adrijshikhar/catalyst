@@ -93,77 +93,132 @@ def _run_cmd_out(cmd: str, files: dict[str, str]) -> str | None:
         return proc.stdout if proc.returncode == 0 else None
 
 
+def _assistant_text(transcript: str) -> str:
+    """What the agent said: assistant text blocks + the final result. Tool output is
+    evidence of what the tools did, never of what the agent claimed."""
+    out = []
+    for line in transcript.splitlines():
+        try:
+            ev = json.loads(line)
+        except Exception:
+            continue
+        if ev.get("type") == "assistant":
+            for c in ev.get("message", {}).get("content", []):
+                if c.get("type") == "text":
+                    out.append(c.get("text", ""))
+        elif ev.get("type") == "result":
+            out.append(str(ev.get("result", "")))
+    # unit-test fixtures and legacy snapshots are plain text, not stream-json
+    return "\n".join(out) if out else transcript
+
+
+def _tool_uses(transcript: str, names: set[str]) -> int:
+    n = 0
+    for line in transcript.splitlines():
+        try:
+            ev = json.loads(line)
+        except Exception:
+            continue
+        if ev.get("type") == "assistant":
+            for c in ev.get("message", {}).get("content", []):
+                if c.get("type") == "tool_use" and c.get("name") in names:
+                    n += 1
+    return n
+
+
+def _subject_content(token: str, files: dict[str, str]) -> str | None:
+    """Content of the named file, or the concatenation of files under a directory token (ends with /)."""
+    tok = token.strip().strip("`").lstrip("./")
+    if tok.endswith("/"):
+        parts = [c for pth, c in files.items() if pth.startswith(tok) or ("/" + tok) in ("/" + pth)]
+        return "\n".join(parts) if parts else None
+    for pth, c in files.items():
+        if _file_matches(tok, {pth: c}):
+            return c
+    return None
+
+
+_TOKEN_RE = re.compile(r"(?<![\w/])(\.?[\w./-]*[\w-]\.(?:json|md|sh|txt|yaml|yml|py|ts|tsx|js|toml)|\.?[\w.-]+/(?:[\w.-]+/)*)(?![\w])")
+_NEG_RE = re.compile(r"(?-i:\bNOT\b)|\bdoes not (?:exist|contain)\b|(?-i:\bNo\b).*?\bwas written\b|\bnot created\b|\bnever written\b", re.I)
+_DISPATCH_RE = re.compile(r"(?:agent|task) tool dispatch occurs (\d+|once|twice|zero) times?|dispatch occurs (once|twice|\d+ times?)", re.I)
+_LINES_RE = re.compile(r"^([\w./-]+)\s+is\s+(\d+)\s+lines?\s+or\s+fewer", re.I)
+_WORDS = {"once": 1, "twice": 2, "zero": 0}
+
+
 def grade_assertion(assertion: str, transcript: str, files: dict[str, str] | None = None) -> bool | None:
-    """True/False when gradable; None when the grammar cannot decide."""
+    """True/False when gradable; None when the grammar cannot decide (counts as failed)."""
     files = files or {}
     a = assertion.strip().rstrip(".")
     low = a.lower()
+    needles = [x or y for x, y in _NEEDLE_RE.findall(a)]
+    tokens = [tk for tk in _TOKEN_RE.findall(a) if not tk.startswith("scripts/")]
+    subject = next((tk for tk in tokens if _subject_content(tk, files) is not None), None)
+    any_of = " or " in low or "at least one of" in low
+
     m = _CMD_RE.search(a)
     if m:
         return _run_cmd(m.group(1), files)
-    if "bash -n" in low:
-        paths = _PATH_RE.findall(a)
-        return bool(paths) and _file_matches(paths[0], files) and _run_cmd(f"bash -n {paths[0].lstrip('./')}", files)
-    if _NEG_RE.search(a):
-        paths = [p for p in _PATH_RE.findall(a) if not p.startswith("scripts/")]
-        if paths:
-            return not any(_file_matches(p, files) for p in paths)
-        return None
-    # JSON field: "Brief state.branch is feat/jwt-expiry" / "Brief state.next_acceptance_check mentions the 6/6 ..."
-    mj = re.match(r"^(?:the\s+)?(?:written\s+)?brief\s+([\w.]+)\s+(is|mentions|names|contains)\s+(.+)$", a, re.I)
-    if mj:
-        field, verb, rest = mj.group(1), mj.group(2).lower(), mj.group(3)
-        briefs = [json.loads(c) for pth, c in files.items() if pth.endswith(".json") and "/handoffs/" in pth and _is_json(c)]
+    if "bash -n" in low and tokens:
+        return _subject_content(tokens[0], files) is not None and _run_cmd(f"bash -n {tokens[0].lstrip('./')}", files)
+    m = _DISPATCH_RE.search(a)
+    if m:
+        raw = (m.group(1) or m.group(2) or "").split()[0].lower()
+        want = _WORDS.get(raw, int(raw) if raw.isdigit() else None)
+        return want is not None and _tool_uses(transcript, {"Task", "Agent"}) == want
+    m = _LINES_RE.match(a)
+    if m:
+        content = _subject_content(m.group(1), files)
+        return content is not None and len(content.rstrip("\n").splitlines()) <= int(m.group(2))
+    m = re.match(r"^(?:the\s+)?(?:written\s+|recovered\s+)?brief\s+([\w.]+)\s+(is|mentions|names|contains)\s+(.+)$", a, re.I)
+    if m:
+        field, verb, rest = m.group(1), m.group(2).lower(), m.group(3)
+        briefs = [json.loads(c) for pth, c in files.items() if pth.endswith(".json") and "handoffs/" in pth and _is_json(c)]
         if not briefs:
             return False
         vals = [_dotted(b, field) for b in briefs]
-        needles = [x or y for x, y in _NEEDLE_RE.findall(rest)] or _PATH_RE.findall(rest) or re.findall(r"[\w/.<>=()-]{3,}", rest.split("(")[0])
         if verb == "is":
-            target = rest.strip().strip("`'\"")
-            return any(str(v) == target for v in vals)
-        return any(any(n in json.dumps(v) for n in needles) for v in vals if v is not None)
-    # positive path presence: "Brief was written to <path>", "<file> was created at <path>"
-    mp = re.search(r"\b(?:written to|created at|saved to|exists at)\s+([\w./-]+\.(?:json|md|sh|txt))", a, re.I)
-    if mp and not _NEG_RE.search(a):
-        return _file_matches(mp.group(1), files)
-    # rendered output: "The rendered output of `cmd` contains the next acceptance check" -> run cmd, check needles/prose keywords in stdout
-    mr = re.search(r"rendered output of `([^`]+)`\s+(?:contains|includes|mentions)\s+(.+)$", a, re.I)
-    if mr:
-        out = _run_cmd_out(mr.group(1), files)
-        needles = [x or y for x, y in _NEEDLE_RE.findall(mr.group(2))]
+            return any(str(v) == rest.strip().strip("`'\"") for v in vals)
+        ns = needles or _TOKEN_RE.findall(rest) or re.findall(r"[\w/.<>=()-]{3,}", rest.split("(")[0])
+        hits = [n in json.dumps(v) for v in vals if v is not None for n in ns]
+        return any(hits) if any_of else (bool(hits) and all(n in json.dumps(v) for v in vals if v is not None for n in ns))
+    m = re.search(r"\b(?:written to|created at|saved to|overwritten at|exists at)\s+([\w./-]+\.(?:json|md|sh|txt))", a, re.I)
+    if m and not _NEG_RE.search(a):
+        return _file_matches(m.group(1), files)
+    m = re.search(r"rendered output of `([^`]+)`\s+(?:contains|includes|mentions)\s+(.+)$", a, re.I)
+    if m:
+        out = _run_cmd_out(m.group(1), files)
         return out is not None and (all(n in out for n in needles) if needles else len(out) > 0)
-    # Chat prose: "Chat response names tier 2 (branch) as ..." -> case-insensitive phrase in transcript
-    mc = re.match(r"^chat response (?:names|mentions|lists|states|says)\s+(.+?)(?:\s+\(|\s+as\b|$)", a, re.I)
-    if mc and not _NEEDLE_RE.search(a):
-        phrase = mc.group(1).strip().strip("`")
-        return phrase.lower() in transcript.lower()
+    m = re.match(r"^chat response (?:names|mentions|lists|states|says|contains|tells)\s+(.+?)(?:\s+\(|\s+as\b|$)", a, re.I)
+    if m:
+        ns = needles or [m.group(1).strip().strip("`")]
+        said = _assistant_text(transcript).lower()
+        hits = [n.lower() in said for n in ns]
+        return any(hits) if any_of else all(hits)
+    if _NEG_RE.search(a):
+        if needles:
+            scope = _subject_content(subject, files) if subject else _corpus(transcript, files)
+            return scope is not None and not any(n in scope for n in needles)
+        if tokens:
+            return not any(_subject_content(tk, files) is not None for tk in tokens)
+        return None
     stripped = re.sub(r"\s+in the working directory$", "", low)
     if stripped.endswith(" exists"):
-        target = a[: len(stripped) - len(" exists")].strip().strip("`")
-        target = re.sub(r"\s+in the working directory$", "", target, flags=re.I)
-        return _file_matches(target, files) or (target in transcript)
-    paths = _PATH_RE.findall(a)
-    subject = paths[0] if paths and _file_matches(paths[0], files) else None
-    needles = [x or y for x, y in _NEEDLE_RE.findall(a)]
-    # "<file> references PostToolUse ..." / "checks for jq" / "has a TODO marker" -> bare keyword in that file
-    mk = re.match(r"^[\w./-]+\s+(?:references|checks for|has a|has an|includes|declares|defines)\s+(?:the\s+)?[`']?([\w.<>=-]{2,})", a, re.I)
-    if subject and not needles and mk:
-        content = next(c for pth, c in files.items() if _file_matches(subject, {pth: c}))
-        return mk.group(1).lower() in content.lower()
-    # "<file> indicates this is a warning or error" -> any of the severity words in that file
-    if subject and re.search(r"\b(?:warning|error)\b", low) and re.search(r"\bindicates\b|\bflags\b|\breports\b", low):
-        content = next(c for pth, c in files.items() if _file_matches(subject, {pth: c})).lower()
-        return any(w in content for w in ("warn", "error", "fail", "problem", "issue"))
-    if subject and not needles and len(paths) > 1:
-        needles = [p for p in paths[1:]]  # "<file> names src/utils/logger.ts"
-    if subject and needles:
-        content = next(c for pth, c in files.items() if _file_matches(subject, {pth: c}))
-        any_of = " or " in low or "at least one of" in low
-        hits = [n in content for n in needles]
+        target = re.sub(r"\s+in the working directory$", "", a[: len(stripped) - len(" exists")].strip().strip("`"), flags=re.I)
+        return _subject_content(target, files) is not None or (target in transcript)
+    if subject:
+        content = _subject_content(subject, files)
+        ns = needles or [tk for tk in tokens if tk != subject]
+        if not ns:
+            mk = re.match(r"^[\w./-]+\s+(?:references|checks for|has a|has an|includes|declares|defines|mentions|names|flags)\s+(?:the\s+|that\s+|this is a\s+)?[`']?([\w.<>=/-]{2,})", a, re.I)
+            if mk:
+                return mk.group(1).lower() in content.lower()
+            if re.search(r"\b(?:warning|error)\b", low) and re.search(r"\bindicates\b|\bflags\b|\breports\b", low):
+                return any(w in content.lower() for w in ("warn", "error", "fail", "problem", "issue"))
+            return None
+        hits = [n in content for n in ns]
         return any(hits) if any_of else all(hits)
     if needles:
         corpus = _corpus(transcript, files)
-        any_of = " or " in low or "at least one of" in low
         hits = [n in corpus for n in needles]
         return any(hits) if any_of else all(hits)
     return None
@@ -187,6 +242,11 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else ""
 
 
+def inputs_sha256(spec: dict) -> str:
+    canon = [{"id": e.get("id"), "prompt": e.get("prompt"), "files": e.get("files")} for e in spec.get("evals", []) if isinstance(e.get("prompt"), str)]
+    return hashlib.sha256(json.dumps(canon, sort_keys=True).encode()).hexdigest()
+
+
 def grade_skill(skill_dir: Path, errors: list[str], warns: list[str], *, enforce: bool) -> dict | None:
     evals_json = skill_dir / "evals" / "evals.json"
     if not evals_json.exists():
@@ -202,8 +262,8 @@ def grade_skill(skill_dir: Path, errors: list[str], warns: list[str], *, enforce
     stale = []
     if meta.get("skill_md_sha256") and meta["skill_md_sha256"] != _sha(skill_dir / "SKILL.md"):
         stale.append("SKILL.md")
-    if meta.get("evals_json_sha256") and meta["evals_json_sha256"] != _sha(evals_json):
-        stale.append("evals.json")
+    if meta.get("evals_inputs_sha256") and meta["evals_inputs_sha256"] != inputs_sha256(spec):
+        stale.append("evals.json prompts/files")
     if stale:
         (errors if enforce else warns).append(f"{skill_dir.name}: snapshot stale ({', '.join(stale)} changed since seed); regenerate")
     report = {"skill": skill_dir.name, "model": meta.get("model"), "evals": []}
@@ -221,6 +281,8 @@ def grade_skill(skill_dir: Path, errors: list[str], warns: list[str], *, enforce
                 tf = snap_dir / run["transcript_file"]
                 transcript = tf.read_text(encoding="utf-8", errors="replace") if tf.exists() else ""
             files = run.get("files") or {}
+            if '"subtype": "error_max_turns"' in transcript or '"subtype":"error_max_turns"' in transcript:
+                warns.append(f"{skill_dir.name}/{ev['name']} run{run.get('run')}: TRUNCATED at max-turns — its failures are a runner-cap artifact; re-seed with a higher --max-turns")
             verdicts = [grade_assertion(a, transcript, files) for a in ev.get("assertions", [])]
             ungraded += sum(1 for v in verdicts if v is None)
             per_run.append(sum(1 for v in verdicts if v is True) / max(1, len(verdicts)))
