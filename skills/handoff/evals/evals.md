@@ -76,7 +76,8 @@ pass@3 = at least one of three independent dispatches satisfies all assertions f
 
 ---
 
-## Run mechanics
+## Run mechanics (superseded 2026-09-06 — see below)
+
 
 Each eval dispatches a subagent via the Agent tool. The subagent's prompt loads the appropriate SKILL.md (v0.3 for capability, v0.2-snapshot for regression), then executes the eval's test prompt against a freshly-created working dir with the eval's fixture files copied in.
 
@@ -98,6 +99,38 @@ catalyst/                       (workspace, gitignored)
 `grade.py` (in the workspace) runs deterministic code graders and dispatches a model-grader subagent for model-grade assertions. Results aggregate via `python -m scripts.aggregate_benchmark` (the same script handoff v0.2 used).
 
 ---
+
+## Run mechanics (Lane B, 2026-09-06)
+
+`scripts/eval-run.py --skill <name> --model <m> --runs 3 --now <iso>` runs every prompted eval
+through `claude -p` in a **fresh temp workspace per run**: the eval's `files[]` are
+materialized, a `.git-HEAD` fixture becomes a real branch, fixture trees the prompt names
+under `skills/<name>/evals/fixtures/` are copied in at the same relative path, and `scripts/`
+is symlinked to the checkout so `python3 scripts/handoff-*.py` resolves. The plugin under
+test is the working tree (`--plugin-dir`), not the installed cache. Each run's transcript
+and every file it wrote are captured into `evals/snapshots/` with model, commit, SKILL.md
+and evals.json hashes stamped.
+
+`scripts/eval-grade.py` (Lane A, CI) re-applies the assertions against transcript + captured
+files. Deterministic grammar — anything else is UNGRADED and counts as failed:
+
+| Form | Graded as |
+|---|---|
+| `<path> exists` | a captured file path ends with `<path>` |
+| `… written to / created at <path>` | same |
+| `… NOT written / does NOT exist / No … was written … <path>` | no captured path matches |
+| `` `<cmd>` exits 0 `` | cmd run against the captured files (`scripts/` → checkout) |
+| `<file> passes 'bash -n' …` | `bash -n` on the captured file |
+| `Brief state.<field> is <value>` / `mentions <needles>` | JSON field of a captured handoffs/*.json |
+| `<file> names/quotes … 'needle' or path` | needles inside that file |
+| `rendered output of `<cmd>` contains …` | run cmd, needles in stdout |
+| `Chat response names <phrase> (…)` | phrase in transcript, case-insensitive |
+| quoted `'needle'`s | all in transcript+files; ` OR ` / `at least one of` → any |
+
+Model default for seeds: **Sonnet** (Haiku dry run 2026-09-06 did not invoke the skill at all
+and wrote its own JSON; Sonnet invoked `catalyst:handoff` and followed the key ladder).
+Gating: `eval-grade --enforce` fails on missing/stale snapshot, capability pass@3 < 0.90,
+regression pass^3 < 1.00.
 
 ## Anti-patterns caught by grading
 
