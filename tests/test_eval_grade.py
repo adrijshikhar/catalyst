@@ -64,6 +64,16 @@ class TestGrammar(unittest.TestCase):
         self.assertTrue(eg.grade_assertion("Chat response names tier 2 (branch) as the resolution chosen", "I chose Tier 2 (branch key).", {}))
         self.assertFalse(eg.grade_assertion("Chat response names tier 3 (legacy) as the resolution chosen", "I chose Tier 2.", {}))
 
+    def test_bare_keyword_in_subject_file(self):
+        self.assertTrue(eg.grade_assertion("hooks/PostToolUse-x.sh checks for jq", "", FILES))
+        self.assertTrue(eg.grade_assertion("hooks/PostToolUse-x.sh has a TODO marker for the custom logic", "", FILES))
+        self.assertFalse(eg.grade_assertion("hooks/PostToolUse-x.sh references SessionEnd in a comment", "", FILES))
+
+    def test_severity_indication_not_mistaken_for_negation(self):
+        f = {"lint-output.txt": "WARNING: matcher '.*' is overly broad"}
+        self.assertTrue(eg.grade_assertion("lint-output.txt indicates this is a warning or error (not silent pass)", "", f))
+        self.assertFalse(eg.grade_assertion("lint-output.txt indicates this is a warning or error (not silent pass)", "", {"lint-output.txt": "ok"}))
+
     def test_prose_only_is_ungraded(self):
         self.assertIsNone(eg.grade_assertion("Chosen brief is feat-jwt-expiry (matches current branch)", "", FILES))
 
