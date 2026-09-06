@@ -24,7 +24,7 @@
         "PROJECT_STATE.md was created at .claude/PROJECT_STATE.md with header + dated entry",
         "PROJECT_STATE.md entry title includes the feature key (e.g., '[feat-jwt-expiry]')",
         "The rendered output of `python3 scripts/handoff-render.py feat-jwt-expiry` contains the next acceptance check",
-        "Chat response names tier 2 (branch) as the resolution chosen"
+        "Chat response names the tier chosen: 'tier: 2' or 'tier 2' or 'Tier used: 2' (branch-derived, tier 2)"
       ]
     },
     {
