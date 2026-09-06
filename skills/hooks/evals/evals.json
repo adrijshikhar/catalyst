@@ -33,6 +33,34 @@
         "lint-output.txt mentions 'matcher' AND ('broad' OR 'wildcard' OR '.*')",
         "lint-output.txt indicates this is a warning or error (not silent pass)"
       ]
+    },
+    {
+      "id": 5,
+      "name": "status-report",
+      "category": "capability",
+      "prompt": "Run `/hooks status`. Which Catalyst hooks are active in this project, what events do they fire on, and where are they registered? Save exactly what the status command prints to `hooks-status.txt` in the current working directory.",
+      "files": [],
+      "assertions": [
+        "hooks-status.txt exists",
+        "hooks-status.txt contains 'PreCompact' and 'SessionStart' (both hooks reported)",
+        "hooks-status.txt contains 'enabled' (state column present)",
+        "Chat response mentions hooks.json (registration surface named)",
+        "Agent tool dispatch occurs 0 times (status is deterministic, no subagent)"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "disable-precompact-knob",
+      "category": "capability",
+      "prompt": "Disable the Catalyst PreCompact hook for this project only; leave the SessionStart hook on. Then confirm the resulting state.",
+      "files": [],
+      "assertions": [
+        ".claude/catalyst.json exists",
+        ".claude/catalyst.json contains 'precompact_prompt' and 'false'",
+        ".claude/catalyst.json does not contain 'sessionstart_resume' (untouched knob is not written)",
+        "Chat response mentions disabled (state confirmed back)",
+        "No hooks.json file was written (never edits the plugin declaration)"
+      ]
     }
   ]
 }

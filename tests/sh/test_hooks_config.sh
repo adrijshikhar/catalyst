@@ -58,7 +58,7 @@ check "T9b sessionstart still enabled" 0 "$(enabled_rc hooks.sessionstart_resume
 H="$REPO_ROOT/hooks"
 
 cfg '{"hooks":{"precompact_prompt":false}}'
-out=$(CLAUDE_PROJECT_DIR="$TMP" bash "$H/PreCompact-handoff-write.sh" 2>&1) || true
+out=$(printf '%s' '{}' | CLAUDE_PROJECT_DIR="$TMP" bash "$H/PreCompact-handoff-write.sh" 2>&1) || true
 if [ -z "$out" ]; then echo "PASS T10 PreCompact silent when disabled"
 else echo "FAIL T10: expected empty output, got: $out"; fail=1; fi
 
@@ -96,7 +96,7 @@ rm -rf "${T11_DIR:?}"
 
 # T12: disabling one must not disable the other. PreCompact still speaks.
 cfg '{"hooks":{"sessionstart_resume":false}}'
-out=$(CLAUDE_PROJECT_DIR="$TMP" bash "$H/PreCompact-handoff-write.sh" 2>&1) || true
+out=$(printf '%s' '{}' | CLAUDE_PROJECT_DIR="$TMP" bash "$H/PreCompact-handoff-write.sh" 2>&1) || true
 if printf '%s' "$out" | grep -q 'systemMessage'; then echo "PASS T12 knobs are independent"
 else echo "FAIL T12: PreCompact went silent under the wrong knob: $out"; fail=1; fi
 

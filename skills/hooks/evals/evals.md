@@ -6,15 +6,17 @@
 
 ---
 
-## Capability evals (5)
+## Capability evals (4 live, 3 retired)
 
 | ID | Name | What it proves |
 |----|------|----------------|
-| 0 | install-single-precompact | `/hooks install PreCompact` adds entry to settings.json + copies script to .claude/hooks/ |
-| 1 | install-all | `/hooks install --all` adds both lifecycle hooks (PreCompact, SessionStart) idempotently |
-| 2 | uninstall-removes-cleanly | `/hooks uninstall PreCompact` removes settings.json entry + deletes hook script |
+| ~~0 | install-single-precompact~~ | *retired 2026-09-03 with the installer (hooks are declared in `hooks.json`); dropped from evals.json 2026-09-06* |
+| ~~1 | install-all~~ | *retired 2026-09-03 with the installer (hooks are declared in `hooks.json`); dropped from evals.json 2026-09-06* |
+| ~~2 | uninstall-removes-cleanly~~ | *retired 2026-09-03 with the installer (hooks are declared in `hooks.json`); dropped from evals.json 2026-09-06* |
 | 3 | new-event-scaffold | `/hooks new PostToolUse my-custom-hook` produces a valid hook script template at hooks/PostToolUse-my-custom-hook.sh |
 | 4 | lint-catches-bad-matcher | `/hooks lint <path>` flags a hook with matcher ".*" as too broad |
+| 5 | status-report | `/hooks status` prints both hooks with event and state, names `hooks.json` as the registration surface, dispatches no subagent |
+| 6 | disable-precompact-knob | `/hooks disable precompact` writes only `hooks.precompact_prompt: false` to `.claude/catalyst.json`, leaves the other knob unwritten, never edits `hooks.json` |
 
 ## Regression evals (0)
 
@@ -26,7 +28,7 @@ This skill primarily orchestrates other components. Regression coverage comes fr
 
 | Class | Metric | Threshold |
 |-------|--------|-----------|
-| Capability evals (5) | pass@3 | ≥ 0.90 |
+| Capability evals (4) | pass@3 | ≥ 0.90 |
 
 ---
 
