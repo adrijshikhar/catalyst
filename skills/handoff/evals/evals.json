@@ -149,9 +149,9 @@
       "assertions": [
         "resume_response.md exists",
         "resume_response.md contains 'Tier 2' (next acceptance check surfaced)",
-        "resume_response.md contains 'evaluator-library' (next acceptance check detail)",
+        "resume_response.md contains at least one of: 'evaluator-library', 'failure-pattern-detector', 'pipeline-templates', 'PIPELINE' (dogfood plan actions surfaced)",
         "resume_response.md contains at least one of: 'POSIX bash', 'jq', 'EDD', 'anti-self-grade' (decisions surfaced)",
-        "resume_response.md contains at least one rejected path: 'tool-output' OR 'rtk' OR 'caveman' OR 'Company Brain' OR 'autonomous'",
+        "resume_response.md contains at least one rejected path: 'tool-output' OR 'rtk' OR 'caveman' OR 'Company Brain' OR 'autonomous' OR 'Autonomous' OR 'harness scaffolder' OR 'Skipping evals'",
         "resume_response.md mentions at least one of: 'handoff resume', 'handoff-render.py', '/handoff'",
         "resume_response.md mentions at least one of: 'hooks install', '/hooks'",
         "PROJECT_STATE.md was NOT created or read (file does NOT exist in working dir after eval)"
@@ -272,7 +272,12 @@
       "name": "brief-external-inline-opt-in",
       "category": "capability",
       "prompt": "Handoff this to Codex, explicitly inline: read README.md and report the runtime requirement. This is read-only, use the current workspace. Include the task and return contract in your message; no file needed.",
-      "files": [],
+      "files": [
+        {
+          "path": "README.md",
+          "content": "# demo-service\n\nSmall HTTP service used for handoff evals.\n\n## Runtime requirement\n\nRequires **Node.js 20 or newer**. No other runtime is supported.\n\n## Run\n\n    npm install\n    npm start\n"
+        }
+      ],
       "assertions": [
         "Chat response contains 'Acceptance' and 'Return'",
         "No .catalyst/tasks/ or .catalyst/handoffs/ or PROJECT_STATE.md file was written"
