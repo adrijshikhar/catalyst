@@ -1,100 +1,163 @@
 #!/usr/bin/env python3
-"""Local eval generator — runs each eval prompt through the `claude` CLI and
-writes committed snapshots. NEVER runs in CI (calls a model).
+"""Local eval generator — Lane B. Runs each eval prompt through the `claude` CLI
+in an isolated, fixture-staged workspace and writes committed snapshots.
+NEVER runs in CI (calls a model).
 
 Usage:
-    eval-run.py --skill <name> [--runs 3] --now "<iso8601>"
+    eval-run.py --skill <name> --model <sonnet|haiku|opus|...> --now "<iso8601>"
+                [--runs 3] [--only 0,3,13] [--max-turns 30]
+
+Per run:
+  * a fresh temp workspace; the eval's `files[]` fixtures are materialized;
+    `.git-HEAD` (if present) becomes a real git branch; fixture trees the prompt
+    names under skills/<skill>/evals/fixtures/ are copied in at the same relative
+    path; `scripts/` is symlinked to this checkout so prompts that call
+    `python3 scripts/handoff-*.py` resolve.
+  * `claude -p` runs with cwd = workspace and `--plugin-dir <this checkout>`, so
+    the SKILL.md under test is the working tree, not the installed cache.
+  * the transcript (scrubbed of $HOME) and every file the run wrote are captured.
 
 Writes:
-    skills/<name>/evals/snapshots/<eval-id>-run<k>.jsonl   (raw transcript)
-    skills/<name>/evals/snapshots/results.json             (aggregate + meta)
+    skills/<name>/evals/snapshots/<id>-run<k>.jsonl        raw transcript
+    skills/<name>/evals/snapshots/results.json             aggregate + meta + captured files
 
-`--now` is REQUIRED and provided by the shell (no Date.now()-style nondeterminism
-inside the script). commit SHA, SKILL.md hash, CLI version, model are stamped.
+`--now` is REQUIRED (shell-provided; no clock inside). Model, commit SHA, SKILL.md
+and evals.json hashes, CLI version are stamped so the grader can prove freshness.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import os
+import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-
-# Snapshots are committed, so transcripts must not leak the developer's absolute
-# home path (CI's no-personal-paths lint rejects '/Users/<name>' etc.). Replace
-# the home dir with a stable, portable placeholder before writing.
 _HOME = str(Path.home())
+_FIXTURE_RE = re.compile(r"skills/[\w-]+/evals/fixtures/[\w.-]+")
+_CAPTURE_MAX = 64 * 1024
+_SKIP_DIRS = {".git", "scripts", "node_modules", "__pycache__"}
 
 
 def _scrub(text: str) -> str:
-    """Strip the developer's home path from a transcript before it is committed."""
     return text.replace(_HOME, "$HOME") if _HOME and _HOME != "/" else text
 
 
-def _sh(cmd: list[str]) -> str:
-    return subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT).stdout.strip()
+def _condense(transcript: str) -> str:
+    """Keep what the grader reads: assistant turns (text + tool_use), user turns
+    (tool results — renderer output lives there) and the final result. Drops the
+    system init and stream bookkeeping."""
+    keep = []
+    for line in transcript.splitlines():
+        try:
+            ev = json.loads(line)
+        except Exception:
+            continue
+        if ev.get("type") in ("assistant", "user", "result"):
+            keep.append(line)
+    return "\n".join(keep) + "\n"
+
+
+def _sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else ""
+
+
+def inputs_sha256(spec: dict) -> str:
+    """Hash of what the model SAW (id, prompt, files) — assertions are grading-side and
+    may be tightened without re-running; a changed prompt or fixture must re-seed."""
+    canon = [{"id": e.get("id"), "prompt": e.get("prompt"), "files": e.get("files")} for e in spec.get("evals", []) if isinstance(e.get("prompt"), str)]
+    return hashlib.sha256(json.dumps(canon, sort_keys=True).encode()).hexdigest()
+
+
+def _sh(cmd: list[str], cwd: Path = ROOT) -> str:
+    return subprocess.run(cmd, capture_output=True, text=True, cwd=cwd).stdout.strip()
 
 
 def claude_version() -> str:
     try:
         return _sh(["claude", "--version"]) or "unknown"
     except FileNotFoundError:
-        print("ERROR: `claude` CLI not found on PATH — required for eval-run.", file=sys.stderr)
+        print("ERROR: `claude` CLI not found on PATH", file=sys.stderr)
         sys.exit(3)
 
 
-def run_eval(prompt: str, max_turns: int = 12) -> str:
-    """Run one prompt; return the raw stream-json transcript text."""
-    proc = subprocess.run(
-        ["claude", "-p", prompt, "--output-format", "stream-json",
-         "--dangerously-skip-permissions", "--max-turns", str(max_turns), "--verbose"],
-        capture_output=True, text=True, cwd=ROOT,
-    )
-    # `claude -p` can exit non-zero purely because an UNRELATED lifecycle hook
-    # failed (e.g. a global SessionEnd hook erroring with "Hook cancelled"),
-    # even though the run itself produced a complete transcript. A stream-json
-    # `{"type":"result"}` object marks a finished run — if it's present the
-    # transcript is usable, so warn and keep it rather than aborting the whole
-    # seed. Only hard-fail when no result was produced.
-    produced_result = '"type":"result"' in proc.stdout
-    if proc.returncode != 0:
-        # Keep the transcript only if it finished AND is not a login-wall result
-        # (which also carries a `result` object). The auth wall must still hard-
-        # fail on every run, not just the first.
-        if produced_result and not looks_unauthenticated(proc.stdout):
-            print(
-                f"WARN: `claude -p` exited {proc.returncode} but produced a result "
-                f"transcript (likely an unrelated lifecycle-hook failure); using it. "
-                f"stderr head: {proc.stderr.strip()[:160]}",
-                file=sys.stderr,
-            )
-            return proc.stdout
-        print(
-            f"ERROR: `claude -p` exited {proc.returncode} with no result transcript. "
-            f"stderr:\n{proc.stderr.strip()}",
-            file=sys.stderr,
-        )
-        sys.exit(5)
-    return proc.stdout
+def materialize(ev: dict, skill: str, ws: Path) -> None:
+    """Stage one eval's inputs into an empty workspace."""
+    files = ev.get("files") or []
+    items = files.items() if isinstance(files, dict) else [(f["path"], f.get("content", "")) for f in files]
+    branch = None
+    for rel, content in items:
+        if isinstance(content, dict):
+            content = content.get("content", "")
+        target = ws / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+        if rel == ".git-HEAD":
+            branch = content.strip() or None
+    for rel in sorted(set(_FIXTURE_RE.findall(ev.get("prompt", "")))):
+        src = ROOT / rel
+        if src.is_dir():
+            shutil.copytree(src, ws / rel, dirs_exist_ok=True)
+    # Prompts and SKILL.md call `python3 scripts/handoff-*.py`; point at this checkout.
+    if not (ws / "scripts").exists():
+        os.symlink(ROOT / "scripts", ws / "scripts")
+    if branch or (ws / ".claude").exists() or (ws / ".catalyst").exists():
+        subprocess.run(["git", "init", "-q"], cwd=ws, check=True)
+        env = {**os.environ, "GIT_AUTHOR_NAME": "eval", "GIT_AUTHOR_EMAIL": "eval@catalyst", "GIT_COMMITTER_NAME": "eval", "GIT_COMMITTER_EMAIL": "eval@catalyst"}
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", "fixture"], cwd=ws, env=env, check=True)
+        if branch:
+            subprocess.run(["git", "checkout", "-q", "-B", branch], cwd=ws, check=True)
+
+
+def capture(ws: Path) -> dict[str, str]:
+    """Every regular file the run left behind (text, capped), keyed by relative path."""
+    out: dict[str, str] = {}
+    for p in sorted(ws.rglob("*")):
+        if not p.is_file() or p.is_symlink():
+            continue
+        rel = p.relative_to(ws)
+        if any(part in _SKIP_DIRS for part in rel.parts):
+            continue
+        try:
+            text = p.read_bytes()[:_CAPTURE_MAX].decode("utf-8", errors="replace")
+        except OSError:
+            continue
+        out[str(rel)] = _scrub(text)
+    return out
 
 
 def looks_unauthenticated(transcript: str) -> bool:
-    """Detect the headless auth wall: `claude -p` returns a 'Please run /login'
-    notice with zero token usage instead of doing the work. Seeding against this
-    silently produces garbage snapshots (observed 2026-05-29)."""
-    login_wall = "Please run /login" in transcript
-    zero_usage = '"total_cost_usd":0' in transcript and '"output_tokens":0' in transcript
-    return login_wall and zero_usage
+    return "Please run /login" in transcript and '"total_cost_usd":0' in transcript and '"output_tokens":0' in transcript
+
+
+def run_eval(prompt: str, ws: Path, model: str, max_turns: int) -> str:
+    proc = subprocess.run(
+        ["claude", "-p", prompt, "--model", model, "--output-format", "stream-json",
+         "--dangerously-skip-permissions", "--max-turns", str(max_turns), "--verbose",
+         "--plugin-dir", str(ROOT)],
+        capture_output=True, text=True, cwd=ws,
+    )
+    produced = '"type":"result"' in proc.stdout
+    if proc.returncode != 0 and not (produced and not looks_unauthenticated(proc.stdout)):
+        print(f"ERROR: `claude -p` exited {proc.returncode} with no result transcript. stderr:\n{proc.stderr.strip()[:400]}", file=sys.stderr)
+        sys.exit(5)
+    return proc.stdout
 
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skill", required=True)
+    ap.add_argument("--model", required=True)
+    ap.add_argument("--now", required=True)
     ap.add_argument("--runs", type=int, default=3)
-    ap.add_argument("--now", required=True, help="ISO-8601 timestamp from the shell")
+    ap.add_argument("--only", default="", help="comma-separated eval ids")
+    ap.add_argument("--max-turns", type=int, default=30, help="WRITE/RECOVER flows take ~14 tool calls; 12 truncated 8/54 seed runs on 2026-09-06")
+    ap.add_argument("--out", default="", help="snapshot dir override (default skills/<skill>/evals/snapshots)")
     args = ap.parse_args(argv[1:])
 
     skill_dir = ROOT / "skills" / args.skill
@@ -103,59 +166,52 @@ def main(argv: list[str]) -> int:
         print(f"ERROR: {evals_json} not found", file=sys.stderr)
         return 2
     spec = json.loads(evals_json.read_text())
-    snap_dir = skill_dir / "evals" / "snapshots"
+    snap_dir = Path(args.out) if args.out else skill_dir / "evals" / "snapshots"
     snap_dir.mkdir(parents=True, exist_ok=True)
-
-    version = claude_version()
-    commit = _sh(["git", "rev-parse", "HEAD"]) or "unknown"
-    md = skill_dir / "SKILL.md"
-    md_hash = hashlib.sha256(md.read_bytes()).hexdigest() if md.exists() else ""
+    only = {s.strip() for s in args.only.split(",") if s.strip()}
 
     aggregate = {
         "meta": {
             "generated_at": args.now,
-            "commit_sha": commit,
-            "skill_md_sha256": md_hash,
-            "claude_cli_version": version,
-            "model": "default",
-            "n_evals": len(spec.get("evals", [])),
+            "commit_sha": _sh(["git", "rev-parse", "HEAD"]) or "unknown",
+            "skill_md_sha256": _sha(skill_dir / "SKILL.md"),
+            "evals_inputs_sha256": inputs_sha256(spec),
+            "claude_cli_version": claude_version(),
+            "model": args.model,
+            "runs_per_eval": args.runs,
+            "max_turns": args.max_turns,
+            "n_evals": 0,
         },
         "evals": {},
     }
-    first_run = True
+    first = True
     for ev in spec.get("evals", []):
-        # Deferred evals carry a null/absent prompt — intentional placeholders
-        # that are not run yet. Skip them rather than passing None to subprocess
-        # (which crashes with "expected str ... not NoneType"). The grader skips
-        # them by the same rule, so no snapshot is expected for them.
+        eid = str(ev.get("id"))
+        if only and eid not in only:
+            continue
         if not isinstance(ev.get("prompt"), str):
-            print(f"skip {args.skill}/{ev.get('name', ev.get('id'))} (deferred — no prompt)")
+            print(f"skip {args.skill}/{ev.get('name', eid)} (deferred — no prompt)")
             continue
         runs = []
         for k in range(args.runs):
-            transcript = run_eval(ev["prompt"])
-            # Auth-wall guard: after the very first run, abort before spending
-            # the rest if the child `claude` is unauthenticated — otherwise we
-            # snapshot dozens of garbage login-wall transcripts.
-            if first_run:
-                first_run = False
-                if looks_unauthenticated(transcript):
-                    print(
-                        "ERROR: child `claude` CLI is not authenticated "
-                        "(hit the 'Please run /login' wall, zero token usage). "
-                        "Set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY in the "
-                        "environment eval-run.py runs in, then retry.",
-                        file=sys.stderr,
-                    )
-                    return 4
-            transcript = _scrub(transcript)
-            raw_path = snap_dir / f"{ev['id']}-run{k}.jsonl"
-            raw_path.write_text(transcript, encoding="utf-8")
-            runs.append({"run": k, "transcript_text": transcript})
-        aggregate["evals"][str(ev["id"])] = {"name": ev["name"], "runs": runs}
-        print(f"ran {args.skill}/{ev['name']} x{args.runs}")
-    (snap_dir / "results.json").write_text(json.dumps(aggregate, indent=2), encoding="utf-8")
-    print(f"wrote {snap_dir / 'results.json'}")
+            with tempfile.TemporaryDirectory(prefix=f"catalyst-eval-{eid}-") as d:
+                ws = Path(d)
+                materialize(ev, args.skill, ws)
+                transcript = run_eval(ev["prompt"], ws, args.model, args.max_turns)
+                if first:
+                    first = False
+                    if looks_unauthenticated(transcript):
+                        print("ERROR: child `claude` is not authenticated (login wall).", file=sys.stderr)
+                        return 4
+                transcript = _scrub(_condense(transcript))
+                files = capture(ws)
+            (snap_dir / f"{eid}-run{k}.jsonl").write_text(transcript, encoding="utf-8")
+            runs.append({"run": k, "transcript_file": f"{eid}-run{k}.jsonl", "files": files})
+            print(f"  {args.skill}/{ev['name']} run{k}: {len(files)} files captured, {len(transcript)//1024} KB transcript")
+        aggregate["evals"][eid] = {"name": ev["name"], "category": ev.get("category", "capability"), "runs": runs}
+        aggregate["meta"]["n_evals"] += 1
+    (snap_dir / "results.json").write_text(json.dumps(aggregate, indent=1), encoding="utf-8")
+    print(f"wrote {snap_dir / 'results.json'} ({aggregate['meta']['n_evals']} evals x {args.runs} runs, model={args.model})")
     return 0
 
 

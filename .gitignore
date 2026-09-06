@@ -26,3 +26,6 @@ docs/ROADMAP.md
 __pycache__/
 *.pyc
 .claude/workflows/
+
+# Isolated feature worktrees
+.worktrees/

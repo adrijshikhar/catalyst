@@ -1,0 +1,73 @@
+{
+ "meta": {
+  "generated_at": "2026-09-06T07:29:17Z",
+  "commit_sha": "ea5ec10baf07afdbfb6673c7970668d122e82c4f",
+  "skill_md_sha256": "55ebde72817fecc01050dd165cbb25a5b694e9223a45ebdd11cf45fdd96dc61c",
+  "claude_cli_version": "2.1.261 (Claude Code)",
+  "model": "sonnet",
+  "runs_per_eval": 3,
+  "n_evals": 2,
+  "evals_inputs_sha256": "80dbfc97ecdac727741cbfc588b592c2b4e232a33be066abfd219974286a6927"
+ },
+ "evals": {
+  "3": {
+   "name": "new-event-scaffold",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "3-run0.jsonl",
+     "files": {
+      "hooks/PostToolUse-my-custom-hook.sh": "#!/usr/bin/env bash\n# Hook event: PostToolUse\n# Fires after a tool call completes. Receives tool call + result info on stdin as JSON.\nset -euo pipefail\n\nif ! command -v jq >/dev/null 2>&1; then\n  echo \"my-custom-hook: jq not found, skipping\" >&2\n  exit 0\nfi\n\ninput=\"$(cat)\"\n\n# TODO: custom logic here. Example field pulls:\n# tool_name=\"$(echo \"$input\" | jq -r '.tool_name // empty')\"\n# tool_input=\"$(echo \"$input\" | jq -c '.tool_input // {}')\"\n\n# Exit codes:\n#   0 - success, continue normally\n#   1 - non-blocking error (shown to user, does not stop tool use)\n#   2 - blocking error (stderr fed back to Claude, tool use halted)\nexit 0\n",
+      "scaffold-output.sh": "#!/usr/bin/env bash\n# Hook event: PostToolUse\n# Fires after a tool call completes. Receives tool call + result info on stdin as JSON.\nset -euo pipefail\n\nif ! command -v jq >/dev/null 2>&1; then\n  echo \"my-custom-hook: jq not found, skipping\" >&2\n  exit 0\nfi\n\ninput=\"$(cat)\"\n\n# TODO: custom logic here. Example field pulls:\n# tool_name=\"$(echo \"$input\" | jq -r '.tool_name // empty')\"\n# tool_input=\"$(echo \"$input\" | jq -c '.tool_input // {}')\"\n\n# Exit codes:\n#   0 - success, continue normally\n#   1 - non-blocking error (shown to user, does not stop tool use)\n#   2 - blocking error (stderr fed back to Claude, tool use halted)\nexit 0\n"
+     }
+    },
+    {
+     "run": 1,
+     "transcript_file": "3-run1.jsonl",
+     "files": {
+      "hooks/PostToolUse-my-custom-hook.sh": "#!/usr/bin/env bash\n#\n# Hook: PostToolUse\n# Name: my-custom-hook\n#\n# Runs after a tool call completes. Reads the hook event JSON from stdin\n# and reports approve/block/non-blocking-error via exit code.\n#\n# Exit codes:\n#   0 - success / approve (stdout may carry JSON for hook-specific fields)\n#   1 - non-blocking error (stderr shown to user, tool result still applies)\n#   2 - blocking error (stderr shown to Claude, treated as failure)\n\nset -euo pipefail\n\nif ! command -v jq >/dev/null 2>&1; then\n  echo \"my-custom-hook: jq is required but not installed\" >&2\n  exit 1\nfi\n\ninput=\"$(cat)\"\n\ntool_name=\"$(echo \"$input\" | jq -r '.tool_name // empty')\"\ntool_input=\"$(echo \"$input\" | jq -c '.tool_input // {}')\"\ntool_response=\"$(echo \"$input\" | jq -c '.tool_response // {}')\"\n\n# TODO: custom logic goes here\n\nexit 0\n",
+      "scaffold-output.sh": "#!/usr/bin/env bash\n#\n# Hook: PostToolUse\n# Name: my-custom-hook\n#\n# Runs after a tool call completes. Reads the hook event JSON from stdin\n# and reports approve/block/non-blocking-error via exit code.\n#\n# Exit codes:\n#   0 - success / approve (stdout may carry JSON for hook-specific fields)\n#   1 - non-blocking error (stderr shown to user, tool result still applies)\n#   2 - blocking error (stderr shown to Claude, treated as failure)\n\nset -euo pipefail\n\nif ! command -v jq >/dev/null 2>&1; then\n  echo \"my-custom-hook: jq is required but not installed\" >&2\n  exit 1\nfi\n\ninput=\"$(cat)\"\n\ntool_name=\"$(echo \"$input\" | jq -r '.tool_name // empty')\"\ntool_input=\"$(echo \"$input\" | jq -c '.tool_input // {}')\"\ntool_response=\"$(echo \"$input\" | jq -c '.tool_response // {}')\"\n\n# TODO: custom logic goes here\n\nexit 0\n"
+     }
+    },
+    {
+     "run": 2,
+     "transcript_file": "3-run2.jsonl",
+     "files": {
+      "hooks/PostToolUse-my-custom-hook.sh": "#!/usr/bin/env bash\n# Claude Code hook: PostToolUse\n# Runs after a tool call completes. Receives hook event JSON on stdin.\nset -euo pipefail\n\nif ! command -v jq >/dev/null 2>&1; then\n  echo \"my-custom-hook: jq is required but not installed\" >&2\n  exit 1\nfi\n\ninput=\"$(cat)\"\n\ntool_name=\"$(jq -r '.tool_name // empty' <<<\"$input\")\"\ntool_input=\"$(jq -c '.tool_input // {}' <<<\"$input\")\"\ntool_response=\"$(jq -c '.tool_response // {}' <<<\"$input\")\"\n\n# TODO: custom logic here \u2014 inspect $tool_name / $tool_input / $tool_response\n# and act on the completed tool call.\n\n# Exit codes:\n#   0 - success; stdout shown to user in transcript mode, does not block\n#   2 - blocking error; stderr is fed back to Claude as feedback\n#   *  - other non-zero; non-blocking error, stderr shown to user only\nexit 0\n",
+      "scaffold-output.sh": "#!/usr/bin/env bash\n# Claude Code hook: PostToolUse\n# Runs after a tool call completes. Receives hook event JSON on stdin.\nset -euo pipefail\n\nif ! command -v jq >/dev/null 2>&1; then\n  echo \"my-custom-hook: jq is required but not installed\" >&2\n  exit 1\nfi\n\ninput=\"$(cat)\"\n\ntool_name=\"$(jq -r '.tool_name // empty' <<<\"$input\")\"\ntool_input=\"$(jq -c '.tool_input // {}' <<<\"$input\")\"\ntool_response=\"$(jq -c '.tool_response // {}' <<<\"$input\")\"\n\n# TODO: custom logic here \u2014 inspect $tool_name / $tool_input / $tool_response\n# and act on the completed tool call.\n\n# Exit codes:\n#   0 - success; stdout shown to user in transcript mode, does not block\n#   2 - blocking error; stderr is fed back to Claude as feedback\n#   *  - other non-zero; non-blocking error, stderr shown to user only\nexit 0\n"
+     }
+    }
+   ]
+  },
+  "4": {
+   "name": "lint-catches-bad-matcher",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "4-run0.jsonl",
+     "files": {
+      "bad-hook.json": "{\"matcher\": \".*\", \"command\": \"bash /tmp/x.sh\"}\n"
+     }
+    },
+    {
+     "run": 1,
+     "transcript_file": "4-run1.jsonl",
+     "files": {
+      "bad-hook.json": "{\"matcher\": \".*\", \"command\": \"bash /tmp/x.sh\"}\n",
+      "lint-output.txt": "Hook Lint Report\nFile: bad-hook.json\n\n[FAIL] Overly broad matcher\n  matcher: \".*\"\n  This regex matches every tool name, so the hook fires on ALL tool\n  calls (Read, Write, Edit, Bash, WebFetch, etc.) instead of a specific\n  tool or narrow set. Broad matchers cause unnecessary hook invocations,\n  hidden side effects on unrelated tools, and make intent hard to audit.\n  Fix: scope the matcher to the intended tool(s), e.g. \"Bash\" or\n  \"Write|Edit\".\n\n[WARN] Command references a world-writable temp path\n  command: \"bash /tmp/x.sh\"\n  /tmp/x.sh is not version-controlled and can be modified by any local\n  process/user before the hook runs. Prefer a script path inside the\n  project or plugin directory.\n\nResult: 1 FAIL, 1 WARN\n"
+     }
+    },
+    {
+     "run": 2,
+     "transcript_file": "4-run2.jsonl",
+     "files": {
+      "bad-hook.json": "{\"matcher\": \".*\", \"command\": \"bash /tmp/x.sh\"}\n",
+      "lint-output.txt": "Hook Lint Report: bad-hook.json\n\n[FAIL] Overly broad matcher\n  matcher: \".*\"\n  command: \"bash /tmp/x.sh\"\n  Issue: \".*\" matches every tool call (Read, Write, Edit, Bash, WebFetch, etc.),\n  not a specific tool. This runs the hook command on ALL tool use, which is\n  almost certainly unintended and a security/performance risk (arbitrary\n  command fires unconditionally on every action).\n  Fix: scope matcher to the intended tool name(s), e.g. \"Bash\" or\n  \"Write|Edit\", instead of the catch-all \".*\".\n\nResult: 1 issue found (1 fail, 0 warnings).\n"
+     }
+    }
+   ]
+  }
+ }
+}

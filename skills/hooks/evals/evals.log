@@ -1,0 +1,1 @@
+2026-09-06T07:29:17Z  seed  lane-B  model=sonnet runs=3  evals=2(cap)  capability pass@3=1.00  eval 4 lint-catches-bad-matcher pass@1=0 (run0 never saved lint-output.txt)  evals 0-2 dropped (/hooks install retired v0.9.0)
