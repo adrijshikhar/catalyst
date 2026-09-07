@@ -28,6 +28,7 @@ event_for_hook() {
     SessionStart-*)     echo SessionStart ;;
     PreToolUse-*)       echo PreToolUse ;;
     PreCompact-*)       echo PreCompact ;;
+    PreInvocation-*)    echo PreInvocation ;;
     Stop-*|SubagentStop-*) echo Stop ;;
     *)                  echo unknown ;;
   esac
@@ -211,5 +212,30 @@ else
   echo "FAIL hooks: canonical precedence: $out"; fail=1
 fi
 rm -rf "${XA:?}"
+
+# --- Antigravity adapter: PreInvocation-handoff-read.sh ---
+# invocationNum 0 with a branch brief → injectSteps carrying the announce;
+# any later invocation → {} (never re-inject); no brief → {}.
+AGY_DIR="$(mktemp -d)"
+git -C "$AGY_DIR" init -q && git -C "$AGY_DIR" checkout -q -b main 2>/dev/null || true
+mkdir -p "$AGY_DIR/.catalyst/handoffs"
+printf '%s' '{"schema_version":"1","key":"main","timestamp":"2026-09-07T00:00:00Z","mode":"WRITE","resume":{"done_when":"d","resume_by":"r"},"state":{"branch":"main","next_acceptance_check":"c","worktree":{"root":"/w","is_linked":false,"git_common_dir":"/w/.git"}}}' > "$AGY_DIR/.catalyst/handoffs/main.json"
+agy_payload() { printf '{"invocationNum":%s,"workspacePaths":["%s"],"conversationId":"smoke"}' "$1" "$2"; }
+out=$(agy_payload 0 "$AGY_DIR" | bash "$REPO_ROOT/hooks/PreInvocation-handoff-read.sh" 2>/dev/null) || { echo "FAIL PreInvocation: non-zero exit"; fail=1; }
+if printf '%s' "$out" | jq -e '.injectSteps[0].ephemeralMessage | test("handoff brief")' >/dev/null 2>&1; then
+  echo "PASS PreInvocation first invocation injects the brief announce"
+else
+  echo "FAIL PreInvocation first invocation: expected injectSteps with the announce, got: $out"; fail=1
+fi
+out=$(agy_payload 3 "$AGY_DIR" | bash "$REPO_ROOT/hooks/PreInvocation-handoff-read.sh" 2>/dev/null) || { echo "FAIL PreInvocation(n=3): non-zero exit"; fail=1; }
+if [ "$(printf '%s' "$out" | jq -c . 2>/dev/null)" = "{}" ]; then echo "PASS PreInvocation later invocation emits {}"
+else echo "FAIL PreInvocation later invocation: expected {}, got: $out"; fail=1; fi
+NOBRIEF="$(mktemp -d)"; git -C "$NOBRIEF" init -q
+out=$(agy_payload 0 "$NOBRIEF" | bash "$REPO_ROOT/hooks/PreInvocation-handoff-read.sh" 2>/dev/null) || { echo "FAIL PreInvocation(no brief): non-zero exit"; fail=1; }
+if [ "$(printf '%s' "$out" | jq -c . 2>/dev/null)" = "{}" ]; then echo "PASS PreInvocation without a brief emits {}"
+else echo "FAIL PreInvocation without a brief: expected {}, got: $out"; fail=1; fi
+out=$(agy_payload 0 "$AGY_DIR" | CATALYST_HOOKS_SESSIONSTART_RESUME=false bash "$REPO_ROOT/hooks/PreInvocation-handoff-read.sh" 2>/dev/null) || true
+if [ "$(printf '%s' "$out" | jq -c . 2>/dev/null)" = "{}" ]; then echo "PASS PreInvocation honours hooks.sessionstart_resume=false"
+else echo "FAIL PreInvocation knob: expected {}, got: $out"; fail=1; fi
 
 [ "$fail" -eq 0 ] && echo "Failed: 0" || { echo "Failed: 1"; exit 1; }

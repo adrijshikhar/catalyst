@@ -375,7 +375,7 @@ def check_commands(errors: list[str]) -> None:
             fail(f"{rel}: frontmatter missing `description`", errors)
 
 
-HOOK_PREFIXES = (
+HOOK_PREFIXES = ("PreInvocation-", 
     "PreToolUse-",
     "PostToolUse-",
     "PreCompact-",
@@ -530,6 +530,41 @@ def check_manifest_versions_equal(errors: list[str], root: Path | None = None) -
             )
 
 
+_ANTIGRAVITY_HOOK_EVENTS = {"PreToolUse", "PostToolUse", "PreInvocation", "PostInvocation", "Stop"}
+_ANTIGRAVITY_FLAT_EVENTS = {"PreInvocation", "PostInvocation", "Stop"}
+
+
+def _check_antigravity_hooks(data: dict, base: Path, rel_path: str, errors: list[str]) -> None:
+    """hooks.json is dual-shape: Claude Code and Codex read the `hooks` key; Antigravity
+    reads every OTHER top-level key as a named hook in its own schema (per-hook parse
+    failures are isolated, verified on agy 1.1.27). The `catalyst` key must therefore be
+    Antigravity-valid: known events, flat handlers for the non-tool events, commands
+    that are plugin-root-relative (Antigravity runs them with cwd = the hooks.json
+    directory) and point at an existing executable script."""
+    for name, spec in data.items():
+        if name == "hooks" or not isinstance(spec, dict):
+            continue
+        for event, handlers in spec.items():
+            if event == "enabled":
+                continue
+            if event not in _ANTIGRAVITY_HOOK_EVENTS:
+                fail(f"{rel_path}: {name}.{event} is not an Antigravity hook event", errors)
+                continue
+            if not isinstance(handlers, list):
+                fail(f"{rel_path}: {name}.{event} must be an array", errors)
+                continue
+            for h in handlers:
+                if event in _ANTIGRAVITY_FLAT_EVENTS and "hooks" in h:
+                    fail(f"{rel_path}: {name}.{event} is a flat event — no matcher/hooks wrapper", errors)
+                cmd = h.get("command", "")
+                if not cmd.startswith("./hooks/"):
+                    fail(f"{rel_path}: {name}.{event} command must be `./hooks/<script>` (cwd is the plugin root) — got {cmd!r}", errors)
+                    continue
+                script = base / cmd.split()[0]
+                if not script.exists() or not os.access(script, os.X_OK):
+                    fail(f"{rel_path}: {name}.{event} command {cmd!r} is not an existing executable", errors)
+
+
 def check_hooks_json(
     errors: list[str],
     root: Path | None = None,
@@ -552,6 +587,7 @@ def check_hooks_json(
     except (json.JSONDecodeError, OSError) as exc:
         fail(f"{rel_path}: invalid JSON — {exc}", errors)
         return
+    _check_antigravity_hooks(data, base, rel_path, errors)
     for event, groups in (data.get("hooks") or {}).items():
         if event not in _KNOWN_HOOK_EVENTS:
             fail(f"{rel_path}: unknown hook event `{event}`", errors)
