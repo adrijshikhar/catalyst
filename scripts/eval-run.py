@@ -136,6 +136,22 @@ def looks_unauthenticated(transcript: str) -> bool:
     return "Please run /login" in transcript and '"total_cost_usd":0' in transcript and '"output_tokens":0' in transcript
 
 
+_INFRA_MARKERS = ("hit your session limit", "hit your usage limit", "usage limit reached", "rate limit")
+
+
+def infra_failure(transcript: str) -> str | None:
+    """A run that never reached the model is an infrastructure failure, not a skill
+    result: seeding must stop so an empty transcript is never graded as a miss."""
+    if looks_unauthenticated(transcript):
+        return "child `claude` is not authenticated (login wall)"
+    if '"num_turns":1' in transcript:
+        low = transcript.lower()
+        for m in _INFRA_MARKERS:
+            if m in low:
+                return f"child `claude` reported '{m}' before doing any work"
+    return None
+
+
 def run_eval(prompt: str, ws: Path, model: str, max_turns: int) -> str:
     proc = subprocess.run(
         ["claude", "-p", prompt, "--model", model, "--output-format", "stream-json",
@@ -185,7 +201,6 @@ def main(argv: list[str]) -> int:
         },
         "evals": {},
     }
-    first = True
     for ev in spec.get("evals", []):
         eid = str(ev.get("id"))
         if only and eid not in only:
@@ -199,11 +214,12 @@ def main(argv: list[str]) -> int:
                 ws = Path(d)
                 materialize(ev, args.skill, ws)
                 transcript = run_eval(ev["prompt"], ws, args.model, args.max_turns)
-                if first:
-                    first = False
-                    if looks_unauthenticated(transcript):
-                        print("ERROR: child `claude` is not authenticated (login wall).", file=sys.stderr)
-                        return 4
+                why = infra_failure(transcript)
+                if why:
+                    print(f"ERROR: {why}. Stopping at {args.skill}/{ev['name']} run{k}; "
+                          f"{aggregate['meta']['n_evals']} completed evals were NOT written to results.json — "
+                          f"re-run with --only for the rest and merge.", file=sys.stderr)
+                    return 4
                 transcript = _scrub(_condense(transcript))
                 files = capture(ws)
             (snap_dir / f"{eid}-run{k}.jsonl").write_text(transcript, encoding="utf-8")
