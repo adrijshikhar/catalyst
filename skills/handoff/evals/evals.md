@@ -106,6 +106,12 @@ catalyst/                       (workspace, gitignored)
 
 ## Run mechanics (Lane B, 2026-09-06)
 
+**Hosts (2026-09-07).** `--host claude` is the default and the only enforced lane.
+`--host antigravity` runs the same prompts through `agy -p` with the checkout's skills
+staged under `<workspace>/.agents/skills/`, normalises the event stream to the shape
+below, and writes `snapshots-antigravity/`; grade with `eval-grade.py --host antigravity`.
+Report-only. Antigravity has no `--max-turns`; a 10-minute print timeout bounds a run.
+
 `scripts/eval-run.py --skill <name> --model <m> --runs 3 --now <iso>` runs every prompted eval
 through `claude -p` in a **fresh temp workspace per run**: the eval's `files[]` are
 materialized, a `.git-HEAD` fixture becomes a real branch, fixture trees the prompt names
