@@ -39,7 +39,7 @@
         "The written .catalyst/handoffs/HANDOFF.json is valid JSON with schema_version '1' and key 'HANDOFF'",
         "`python3 scripts/handoff-validate.py .catalyst/handoffs/HANDOFF.json` exits 0 (WRITE-gate passes)",
         ".catalyst/handoffs/HANDOFF.json mentions 'console.log'",
-        "Chat response names tier 3 (legacy / no-git) as the resolution chosen",
+        "Chat response names the tier chosen: 'tier: 3' or 'tier 3' or 'Tier used: 3' (legacy / no-git)",
         "PROJECT_STATE.md was created at .claude/PROJECT_STATE.md (repo-level, not feature-scoped)"
       ]
     },
@@ -247,10 +247,15 @@
       "name": "brief-native-dispatch",
       "category": "capability",
       "prompt": "We agreed on this side quest: inspect README.md and report the Python runtime requirement. Do not edit files. Handoff this to a subagent and report its answer. Use the native agent tool; scope and acceptance: the answer cites README.md and states the runtime requirement.",
-      "files": [],
+      "files": [
+        {
+          "path": "README.md",
+          "content": "# report-tool\n\nCommand-line report generator used for handoff evals.\n\n## Runtime requirement\n\nRequires **Python 3.11 or newer**. No other runtime is supported.\n\n## Run\n\n    python3 -m report_tool --help\n"
+        }
+      ],
       "assertions": [
         "Agent tool dispatch occurs once (scoped brief with return instructions)",
-        "Returned answer cites \"README.md\" and \"Python 3\"."
+        "Chat response contains 'README.md' and 'Python 3' (returned answer cites the source and the requirement)"
       ]
     },
     {
@@ -258,7 +263,12 @@
       "name": "brief-external-file-default",
       "category": "capability",
       "prompt": "We agreed on an external side quest: inspect README.md and explain the handoff lifecycle without edits. Handoff this to Codex. Use the current workspace (I have selected it). Name the task lifecycle-explanation. Generate the handoff only; do not execute the task or launch Codex.",
-      "files": [],
+      "files": [
+        {
+          "path": "README.md",
+          "content": "# demo-service\n\nSmall HTTP service used for handoff evals.\n\n## Handoff lifecycle\n\n1. WRITE a checkpoint before the session ends.\n2. READ it in the next session.\n3. BRIEF a task to another agent when work can run in parallel.\n\n## Runtime requirement\n\nRequires **Node.js 20 or newer**.\n"
+        }
+      ],
       "assertions": [
         ".catalyst/tasks/ contains 'Task', 'Workspace', 'Acceptance', 'Return', 'Completion'",
         ".catalyst/tasks/ mentions 'lifecycle'",
@@ -271,7 +281,7 @@
       "id": 24,
       "name": "brief-external-inline-opt-in",
       "category": "capability",
-      "prompt": "Handoff this to Codex, explicitly inline: read README.md and report the runtime requirement. This is read-only, use the current workspace. Include the task and return contract in your message; no file needed.",
+      "prompt": "Prepare an inline handoff brief for Codex — do not launch Codex, I will paste it myself. Task: read README.md and report the runtime requirement. Read-only, use the current workspace. Put the full task and return contract in your message; no file needed.",
       "files": [
         {
           "path": "README.md",
