@@ -1,6 +1,6 @@
 ---
 name: hooks
-description: Use for Catalyst's two plugin-native lifecycle hooks (PreCompact → handoff WRITE, SessionStart → auto-render brief on clear/compact (one-line announce on startup/resume)) — checking hook status, disabling or re-enabling a Catalyst hook, scaffolding new hooks, or linting hook scripts. Trigger phrases: "hook status", "disable a Catalyst hook", "wire up handoff", "ambient mode", "/hooks", "hook scaffold", "hook lint", "author a hook".
+description: "Use for Catalyst's two plugin-native lifecycle hooks (PreCompact → handoff WRITE, SessionStart → auto-render brief on clear/compact (one-line announce on startup/resume)) — checking hook status, disabling or re-enabling a Catalyst hook, scaffolding new hooks, or linting hook scripts. Trigger phrases: 'hook status', 'disable a Catalyst hook', 'wire up handoff', 'ambient mode', '/hooks', 'hook scaffold', 'hook lint', 'author a hook'."
 ---
 
 # hooks

@@ -107,11 +107,21 @@ def check_description_scalar(path: Path, errors: list[str]) -> None:
         stripped = line.strip()
         if stripped.startswith("description:"):
             value = stripped.partition(":")[2].strip()
+            rel = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
             if _BLOCK_SCALAR_RE.match(value):
-                rel = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
                 fail(
                     f"{rel}: description uses block scalar '{value}' — "
                     "use an inline or folded '>' string (breaks catalog tables)",
+                    errors,
+                )
+            elif value[:1] not in ("'", '"') and (": " in value or " #" in value):
+                # Antigravity CLI reads frontmatter with strict YAML: an unquoted
+                # scalar containing ': ' or ' #' fails to parse and the skill vanishes
+                # from that host (skills.go "failed to parse frontmatter"). Claude Code
+                # is lenient, so this is the only place the mistake is caught.
+                fail(
+                    f"{rel}: description is a plain scalar containing ': ' or ' #' — "
+                    "not strict YAML (Antigravity drops the skill); wrap it in double quotes",
                     errors,
                 )
             return
