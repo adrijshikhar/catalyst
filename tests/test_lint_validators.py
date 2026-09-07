@@ -34,6 +34,14 @@ class TestBlockScalarGuard(unittest.TestCase):
         lint.check_description_scalar(FIXTURES / "bad_blockscalar.md", errors)
         self.assertTrue(any("block scalar" in e.lower() for e in errors))
 
+    def test_flags_plain_scalar_with_colon_space(self):
+        # Antigravity parses frontmatter with strict YAML; an unquoted description
+        # containing ': ' fails there ("failed to parse frontmatter") and the skill
+        # silently disappears. Claude Code tolerates it, so lint must not.
+        errors: list[str] = []
+        lint.check_description_scalar(FIXTURES / "bad_plainscalar_colon.md", errors)
+        self.assertTrue(any("strict yaml" in e.lower() for e in errors))
+
 
 class TestNoPersonalPaths(unittest.TestCase):
     def test_flags_users_path(self):
