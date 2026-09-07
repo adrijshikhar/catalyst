@@ -1,0 +1,296 @@
+{
+ "meta": {
+  "generated_at": "2026-09-07T05:37:31Z",
+  "commit_sha": "280edd2542094c789d19329bece3415bcf65233a",
+  "skill_md_sha256": "7512eba21c9ecb0002b13ca40c21bbceb5a20e8378994e20bdef6b17d9645b61",
+  "evals_inputs_sha256": "9e0a4062aa0c6bd0592e55d8153dfed3fb7bf7372ae851c9a92395fb065770fe",
+  "host": "antigravity",
+  "claude_cli_version": null,
+  "host_cli_version": "1.1.27",
+  "model": "gemini-3.8-flash-high",
+  "runs_per_eval": 1,
+  "max_turns": 30,
+  "n_evals": 19
+ },
+ "evals": {
+  "0": {
+   "name": "write-tier-2-branch",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "0-run0.jsonl",
+     "files": {
+      ".catalyst/handoffs/feat-jwt-expiry.json": "{\n  \"schema_version\": \"1\",\n  \"key\": \"feat-jwt-expiry\",\n  \"timestamp\": \"2026-09-07T05:39:17Z\",\n  \"mode\": \"WRITE\",\n  \"resume\": {\n    \"done_when\": \"pnpm test src/auth/ passes 6/6\",\n    \"resume_by\": \"add a leeway parameter to JWT expiry verification in src/auth/middleware.ts and verify 6/6 tests pass\"\n  },\n  \"state\": {\n    \"branch\": \"feat/jwt-expiry\",\n    \"next_acceptance_check\": \"pnpm test src/auth/ passes 6/6 after adding a leeway parameter\",\n    \"worktree\": {\n      \"root\": \"/private/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-0-eovmawr0\",\n      \"is_linked\": false,\n      \"git_common_dir\": \"/private/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-0-eovmawr0/.git\"\n    },\n    \"head_sha\": \"485447b851eaacaa4b6dbb9b32422e7ee75ed5be\",\n    \"tests\": [\n      {\n        \"cmd\": \"pnpm test src/auth/\",\n        \"result\": \"fail\"\n      }\n    ],\n    \"decisions\": [\n      \"JWT lib is jose (not jsonwebtoken)\",\n      \"Use Date.now() (UTC ms) \\u2014 not new Date() (alloc in hot path)\",\n      \"Operator is <= not < (fixes off-by-one boundary condition)\"\n    ],\n    \"rejected_paths\": [\n      \"< operator (off-by-one boundary rejection)\",\n      \"new Date() (alloc in hot path)\",\n      \"jsonwebtoken library\"\n    ],\n    \"open_risks\": [\n      \"Clock skew \\u2014 2 of 6 tests fail at auth.spec.ts:42-78 until leeway parameter is added\"\n    ]\n  },\n  \"files_read_first\": [\n    {\n      \"path\": \"src/auth/middleware.ts\",\n      \"why\": \"file under repair \\u2014 JWT expiry check, needs leeway parameter\"\n    },\n    {\n      \"path\": \"src/auth/auth.spec.ts\",\n      \"why\": \"failing clock-skew tests at lines 42-78\"\n    }\n  ],\n  \"files_skip\": [\n    {\n      \"path\": \".claude/PROJECT_STATE.md\",\n      \"why\": \"historical context only; decisions above are binding\"\n    }\n  ]\n}",
+      ".claude/PROJECT_STATE.md": "# Project state \u2014 narrative log\n\nAccretes over the life of the project. Each handoff prepends a new dated section above earlier entries.\nRead sections selectively. The brief at `<store>/<key>.json` is the entry point; this file is the reference.\n\n## 2026-09-07 \u2014 [feat-jwt-expiry] JWT expiry off-by-one fix, clock skew open\n\n### What was done\n- Investigated JWT expiry off-by-one bug on branch `feat/jwt-expiry`.\n- Switched comparison operator from `<` to `<=` against expiry timestamp in `src/auth/middleware.ts`.\n- Ran test suite with `pnpm test src/auth/`: 4 of 6 tests pass.\n- Identified 2 remaining test failures at `src/auth/auth.spec.ts:42-78` caused by clock skew between token issuer and validator.\n\n### Decisions (with rationale)\n- **Use `jose` library (not `jsonwebtoken`)** \u2014 active project decision in force for JWT verification.\n- **Timestamp via `Date.now()` (UTC ms, not `new Date()`)** \u2014 avoids object allocation overhead in the hot request-validation path.\n- **Comparison operator is `<=` (not `<`)** \u2014 tokens expiring exactly on the boundary second were being rejected prematurely. Rejected: `<` operator (off-by-one boundary bug).\n\n### Surprises / lessons\n- Resolving the boundary condition with `<=` fixed the off-by-one bug but exposed 2 clock-skew tests failing in `auth.spec.ts:42-78`; full pass requires adding a leeway parameter.\n\n### Pointers\n- `src/auth/middleware.ts` \u2014 JWT verification logic where the leeway parameter must be added.\n- `src/auth/auth.spec.ts:42-78` \u2014 the 2 failing clock-skew test cases.\n",
+      ".git-HEAD": "feat/jwt-expiry\n",
+      ".gitignore": ".catalyst/\n"
+     }
+    }
+   ]
+  },
+  "1": {
+   "name": "write-tier-3-legacy-fallback",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "1-run0.jsonl",
+     "files": {
+      ".catalyst/handoffs/HANDOFF.json": "{\n  \"schema_version\": \"1\",\n  \"key\": \"HANDOFF\",\n  \"timestamp\": \"2026-09-07T05:41:00Z\",\n  \"mode\": \"WRITE\",\n  \"resume\": {\n    \"done_when\": \"Logger refactor complete with no console.log calls remaining in src/\",\n    \"resume_by\": \"Search src/ for any remaining console.log statements and replace them with the refactored logger\",\n    \"prompt\": \"resume handoff 'HANDOFF': run `/catalyst:handoff resume` (READ mode), then continue. next acceptance check: no console.log in src/.\"\n  },\n  \"state\": {\n    \"branch\": \"no-git\",\n    \"next_acceptance_check\": \"no console.log in src/\",\n    \"worktree\": {\n      \"root\": \"/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-1-krjnnyp5\",\n      \"is_linked\": false,\n      \"git_common_dir\": \"no-git\"\n    },\n    \"diff_summary\": \"Cleaned up 4 files during logger refactor\",\n    \"decisions\": [\n      \"Refactor logger implementation to replace raw console calls\",\n      \"Cleaned up 4 files in current session\"\n    ],\n    \"rejected_paths\": [\n      \"Direct console.log calls in production code under src/\"\n    ],\n    \"open_risks\": [\n      \"Plain filesystem environment without git tracking \u2014 changes are uncommitted and diff cannot be generated from VCS\"\n    ]\n  },\n  \"files_read_first\": [\n    {\n      \"path\": \"src/\",\n      \"why\": \"Check for remaining console.log call sites to verify acceptance check\"\n    }\n  ]\n}\n",
+      ".claude/PROJECT_STATE.md": "# Project state \u2014 narrative log\n\nAccretes over the life of the project. Each handoff prepends a new dated section above earlier entries.\nRead sections selectively. The brief at `.catalyst/handoffs/HANDOFF.json` is the entry point; this file is the reference.\n\n## 2026-09-07 \u2014 [HANDOFF] Logger refactor and cleanup\n\n### What was done\n- Refactored logger implementation across the codebase.\n- Cleaned up 4 files to route logging through the new logger.\n- Prepared for eliminating all remaining `console.log` calls in `src/`.\n\n### Decisions (with rationale)\n- **Migrate raw console calls to structured logger** \u2014 Standardizes logging output format and severity levels across the project. Rejected: leaving ad-hoc `console.log` statements in production source.\n- **Verification via console.log sweep** \u2014 Without git version control present, running a filesystem sweep (`grep -rn 'console.log' src/`) serves as the definitive acceptance check.\n\n### Surprises / lessons\n- Plain filesystem working directory without git repository: used Tier 3 legacy single-slot fallback key (`HANDOFF.json`).\n- Changes are uncommitted on disk; the next session should inspect `src/` directly before making further edits.\n\n### Pointers\n- `src/` \u2014 Primary target directory for the next acceptance check to verify no `console.log` remains.\n"
+     }
+    }
+   ]
+  },
+  "2": {
+   "name": "read-multi-brief",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "2-run0.jsonl",
+     "files": {
+      ".claude/handoffs/feat-jwt-expiry.json": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-05-23T23:14:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"src/auth/auth.spec.ts:42-78 all 6 pass.\",\"resume_by\":\"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-jwt-expiry and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"},\"state\":{\"branch\":\"feat/jwt-expiry\",\"next_acceptance_check\":\"pnpm test src/auth/auth.spec.ts passes 6/6.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"2 files, +18/-6 in src/auth/\",\"tests\":[{\"cmd\":\"pnpm test src/auth/auth.spec.ts\",\"result\":\"fail\"}],\"decisions\":[\"lib is jose (not jsonwebtoken)\",\"comparison is <= (not <)\",\"expiry uses Date.now() UTC ms (not new Date())\"],\"rejected_paths\":[\"< comparison \\u2014 off-by-one boundary rejection\",\"new Date() \\u2014 allocation in hot path\"],\"open_risks\":[\"Clock skew not yet addressed\"]},\"files_read_first\":[{\"path\":\"src/auth/middleware.ts\",\"why\":\"primary edit target for leeway parameter\"},{\"path\":\"src/auth/auth.spec.ts\",\"why\":\"lines 42-78 are the failing clock-skew tests\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only; brief has the binding decisions\"},{\"path\":\"src/users/*\",\"why\":\"unrelated to JWT expiry fix\"}]}",
+      ".claude/handoffs/feat-rate-limit.json": "{\"schema_version\":\"1\",\"key\":\"feat-rate-limit\",\"timestamp\":\"2026-05-22T18:20:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"Existing rate-limit tests pass AND new per-route override test passes.\",\"resume_by\":\"Add a per-route override to src/middleware/rate-limit.ts.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-rate-limit and continue. next acceptance check: rate-limit middleware accepts a per-route override.\"},\"state\":{\"branch\":\"feat/rate-limit\",\"next_acceptance_check\":\"pnpm test src/middleware/rate-limit.spec.ts passes including the new test.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"1 file, +24/-2 in src/middleware/\",\"decisions\":[\"sliding window stays\",\"per-route override is opt-in via decorator\"],\"rejected_paths\":[\"token-bucket \\u2014 too heavy for our use case\"],\"open_risks\":[\"Decorator stacking semantics with auth middleware unverified\"]},\"files_read_first\":[{\"path\":\"src/middleware/rate-limit.ts\",\"why\":\"primary edit target for per-route override\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only\"},{\"path\":\"src/auth/*\",\"why\":\"unrelated to rate-limit feature\"}]}",
+      ".git-HEAD": "feat/jwt-expiry\n",
+      "resume_summary.md": "# Resume Summary: feat-jwt-expiry\n\n**Chosen Brief:** `feat-jwt-expiry` (`.claude/handoffs/feat-jwt-expiry.json`)  \n**Branch:** `feat/jwt-expiry`  \n**Timestamp:** `2026-05-23T23:14:00Z`  \n\n## Next Acceptance Check\n- `pnpm test src/auth/auth.spec.ts passes 6/6.`\n- **Done When:** `src/auth/auth.spec.ts:42-78 all 6 pass.`\n- **Goal / Resume By:** Extend the JWT expiry check in `src/auth/middleware.ts` to allow a small clock-skew leeway window.\n\n## Files to Read First\n1. `src/auth/middleware.ts` \u2014 primary edit target for leeway parameter\n2. `src/auth/auth.spec.ts` \u2014 lines 42-78 are the failing clock-skew tests\n\n## Locked Decisions\n- **Library:** `jose` (not `jsonwebtoken`)\n- **Comparison:** `<=` (not `<`)\n- **Expiry calculation:** `Date.now()` UTC ms (not `new Date()`)\n\n## Additional Context\n- **Rejected Paths:**\n  - `<` comparison \u2014 off-by-one boundary rejection\n  - `new Date()` \u2014 allocation in hot path\n- **Open Risks:** Clock skew not yet addressed\n- **Files to Skip:**\n  - `.claude/PROJECT_STATE.md` (historical context only; brief has binding decisions)\n  - `src/users/*` (unrelated to JWT expiry fix)\n"
+     }
+    }
+   ]
+  },
+  "3": {
+   "name": "read-legacy-fallback",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "3-run0.jsonl",
+     "files": {
+      ".claude/handoffs/HANDOFF.json": "{\"schema_version\":\"1\",\"key\":\"HANDOFF\",\"timestamp\":\"2026-05-20T22:00:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"No console.log calls left in src/.\",\"resume_by\":\"Clean up the leftover console.log statements in src/utils/logger.ts.\",\"prompt\":\"run python3 scripts/handoff-render.py --file .claude/handoffs/HANDOFF.json and continue. next acceptance check: grep -rn console.log src/ returns no production matches.\"},\"state\":{\"branch\":\"main\",\"next_acceptance_check\":\"grep -rn console.log src/ returns no production matches.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"4 files\"},\"files_read_first\":[{\"path\":\"src/utils/logger.ts\",\"why\":\"primary cleanup target\"}]}",
+      "resume_summary.md": "# Resume Summary\n\nThis is a legacy single-slot (HANDOFF key) brief located at `.claude/handoffs/HANDOFF.json`.\n\n## Next Acceptance Check\n`grep -rn console.log src/ returns no production matches.`\n\n## Files to Read First\n- `src/utils/logger.ts` \u2014 primary cleanup target\n"
+     }
+    }
+   ]
+  },
+  "4": {
+   "name": "recover-degraded",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "4-run0.jsonl",
+     "files": {
+      ".catalyst/handoffs/feat-jwt-expiry.json": "{\n  \"schema_version\": \"1\",\n  \"key\": \"feat-jwt-expiry\",\n  \"timestamp\": \"2026-09-07T05:46:17Z\",\n  \"mode\": \"RECOVER\",\n  \"resume\": {\n    \"done_when\": \"JWT expiry check uses jose with a <= boundary comparison, and that behavior is confirmed by a passing test for the exact-boundary case\",\n    \"resume_by\": \"Per git log (a4c7b2f, 9e1d0aa) and PROJECT_STATE.md, the jose migration and <= boundary fix are already committed on this branch. Run the auth/JWT test suite to confirm the exact-boundary case passes.\"\n  },\n  \"state\": {\n    \"branch\": \"feat/jwt-expiry\",\n    \"next_acceptance_check\": \"JWT auth test suite passes, including an exact-boundary (token expiry == now) case\",\n    \"worktree\": {\n      \"root\": \"/private/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-4-uyszo9q0\",\n      \"is_linked\": false,\n      \"git_common_dir\": \"/private/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-4-uyszo9q0/.git\"\n    },\n    \"head_sha\": \"fbedc7b37d0fb166acab23b5523cad6595b79fd1\",\n    \"decisions\": [\n      \"JWT lib is jose, not jsonwebtoken (9e1d0aa)\",\n      \"Expiry boundary comparison uses <= not < \\u2014 exact-boundary tokens must be accepted, not rejected (a4c7b2f)\",\n      \"Use Date.now() (not new Date()) for current time \\u2014 avoids allocation in hot path (PROJECT_STATE.md 2026-05-23 [feat-jwt-expiry])\"\n    ],\n    \"rejected_paths\": [\n      \"< operator for boundary check (off-by-one, rejects exact-boundary tokens)\",\n      \"new Date() for current time (allocation in hot path)\"\n    ],\n    \"open_risks\": [\n      \"This checkout's git log shows only a single 'fixture' commit (fbedc7b) \\u2014 commits a4c7b2f and 9e1d0aa are not resolvable here; verify against the real repo/remote before trusting them blindly\",\n      \"No source or test files are present in this checkout to confirm the jose migration or boundary fix are actually in place\"\n    ]\n  },\n  \"files_read_first\": [\n    {\n      \"path\": \".claude/PROJECT_STATE.md\",\n      \"why\": \"binding decisions for this key: jose over jsonwebtoken, <= boundary, Date.now()\"\n    },\n    {\n      \"path\": \".claude/handoffs/feat-jwt-expiry.json\",\n      \"why\": \"legacy brief (stale, wrong worktree) \\u2014 superseded by this recovery, kept for reference only\"\n    }\n  ]\n}\n",
+      ".claude/PROJECT_STATE.md": "# Project state \u2014 narrative log\n\n## 2026-05-23 \u2014 [feat-jwt-expiry] off-by-one fix\n### Decisions\n- Use `Date.now()` (not new Date()) \u2014 allocation in hot path\n- Use `<=` not `<` \u2014 exact-boundary tokens were rejected\n- Lib is `jose` not `jsonwebtoken`\n",
+      ".claude/handoffs/feat-jwt-expiry.json": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-05-23T10:00:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"unknown \\u2014 brief is stale\",\"resume_by\":\"Run RECOVER to reconstruct a fresh brief from git log and transcript.\"},\"state\":{\"branch\":\"feat/jwt-expiry\",\"next_acceptance_check\":\"unknown \\u2014 brief is stale from before the degradation\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"}}}",
+      ".git-HEAD": "feat/jwt-expiry\n",
+      ".gitignore": ".catalyst/\n"
+     }
+    }
+   ]
+  },
+  "5": {
+   "name": "brief-subagent-mode",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "5-run0.jsonl",
+     "files": {
+      "brief.md": "## Task\n- Done when: Audit of JWT verify call sites in src/auth/middleware.ts and src/auth/verify.ts for missing leeway parameter is complete.\n- Acceptance check: All JWT verify call sites identified with leeway parameter status reported.\n- Start by: Audit JWT verify call sites in src/auth/middleware.ts and src/auth/verify.ts for missing leeway parameter.\n\n## Scope\nsrc/auth/middleware.ts and src/auth/verify.ts. Do NOT read PROJECT_STATE.md.\n\n## Locked decisions\n- jose library (not jsonwebtoken)\n- <= comparison (not <)\n- Date.now() ms (time source)\n\n## Do not retry\n- new Date() (alloc in hot path)\n\n## Read first\n- src/auth/middleware.ts \u2014 Audit JWT verify call sites for missing leeway parameter\n- src/auth/verify.ts \u2014 Audit JWT verify call sites for missing leeway parameter\n\n## Return\nReport all JWT verify call sites, their leeway status, changed files (none expected), and any unresolved issues.\n"
+     }
+    }
+   ]
+  },
+  "13": {
+   "name": "fresh-session-resumes-from-brief",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "13-run0.jsonl",
+     "files": {
+      ".claude/handoffs/catalyst-dogfood-build.json": "{\"schema_version\":\"1\",\"key\":\"catalyst-dogfood-build\",\"timestamp\":\"2026-05-24T13:35:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"Tier 2 v0.5 shipped with all 3 skills passing pass@3 >= 0.90 + handoff v0.3 / Tier 1 regression at pass^3 = 1.00.\",\"resume_by\":\"Run python3 scripts/handoff-render.py catalyst-dogfood-build (or /catalyst:handoff resume), then follow the dogfood plan.\",\"prompt\":\"run python3 scripts/handoff-render.py catalyst-dogfood-build and continue. next acceptance check: build Catalyst Tier 2 (evaluator-library + failure-pattern-detector + pipeline-templates) using Catalyst own skills as the harness.\"},\"state\":{\"branch\":\"main\",\"next_acceptance_check\":\"Tier 2 v0.5 shipped with all 3 skills passing pass@3 >= 0.90 + handoff v0.3 / Tier 1 regression at pass^3 = 1.00.\",\"worktree\":{\"root\":\"/workspace/catalyst\",\"is_linked\":false,\"git_common_dir\":\"/workspace/catalyst/.git\"},\"diff_summary\":\"clean working tree\",\"tests\":[{\"cmd\":\"verify-gate hook smoke-tests (block/allow/stale)\",\"result\":\"pass\"},{\"cmd\":\"4 lifecycle hook smoke-tests\",\"result\":\"pass\"},{\"cmd\":\"installer smoke-test\",\"result\":\"pass\"},{\"cmd\":\"python3 scripts/lint.py\",\"result\":\"pass\"}],\"commands\":[\"gh release list\",\"git pull --rebase\",\"bash scripts/install-hooks.sh install <event> <hook>\",\"python3 scripts/lint.py\",\"gh run list -R adrijshikhar/catalyst\"],\"decisions\":[\"Tier 1 is SHIPPED as v0.4 (live as v0.1.13). Skills: handoff (v0.3), verify-gate (v0.4), hooks (v0.4). All 4 commands work.\",\"Next build target: Tier 2 per docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md\",\"Build Catalyst with Catalyst: dogfood catalyst:handoff PIPELINE mode + catalyst:verify-gate + catalyst:hooks install --all\",\"EDD ordering per CLAUDE.md: evals BEFORE SKILL.md BEFORE hooks\",\"POSIX bash + jq only for hooks (no Python deps)\",\"Version policy: auto-bumps patch on every push. For Tier 2 milestone, manually edit .claude-plugin/plugin.json to 0.5.0 before the push.\",\"Anti-self-grade is hard rule: evaluator subagent in evaluator-library MUST NEVER see the generator transcript.\"],\"rejected_paths\":[\"tool-output compactor \\u2014 rtk + caveman cover this layer. Removed from Tier 1 scope mid-session (commit c79e5b3 rationale).\",\"Catalyst as Company Brain competitor \\u2014 saturated ecosystem. Bridge via Tier 3 brain-bridge instead.\",\"Generic harness scaffolder \\u2014 Harness Engineer plugin already ships init/doctor/gc/onboard. Do not compete.\",\"Autonomous-loop / /goal replacement \\u2014 Claude Code platform owns this; wrong shape for Catalyst collaborative-first positioning.\",\"Skipping evals \\u2014 every Tier 1 skill has evals committed BEFORE the SKILL.md per EDD. Tier 2 must follow same rule.\"],\"open_risks\":[\"Tier 2 failure-pattern-detector overlaps with Tier 3 session-degradation-watch on repeated-tool-call + stale-read signals.\",\"Plugin marketplace risk: ClawHavoc (Jan 2026) \\u2014 skill-supply-chain-audit (Tier 4) has not shipped.\",\"Hook portability: macOS date -j vs Linux date -d. Windows native not supported (POSIX bash only).\",\"Auto-bump pipeline depends on GitHub Actions firing on push. Has glitched once (commit ecc3408); manual gh workflow run is the escape hatch.\"]},\"files_read_first\":[{\"path\":\"docs/ROADMAP.md\",\"why\":\"10-skill roadmap, status of each tier, design principles, what-NOT-to-build\"},{\"path\":\"docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md\",\"why\":\"Tier 2 spec (what to build next)\"},{\"path\":\"CLAUDE.md\",\"why\":\"repo conventions (commit format, EDD ordering, skill layout, hook authoring rules)\"},{\"path\":\"docs/superpowers/plans/2026-05-24-tier-1-harness-primitives.md\",\"why\":\"Tier 1 plan as the template for Tier 2 plan structure\"},{\"path\":\"skills/handoff/SKILL.md\",\"why\":\"handoff v0.3 (4 modes + PIPELINE) \\u2014 the skill you are about to invoke\"},{\"path\":\"skills/verify-gate/SKILL.md\",\"why\":\"verify-gate skill \\u2014 install it before Tier 2 build to enforce evidence discipline\"},{\"path\":\"skills/hooks/SKILL.md\",\"why\":\"hooks skill \\u2014 install --all lifecycle hooks for the Tier 2 build sessions\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical narrative; this brief names the binding decisions\"},{\"path\":\"docs/superpowers/specs/2026-05-24-tier-3-knowledge-integration-design.md\",\"why\":\"Tier 3 spec; not relevant for Tier 2 build\"},{\"path\":\"docs/superpowers/specs/2026-05-24-tier-4-safety-coordination-design.md\",\"why\":\"Tier 4 spec; not relevant for Tier 2 build\"},{\"path\":\"docs/superpowers/specs/2026-05-24-pipeline-skill-design.md\",\"why\":\"SUPERSEDED by handoff v0.3 spec; do not implement from it\"}]}",
+      "resume_response.md": "# Resume: catalyst-dogfood-build\n\n## 1. Handoff Brief Render & Warnings\n\nRendered brief via `python3 scripts/handoff-render.py catalyst-dogfood-build` (and checked `.claude/handoffs/catalyst-dogfood-build.json`):\n\n- **BRANCH CHECK**: Current branch (`main`) matches the brief's recorded branch (`main`). No `BRANCH MISMATCH` warning.\n- **REPO MISMATCH**: Brief was originally written in `/workspace/catalyst/.git`, which differs from the current fixture directory.\n- **STALE**: Brief was written on `2026-05-24T13:35:00Z` (~105 days ago relative to current eval timestamp).\n- **MISSING**: Referenced files listed under `files_read_first` are missing in this fixture checkout.\n\nResume entry point and slash commands:\n- `/catalyst:handoff resume` (or `python3 scripts/handoff-render.py catalyst-dogfood-build`)\n- Resume prompt: `run python3 scripts/handoff-render.py catalyst-dogfood-build and continue. next acceptance check: build Catalyst Tier 2 (evaluator-library + failure-pattern-detector + pipeline-templates) using Catalyst own skills as the harness.`\n\n---\n\n## 2. Files to Read First (`files_read_first`)\n\nThe following files are listed in `files_read_first` for reference in immediate next actions (noted, but not read since they are absent in this fixture):\n1. `docs/ROADMAP.md` \u2014 10-skill roadmap, status of each tier, design principles, what-NOT-to-build\n2. `docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md` \u2014 Tier 2 spec (what to build next)\n3. `CLAUDE.md` \u2014 repo conventions (commit format, EDD ordering, skill layout, hook authoring rules)\n4. `docs/superpowers/plans/2026-05-24-tier-1-harness-primitives.md` \u2014 Tier 1 plan as the template for Tier 2 plan structure\n5. `skills/handoff/SKILL.md` \u2014 handoff v0.3 (4 modes + PIPELINE) \u2014 the skill invoked for context management\n6. `skills/verify-gate/SKILL.md` \u2014 verify-gate skill \u2014 install before Tier 2 build to enforce evidence discipline\n7. `skills/hooks/SKILL.md` \u2014 hooks skill \u2014 install --all lifecycle hooks for the Tier 2 build sessions\n\n*Note on `.claude/PROJECT_STATE.md`:* Per `files_skip`, `.claude/PROJECT_STATE.md` is historical narrative only; binding decisions are carried directly in this brief's state packet, so `.claude/PROJECT_STATE.md` was NOT auto-read.\n\n---\n\n## 3. Confirmations\n\n### (a) Next Acceptance Check (Verbatim)\n\n> Tier 2 v0.5 shipped with all 3 skills passing pass@3 >= 0.90 + handoff v0.3 / Tier 1 regression at pass^3 = 1.00.\n\nConfirmation:\n> Resumed from `catalyst-dogfood-build`. Next acceptance check: Tier 2 v0.5 shipped with all 3 skills passing pass@3 >= 0.90 + handoff v0.3 / Tier 1 regression at pass^3 = 1.00. Starting now.\n\n### (b) Top 3 Decisions Still in Force (from the State Packet)\n\n1. **Tier 1 is SHIPPED as v0.4** (live as v0.1.13). Skills: `handoff` (v0.3), `verify-gate` (v0.4), `hooks` (v0.4). All 4 commands work.\n2. **Next build target is Tier 2** per `docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md`.\n3. **Build Catalyst with Catalyst**: dogfood `catalyst:handoff` PIPELINE mode + `catalyst:verify-gate` + `catalyst:hooks install --all` (using `hooks install` / `/hooks`).\n\n*Additional binding decisions in force:*\n- **EDD ordering** per `CLAUDE.md`: evals BEFORE `SKILL.md` BEFORE hooks.\n- **POSIX bash + jq only** for hooks (no Python deps).\n- **Anti-self-grade** is a hard rule: evaluator subagent in `evaluator-library` MUST NEVER see the generator transcript.\n- **Version policy**: auto-bumps patch on every push. For Tier 2 milestone, manually edit `.claude-plugin/plugin.json` to 0.5.0 before the push.\n\n### (c) Rejected Paths (Must NOT Re-litigate)\n\n- **Skipping evals**: Every Tier 1 skill has evals committed BEFORE the `SKILL.md` per EDD. Tier 2 must follow the same rule.\n\n*Other rejected paths on record:*\n- **tool-output compactor** \u2014 `rtk` + `caveman` cover this layer. Removed from Tier 1 scope mid-session (commit `c79e5b3` rationale).\n- **Catalyst as Company Brain competitor** \u2014 saturated ecosystem. Bridge via Tier 3 `brain-bridge` instead.\n- **Generic harness scaffolder** \u2014 `Harness Engineer` plugin already ships `init`/`doctor`/`gc`/`onboard`. Do not compete.\n- **Autonomous-loop / /goal replacement** \u2014 Claude Code platform owns this; wrong shape for Catalyst collaborative-first positioning.\n\n### (d) First 3 Actions in the Dogfood Plan\n\n1. **Confirm Scope & Conventions**: Review `docs/ROADMAP.md`, `docs/superpowers/specs/2026-05-24-tier-2-orchestration-extensions-design.md`, `CLAUDE.md`, and `docs/superpowers/plans/2026-05-24-tier-1-harness-primitives.md` to establish Tier 2 requirements and plan structure.\n2. **Install & Wire Catalyst Harness Tools**: Run `hooks install` via `catalyst:hooks install --all` (or `bash scripts/install-hooks.sh install <event> <hook>`) and activate `catalyst:verify-gate` to enforce evidence verification before coding begins.\n3. **Execute Tier 2 Build via Dogfood Pipeline**: Build Catalyst Tier 2 skills (`evaluator-library` + `failure-pattern-detector` + `pipeline-templates`) dogfooding `catalyst:handoff` PIPELINE mode, adhering strictly to EDD ordering (evals before `SKILL.md` before hooks).\n"
+     }
+    }
+   ]
+  },
+  "18": {
+   "name": "read-drift-missing-file",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "18-run0.jsonl",
+     "files": {
+      ".claude/handoffs/feat-jwt-expiry.json": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-07-08T10:00:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"src/auth/auth.spec.ts:42-78 all 6 pass.\",\"resume_by\":\"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\"prompt\":\"run /catalyst:handoff resume and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"},\"state\":{\"branch\":\"main\",\"next_acceptance_check\":\"pnpm test src/auth/auth.spec.ts passes 6/6.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"decisions\":[\"lib is jose (not jsonwebtoken)\",\"comparison is <= (not <)\"],\"open_risks\":[\"Clock skew not yet addressed\"]},\"files_read_first\":[{\"path\":\"src/auth/legacy/verify-old.ts\",\"why\":\"old verify helper the leeway parameter was going to reuse\"}]}",
+      ".git-HEAD": "main\n",
+      "drift_report.md": "!! REPO MISMATCH: this brief belongs to a different repo (/workspace/project/.git); not resuming.\n!! MISSING: src/auth/legacy/verify-old.ts \u2014 referenced file no longer exists; verify before resuming.\nACK REPO: Inspect the git remote and common directory to verify whether this repository corresponds to /workspace/project/.git before resuming.\nACK MISSING: Check git log to see if src/auth/legacy/verify-old.ts was moved, renamed, or deleted, and identify any replacement.\n",
+      "skills/handoff/evals/fixtures/eval-18-read-drift-missing-file/.claude/handoffs/feat-jwt-expiry.json": "{\n  \"schema_version\": \"1\",\n  \"key\": \"feat-jwt-expiry\",\n  \"timestamp\": \"2026-07-08T10:00:00Z\",\n  \"mode\": \"WRITE\",\n  \"resume\": {\n    \"done_when\": \"src/auth/auth.spec.ts:42-78 all 6 pass.\",\n    \"resume_by\": \"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\n    \"prompt\": \"run /catalyst:handoff resume and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"\n  },\n  \"state\": {\n    \"branch\": \"main\",\n    \"next_acceptance_check\": \"pnpm test src/auth/auth.spec.ts passes 6/6.\",\n    \"worktree\": {\n      \"root\": \"/workspace/project\",\n      \"is_linked\": false,\n      \"git_common_dir\": \"/workspace/project/.git\"\n    },\n    \"decisions\": [\n      \"lib is jose (not jsonwebtoken)\",\n      \"comparison is <= (not <)\"\n    ],\n    \"open_risks\": [\n      \"Clock skew not yet addressed\"\n    ]\n  },\n  \"files_read_first\": [\n    {\n      \"path\": \"src/auth/legacy/verify-old.ts\",\n      \"why\": \"old verify helper the leeway parameter was going to reuse\"\n    }\n  ]\n}\n"
+     }
+    }
+   ]
+  },
+  "19": {
+   "name": "read-drift-stale-brief",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "19-run0.jsonl",
+     "files": {
+      ".claude/handoffs/feat-jwt-expiry.json": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-06-28T10:00:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"src/auth/auth.spec.ts:42-78 all 6 pass.\",\"resume_by\":\"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\"prompt\":\"run /catalyst:handoff resume and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"},\"state\":{\"branch\":\"main\",\"next_acceptance_check\":\"pnpm test src/auth/auth.spec.ts passes 6/6.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"decisions\":[\"lib is jose (not jsonwebtoken)\",\"comparison is <= (not <)\"],\"open_risks\":[\"Clock skew not yet addressed\"]}}",
+      ".git-HEAD": "main\n",
+      "drift_report.md": "!! REPO MISMATCH: this brief belongs to a different repo (/workspace/project/.git); not resuming.\n!! STALE: brief written ~10d ago (2026-06-28T10:00:00Z) \u2014 diff current git state before resuming.\nACK REPO: Verify repository root matches /workspace/project before resuming.\nACK STALE: Run git diff against current git state to review any changes since the brief was written.\n",
+      "skills/handoff/evals/fixtures/eval-19-read-drift-stale-brief/.claude/handoffs/feat-jwt-expiry.json": "{\n  \"schema_version\": \"1\",\n  \"key\": \"feat-jwt-expiry\",\n  \"timestamp\": \"2026-06-28T10:00:00Z\",\n  \"mode\": \"WRITE\",\n  \"resume\": {\n    \"done_when\": \"src/auth/auth.spec.ts:42-78 all 6 pass.\",\n    \"resume_by\": \"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\n    \"prompt\": \"run /catalyst:handoff resume and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"\n  },\n  \"state\": {\n    \"branch\": \"main\",\n    \"next_acceptance_check\": \"pnpm test src/auth/auth.spec.ts passes 6/6.\",\n    \"worktree\": {\n      \"root\": \"/workspace/project\",\n      \"is_linked\": false,\n      \"git_common_dir\": \"/workspace/project/.git\"\n    },\n    \"decisions\": [\n      \"lib is jose (not jsonwebtoken)\",\n      \"comparison is <= (not <)\"\n    ],\n    \"open_risks\": [\n      \"Clock skew not yet addressed\"\n    ]\n  }\n}\n"
+     }
+    }
+   ]
+  },
+  "20": {
+   "name": "read-drift-commits-since",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "20-run0.jsonl",
+     "files": {
+      ".claude/handoffs/catalyst-read-drift.json": "{\"schema_version\":\"1\",\"key\":\"catalyst-read-drift\",\"timestamp\":\"2026-07-07T18:32:09Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"v0.6.21 released with drift-validation evals recorded in skills/handoff/evals/evals.log.\",\"resume_by\":\"Run /catalyst:handoff resume, then close the loop on #69: behavioral evals, evals.log record, release.\",\"prompt\":\"run /catalyst:handoff resume and continue. next acceptance check: python3 -m unittest tests.test_handoff_render passes.\"},\"state\":{\"branch\":\"main\",\"next_acceptance_check\":\"python3 -m unittest tests.test_handoff_render passes with TestDriftFiles, TestDriftAge and TestDriftCommits green.\",\"worktree\":{\"root\":\"/workspace/catalyst\",\"is_linked\":false,\"git_common_dir\":\"/workspace/catalyst/.git\"},\"head_sha\":\"82de465a0e5058d6a67799306394682b30cdda3c\",\"decisions\":[\"READ-time drift checks are fail-open and deterministic (PRINCIPLES P9, P10)\",\"Warning order is REPO MISMATCH > BRANCH MISMATCH > STALE > MISSING > resume body\"]}}",
+      ".git-HEAD": "main\n",
+      "drift_report.md": "!! REPO MISMATCH: this brief belongs to a different repo (/workspace/catalyst/.git); not resuming.\nACK REPO: run `git rev-parse --git-common-dir` in the current worktree and compare the result to the brief's recorded worktree git_common_dir (/workspace/catalyst/.git) to confirm they differ.\n\nNo `- Commits since brief written:` line and no `... not in current history` line appeared in the renderer output. (The brief's head_sha, 82de465a0e5058d6a67799306394682b30cdda3c, does not resolve to a valid commit in this repo's history, so the renderer's fail-open commits-since check emitted nothing for this field.)\n\nACK COMMITS: not shown by renderer\ngit log --oneline 82de465..HEAD\n",
+      "skills/handoff/evals/fixtures/eval-20-read-drift-commits-since/.claude/handoffs/catalyst-read-drift.json": "{\n  \"schema_version\": \"1\",\n  \"key\": \"catalyst-read-drift\",\n  \"timestamp\": \"2026-07-07T18:32:09Z\",\n  \"mode\": \"WRITE\",\n  \"resume\": {\n    \"done_when\": \"v0.6.21 released with drift-validation evals recorded in skills/handoff/evals/evals.log.\",\n    \"resume_by\": \"Run /catalyst:handoff resume, then close the loop on #69: behavioral evals, evals.log record, release.\",\n    \"prompt\": \"run /catalyst:handoff resume and continue. next acceptance check: python3 -m unittest tests.test_handoff_render passes.\"\n  },\n  \"state\": {\n    \"branch\": \"main\",\n    \"next_acceptance_check\": \"python3 -m unittest tests.test_handoff_render passes with TestDriftFiles, TestDriftAge and TestDriftCommits green.\",\n    \"worktree\": {\n      \"root\": \"/workspace/catalyst\",\n      \"is_linked\": false,\n      \"git_common_dir\": \"/workspace/catalyst/.git\"\n    },\n    \"head_sha\": \"82de465a0e5058d6a67799306394682b30cdda3c\",\n    \"decisions\": [\n      \"READ-time drift checks are fail-open and deterministic (PRINCIPLES P9, P10)\",\n      \"Warning order is REPO MISMATCH > BRANCH MISMATCH > STALE > MISSING > resume body\"\n    ]\n  }\n}\n"
+     }
+    }
+   ]
+  },
+  "21": {
+   "name": "read-drift-clean-brief",
+   "category": "regression",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "21-run0.jsonl",
+     "files": {
+      ".claude/handoffs/feat-jwt-expiry.json": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-07-08T10:00:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"src/auth/auth.spec.ts:42-78 all 6 pass.\",\"resume_by\":\"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\"prompt\":\"run /catalyst:handoff resume and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"},\"state\":{\"branch\":\"main\",\"next_acceptance_check\":\"pnpm test src/auth/auth.spec.ts passes 6/6.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"decisions\":[\"lib is jose (not jsonwebtoken)\",\"comparison is <= (not <)\"],\"open_risks\":[\"Clock skew not yet addressed\"]}}",
+      ".git-HEAD": "main\n",
+      "drift_report.md": "!! REPO MISMATCH: this brief belongs to a different repo (/workspace/project/.git); not resuming.\nACK REPO: Run `git rev-parse --show-toplevel` in the current working directory and confirm it matches `/workspace/project` before treating this brief as applicable here.\nDRIFT: clean\n",
+      "skills/handoff/evals/fixtures/eval-21-read-drift-clean-brief/.claude/handoffs/feat-jwt-expiry.json": "{\n  \"schema_version\": \"1\",\n  \"key\": \"feat-jwt-expiry\",\n  \"timestamp\": \"2026-07-08T10:00:00Z\",\n  \"mode\": \"WRITE\",\n  \"resume\": {\n    \"done_when\": \"src/auth/auth.spec.ts:42-78 all 6 pass.\",\n    \"resume_by\": \"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\n    \"prompt\": \"run /catalyst:handoff resume and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"\n  },\n  \"state\": {\n    \"branch\": \"main\",\n    \"next_acceptance_check\": \"pnpm test src/auth/auth.spec.ts passes 6/6.\",\n    \"worktree\": {\n      \"root\": \"/workspace/project\",\n      \"is_linked\": false,\n      \"git_common_dir\": \"/workspace/project/.git\"\n    },\n    \"decisions\": [\n      \"lib is jose (not jsonwebtoken)\",\n      \"comparison is <= (not <)\"\n    ],\n    \"open_risks\": [\n      \"Clock skew not yet addressed\"\n    ]\n  }\n}\n"
+     }
+    }
+   ]
+  },
+  "22": {
+   "name": "brief-native-dispatch",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "22-run0.jsonl",
+     "files": {
+      "README.md": "# report-tool\n\nCommand-line report generator used for handoff evals.\n\n## Runtime requirement\n\nRequires **Python 3.11 or newer**. No other runtime is supported.\n\n## Run\n\n    python3 -m report_tool --help\n"
+     }
+    }
+   ]
+  },
+  "23": {
+   "name": "brief-external-file-default",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "23-run0.jsonl",
+     "files": {
+      ".catalyst/tasks/lifecycle-explanation-3c68d2.md": "# Task: lifecycle-explanation\n\n## Task\n\nInspect `README.md` in the task directory below and explain the handoff lifecycle it documents (the \"Handoff lifecycle\" section: WRITE, READ, BRIEF). Produce a clear written explanation of that lifecycle for the requesting user. This is a read-only, explanation-only task.\n\nScope: read-only. Do not edit, create, or delete any files in the workspace. Do not run the service, install dependencies, or make changes outside producing the explanation.\n\nRead first:\n- README.md (repository root) \u2014 contains the \"Handoff lifecycle\" section to explain\n\nDependencies and known risks: none. No dependencies required.\n\n## Workspace\n\n- Repository / task directory: /private/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-23-421wrxi1\n- Source worktree: /private/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-23-421wrxi1\n- Base commit: not applicable outside Git (this directory is not a Git repository)\n- Selected strategy: current workspace (user selected current workspace; read-only task)\n- Required uncommitted changes: none\n\nRead the repository's agent instructions before editing. Verify the repository, base commit and dependencies against the actual filesystem. Paths recorded on another machine must be resolved locally. If required material is inaccessible, report blocked with the exact missing dependency instead of guessing.\n\nFor a separate workspace, create a new Git worktree and branch from the recorded base before editing. Choose unused names and record the actual path and branch in Completion. Never reset an existing branch, clean another worktree or assume uncommitted source changes are in the base commit. Resolve any required dirty changes before starting. For the current workspace, inspect its working changes and preserve other work; report conflicting concurrent edits before proceeding.\n\n## Acceptance checklist\n\n- [ ] Inspect README.md and identify its \"Handoff lifecycle\" section\n- [ ] Produce a clear explanation of the handoff lifecycle (WRITE, READ, BRIEF) without editing any files in the workspace\n\n## Return instructions\n\nThis is a scoped task handed off from an ongoing session. Catalyst is not required to execute it. Follow the task within your host's permissions and repository instructions. Do not expand scope or merge into the originating branch.\n\nPreserve all text before `## Completion`, including the original acceptance checklist. You own the Completion section while working. When done or blocked, update that section with:\n\n- **Status:** complete, partial or blocked. Complete requires evidence for every acceptance item; unrun or failing checks remain explicitly unresolved.\n- **Workspace:** actual path, branch and starting commit, if using Git.\n- **Changes/result:** files changed and concrete outcomes; for read-only tasks, report findings and their sources.\n- **Checklist results:** repeat each original item with its result and evidence.\n- **Verification:** commands actually run, their outcomes and any unrun checks.\n- **Delivery:** resulting commit SHAs, or the exact worktree and uncommitted files. Do not assume changes are committed, pushed, merged or available elsewhere.\n- **Remaining issues:** blockers, risks and incomplete requirements.\n- **Integration:** which changes to review/apply and any prerequisites. Explain conflicts or dependencies without applying them to the originating branch.\n\nDo not write a session checkpoint or project narrative for this task's return. Return only a short message for the user to pass to the originating agent, substituting this task file's real absolute path:\n\n> Read the Completion section in `<absolute-task-file>`. Review the referenced changes and evidence against the original acceptance checklist, then report whether the task is ready to integrate and what remains unresolved.\n\nThe originating agent reviews the actual artifacts before integration. A completion statement is a report, not independent proof that changes are correct.\n\n## Completion\n",
+      "README.md": "# demo-service\n\nSmall HTTP service used for handoff evals.\n\n## Handoff lifecycle\n\n1. WRITE a checkpoint before the session ends.\n2. READ it in the next session.\n3. BRIEF a task to another agent when work can run in parallel.\n\n## Runtime requirement\n\nRequires **Node.js 20 or newer**.\n"
+     }
+    }
+   ]
+  },
+  "24": {
+   "name": "brief-external-inline-opt-in",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "24-run0.jsonl",
+     "files": {
+      "README.md": "# demo-service\n\nSmall HTTP service used for handoff evals.\n\n## Runtime requirement\n\nRequires **Node.js 20 or newer**. No other runtime is supported.\n\n## Run\n\n    npm install\n    npm start\n"
+     }
+    }
+   ]
+  },
+  "25": {
+   "name": "brief-workspace-choice",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "25-run0.jsonl",
+     "files": {}
+    }
+   ]
+  },
+  "26": {
+   "name": "brief-external-completion",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "26-run0.jsonl",
+     "files": {
+      "source.txt": "Python 3\n",
+      "task.md": "# Task: runtime-check\n\n## Task\nRead source.txt and report its exact runtime requirement. Do not change source.txt.\n\n## Workspace\nUse the current directory; read-only task.\n\n## Acceptance checklist\n- [ ] Report the exact line in source.txt.\n\n## Return instructions\nPreserve the task body; write status, checklist results and evidence under Completion. Return a short prompt pointing to this file.\n\n## Completion\n\n- **Status:** complete\n- **Workspace:** `/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-26-rzq5yfi6` (current directory, not a Git repository)\n- **Changes/result:** Read-only task; `source.txt` was not modified. The exact runtime requirement reported in `source.txt` is `Python 3`.\n- **Checklist results:**\n  - [x] Report the exact line in source.txt: Line 1 is `Python 3`.\n- **Verification:** Inspected `/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-26-rzq5yfi6/source.txt`. Line 1 contains `Python 3`.\n- **Delivery:** Recorded completion in `/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-26-rzq5yfi6/task.md`. No other files were modified.\n- **Remaining issues:** None.\n- **Integration:** None needed; verification-only task.\n"
+     }
+    }
+   ]
+  },
+  "27": {
+   "name": "reground-mid-session",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "27-run0.jsonl",
+     "files": {
+      ".claude/handoffs/feat-jwt-expiry.json": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-05-23T23:14:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"src/auth/auth.spec.ts:42-78 all 6 pass.\",\"resume_by\":\"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-jwt-expiry and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"},\"state\":{\"branch\":\"feat/jwt-expiry\",\"next_acceptance_check\":\"pnpm test src/auth/auth.spec.ts passes 6/6.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"2 files, +18/-6 in src/auth/\",\"tests\":[{\"cmd\":\"pnpm test src/auth/auth.spec.ts\",\"result\":\"fail\"}],\"decisions\":[\"lib is jose (not jsonwebtoken)\",\"comparison is <= (not <)\",\"expiry uses Date.now() UTC ms (not new Date())\"],\"rejected_paths\":[\"< comparison \\u2014 off-by-one boundary rejection\",\"new Date() \\u2014 allocation in hot path\"],\"open_risks\":[\"Clock skew not yet addressed\"]},\"files_read_first\":[{\"path\":\"src/auth/middleware.ts\",\"why\":\"primary edit target for leeway parameter\"},{\"path\":\"src/auth/auth.spec.ts\",\"why\":\"lines 42-78 are the failing clock-skew tests\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only; brief has the binding decisions\"},{\"path\":\"src/users/*\",\"why\":\"unrelated to JWT expiry fix\"}]}",
+      ".git-HEAD": "feat/jwt-expiry\n",
+      "reground.md": "# Reground \u2014 feat-jwt-expiry\n\n## Goal\n  - Done when: src/auth/auth.spec.ts:42-78 all 6 pass.\n  - Next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\n\n## Locked decisions\nLocked decisions:\n  - lib is jose (not jsonwebtoken)\n  - comparison is <= (not <)\n  - expiry uses Date.now() UTC ms (not new Date())\n\n## Files to keep in view\n  - src/auth/middleware.ts \u2014 primary edit target for leeway parameter\n  - src/auth/auth.spec.ts \u2014 lines 42-78 are the failing clock-skew tests\n\n"
+     }
+    }
+   ]
+  },
+  "28": {
+   "name": "list-store-inventory",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "28-run0.jsonl",
+     "files": {
+      ".claude/handoffs/feat-jwt-expiry.json": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-05-23T23:14:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"src/auth/auth.spec.ts:42-78 all 6 pass.\",\"resume_by\":\"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-jwt-expiry and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"},\"state\":{\"branch\":\"feat/jwt-expiry\",\"next_acceptance_check\":\"pnpm test src/auth/auth.spec.ts passes 6/6.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"2 files, +18/-6 in src/auth/\",\"tests\":[{\"cmd\":\"pnpm test src/auth/auth.spec.ts\",\"result\":\"fail\"}],\"decisions\":[\"lib is jose (not jsonwebtoken)\",\"comparison is <= (not <)\",\"expiry uses Date.now() UTC ms (not new Date())\"],\"rejected_paths\":[\"< comparison \\u2014 off-by-one boundary rejection\",\"new Date() \\u2014 allocation in hot path\"],\"open_risks\":[\"Clock skew not yet addressed\"]},\"files_read_first\":[{\"path\":\"src/auth/middleware.ts\",\"why\":\"primary edit target for leeway parameter\"},{\"path\":\"src/auth/auth.spec.ts\",\"why\":\"lines 42-78 are the failing clock-skew tests\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only; brief has the binding decisions\"},{\"path\":\"src/users/*\",\"why\":\"unrelated to JWT expiry fix\"}]}",
+      ".claude/handoffs/feat-rate-limit.json": "{\"schema_version\":\"1\",\"key\":\"feat-rate-limit\",\"timestamp\":\"2026-05-22T18:20:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"Existing rate-limit tests pass AND new per-route override test passes.\",\"resume_by\":\"Add a per-route override to src/middleware/rate-limit.ts.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-rate-limit and continue. next acceptance check: rate-limit middleware accepts a per-route override.\"},\"state\":{\"branch\":\"feat/rate-limit\",\"next_acceptance_check\":\"pnpm test src/middleware/rate-limit.spec.ts passes including the new test.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"1 file, +24/-2 in src/middleware/\",\"decisions\":[\"sliding window stays\",\"per-route override is opt-in via decorator\"],\"rejected_paths\":[\"token-bucket \\u2014 too heavy for our use case\"],\"open_risks\":[\"Decorator stacking semantics with auth middleware unverified\"]},\"files_read_first\":[{\"path\":\"src/middleware/rate-limit.ts\",\"why\":\"primary edit target for per-route override\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only\"},{\"path\":\"src/auth/*\",\"why\":\"unrelated to rate-limit feature\"}]}",
+      ".git-HEAD": "feat/jwt-expiry\n",
+      "list-output.txt": "Handoff briefs\n\nKEY                              BRANCH                       BRANCH?   WRITTEN               NOTE\nfeat-jwt-expiry                  feat/jwt-expiry              yes       2026-05-23T23:14:00Z  current branch\n  /private/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-28-wpr98_3k/.claude/handoffs/feat-jwt-expiry.json\nfeat-rate-limit                  feat/rate-limit              no        2026-05-22T18:20:00Z  orphan\n  /private/var/folders/g4/cr6bc0b13_q2kdrkwt3j1l0w0000gn/T/catalyst-eval-28-wpr98_3k/.claude/handoffs/feat-rate-limit.json\n"
+     }
+    }
+   ]
+  },
+  "29": {
+   "name": "prune-dry-run-needs-confirmation",
+   "category": "capability",
+   "runs": [
+    {
+     "run": 0,
+     "transcript_file": "29-run0.jsonl",
+     "files": {
+      ".claude/handoffs/feat-jwt-expiry.json": "{\"schema_version\":\"1\",\"key\":\"feat-jwt-expiry\",\"timestamp\":\"2026-05-23T23:14:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"src/auth/auth.spec.ts:42-78 all 6 pass.\",\"resume_by\":\"Extend the JWT expiry check in src/auth/middleware.ts to allow a small clock-skew leeway window.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-jwt-expiry and continue. next acceptance check: pnpm test src/auth/auth.spec.ts passes 6/6.\"},\"state\":{\"branch\":\"feat/jwt-expiry\",\"next_acceptance_check\":\"pnpm test src/auth/auth.spec.ts passes 6/6.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"2 files, +18/-6 in src/auth/\",\"tests\":[{\"cmd\":\"pnpm test src/auth/auth.spec.ts\",\"result\":\"fail\"}],\"decisions\":[\"lib is jose (not jsonwebtoken)\",\"comparison is <= (not <)\",\"expiry uses Date.now() UTC ms (not new Date())\"],\"rejected_paths\":[\"< comparison \\u2014 off-by-one boundary rejection\",\"new Date() \\u2014 allocation in hot path\"],\"open_risks\":[\"Clock skew not yet addressed\"]},\"files_read_first\":[{\"path\":\"src/auth/middleware.ts\",\"why\":\"primary edit target for leeway parameter\"},{\"path\":\"src/auth/auth.spec.ts\",\"why\":\"lines 42-78 are the failing clock-skew tests\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only; brief has the binding decisions\"},{\"path\":\"src/users/*\",\"why\":\"unrelated to JWT expiry fix\"}]}",
+      ".claude/handoffs/feat-rate-limit.json": "{\"schema_version\":\"1\",\"key\":\"feat-rate-limit\",\"timestamp\":\"2026-05-22T18:20:00Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"Existing rate-limit tests pass AND new per-route override test passes.\",\"resume_by\":\"Add a per-route override to src/middleware/rate-limit.ts.\",\"prompt\":\"run python3 scripts/handoff-render.py feat-rate-limit and continue. next acceptance check: rate-limit middleware accepts a per-route override.\"},\"state\":{\"branch\":\"feat/rate-limit\",\"next_acceptance_check\":\"pnpm test src/middleware/rate-limit.spec.ts passes including the new test.\",\"worktree\":{\"root\":\"/workspace/project\",\"is_linked\":false,\"git_common_dir\":\"/workspace/project/.git\"},\"diff_summary\":\"1 file, +24/-2 in src/middleware/\",\"decisions\":[\"sliding window stays\",\"per-route override is opt-in via decorator\"],\"rejected_paths\":[\"token-bucket \\u2014 too heavy for our use case\"],\"open_risks\":[\"Decorator stacking semantics with auth middleware unverified\"]},\"files_read_first\":[{\"path\":\"src/middleware/rate-limit.ts\",\"why\":\"primary edit target for per-route override\"}],\"files_skip\":[{\"path\":\".claude/PROJECT_STATE.md\",\"why\":\"historical context only\"},{\"path\":\"src/auth/*\",\"why\":\"unrelated to rate-limit feature\"}]}",
+      ".git-HEAD": "feat/jwt-expiry\n"
+     }
+    }
+   ]
+  }
+ }
+}
