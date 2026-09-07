@@ -23,7 +23,7 @@ Every long agent session ends the same way: `/compact`, a context limit, or you 
 
 1. **Write.** The `handoff` skill (prompted by the `PreCompact` hook when available) writes a typed, schema-validated brief to `.catalyst/handoffs/<branch>.json` in your repo's main worktree: goal, done-when, next acceptance check, decisions with rationale, rejected paths, open risks, files to read first.
 2. **Switch.** Open the same repo in any agent that has Catalyst installed. The brief is plain JSON in your tree; it does not care who wrote it.
-3. **Resume.** The `SessionStart` hook renders the brief back into the new session on Claude Code and Codex; on Antigravity a `PreInvocation` adapter does the same on the first model call. Anywhere else, say `handoff resume`. Drift guards refuse a brief from another branch or repo and flag a stale one.
+3. **Resume.** The `SessionStart` hook renders the brief back into the new session on Claude Code and Codex; on Antigravity a `PreInvocation` adapter does the same on the first model call once registered (see install). Anywhere else, say `handoff resume`. Drift guards refuse a brief from another branch or repo and flag a stale one.
 
 <p align="center">
   <img src="assets/demo/handoff.gif" alt="A brief written before /compact rendered back in a fresh session" width="860"/>
@@ -35,7 +35,7 @@ Every long agent session ends the same way: `/compact`, a context limit, or you 
 |---|---|---|---|---|
 | Claude Code | ✓ | ✓ | ✓ | verified |
 | Codex CLI | ✓ | ✓ after one-time `/hooks` trust | ✓ after trust | hooks load verified |
-| Antigravity CLI | ✓ (+ commands as skills) | ✓ via `PreInvocation` on the first model call | no compaction event | verified on agy 1.1.27 |
+| Antigravity CLI | ✓ (+ commands as skills) | ✓ after a one-time `~/.gemini/config/hooks.json` entry (`PreInvocation`, first model call) | no compaction event | verified on agy 1.1.27 |
 | GitHub Copilot (VS Code, CLI) | ✓ | Claude-format compatible | Claude-format compatible | unverified |
 | Gemini CLI | ✓ + `AGENTS.md` as context | — | — | unverified |
 | ~76 others via the `skills` CLI | ✓ | — | — | skills only |
@@ -59,6 +59,15 @@ codex plugin marketplace add adrijshikhar/catalyst && codex plugin add catalyst@
 ```bash
 agy plugin install https://github.com/adrijshikhar/catalyst
 ```
+Skills load immediately. For the resume hook, add this once to `~/.gemini/config/hooks.json` (agy 1.1.27 parses a plugin's `hooks.json` but only executes hooks declared at user or workspace level):
+```json
+"catalyst": {
+  "PreInvocation": [
+    {"type": "command", "command": "~/.gemini/config/plugins/catalyst/hooks/PreInvocation-handoff-read.sh", "timeout": 10}
+  ]
+}
+```
+It fires on the first model call of each conversation and injects the brief announce; every later call emits nothing.
 
 **GitHub Copilot CLI** (unverified)
 ```bash
