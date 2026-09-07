@@ -247,12 +247,12 @@ def inputs_sha256(spec: dict) -> str:
     return hashlib.sha256(json.dumps(canon, sort_keys=True).encode()).hexdigest()
 
 
-def grade_skill(skill_dir: Path, errors: list[str], warns: list[str], *, enforce: bool) -> dict | None:
+def grade_skill(skill_dir: Path, errors: list[str], warns: list[str], *, enforce: bool, host: str = "claude") -> dict | None:
     evals_json = skill_dir / "evals" / "evals.json"
     if not evals_json.exists():
         return None
     spec = json.loads(evals_json.read_text())
-    snap_dir = skill_dir / "evals" / "snapshots"
+    snap_dir = skill_dir / "evals" / ("snapshots" if host == "claude" else f"snapshots-{host}")
     results = snap_dir / "results.json"
     if not results.exists():
         (errors if enforce else warns).append(f"{skill_dir.name}: no snapshot (run scripts/eval-run.py locally)")
@@ -299,7 +299,7 @@ def grade_skill(skill_dir: Path, errors: list[str], warns: list[str], *, enforce
     if caps:
         rate = sum(e["pass_at_3"] for e in caps) / len(caps)
         report["capability_pass_at_3"] = rate
-        print(f"{skill_dir.name}: capability pass@3 = {rate:.2f} over {len(caps)} evals (threshold {CAP_THRESHOLD}); model={meta.get('model')}")
+        print(f"{skill_dir.name}: capability pass@3 = {rate:.2f} over {len(caps)} evals (threshold {CAP_THRESHOLD}); host={meta.get('host', 'claude')} model={meta.get('model')}")
         if rate < CAP_THRESHOLD:
             (errors if enforce else warns).append(f"{skill_dir.name}: capability pass@3 {rate:.2f} < {CAP_THRESHOLD}")
     return report
@@ -310,6 +310,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--skill")
     ap.add_argument("--enforce", action="store_true")
     ap.add_argument("--check-fresh", action="store_true", help="alias of --enforce (compat)")
+    ap.add_argument("--host", default="claude", help="grade snapshots-<host>/ instead of snapshots/ (claude)")
     args = ap.parse_args(argv[1:])
     enforce = args.enforce or args.check_fresh
     skills = [ROOT / "skills" / args.skill] if args.skill else sorted(p for p in (ROOT / "skills").iterdir() if p.is_dir())
@@ -317,7 +318,7 @@ def main(argv: list[str]) -> int:
     for sd in skills:
         if (sd / "evals" / "evals.json").exists():
             with_evals += 1
-        if grade_skill(sd, errors, warns, enforce=enforce):
+        if grade_skill(sd, errors, warns, enforce=enforce, host=args.host):
             graded += 1
     for w in warns:
         print(f"WARN {w}")
