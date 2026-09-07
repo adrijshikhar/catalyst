@@ -313,7 +313,7 @@ Catalyst CI runs in two lanes (see the CI+eval/perf infra design spec, archived 
 
 | Rule | Detail |
 |------|--------|
-| No model in CI | `eval-run.py` is local-only (`--model` is required; Sonnet is the recorded seed model — Haiku never invoked the skill). CI runs `eval-grade.py` against committed snapshots; `--enforce` in `scripts/test.sh` fails the build on a missing or stale snapshot, capability pass@3 < 0.90 or regression pass^3 < 1.00 (handoff 0.93 / 1.00 and hooks 1.00 at the 2026-09-06 reseed). |
+| No model in CI | `eval-run.py` is local-only (`--model` is required; Sonnet is the recorded seed model — Haiku never invoked the skill). CI runs `eval-grade.py` against committed snapshots; `--enforce` in `scripts/test.sh` fails the build on a missing or stale snapshot, capability pass@3 < 0.90 or regression pass^3 < 1.00 (handoff 1.00 / 1.00 over 18+1 evals and hooks 1.00 over 4 at the 2026-09-07 reseed). |
 | Isolation | Each run gets a fresh temp workspace with the eval's `files[]` staged, `.git-HEAD` as a real branch, named fixture trees copied, `scripts/` symlinked to the checkout, and the checkout loaded via `--plugin-dir`. Transcript (condensed to assistant + result) and every file the run wrote are captured. |
 | Freshness | `results.json` stamps SKILL.md sha256 and an inputs hash over each eval's id + prompt + files. Tightening assertions never stales a snapshot; changing a prompt, fixture or SKILL.md does — re-seed. |
 | Snapshot metadata | Every `results.json` pins `generated_at` (via `--now`), commit SHA, SKILL.md sha256, CLI version, model. |
