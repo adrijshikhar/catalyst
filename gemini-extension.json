@@ -1,6 +1,6 @@
 {
   "name": "catalyst",
   "version": "0.1.1",
-  "description": "Catalyst — harness engineering for coding agents: typed context handoffs and the lifecycle hooks that fire them.",
+  "description": "Hand a coding session from one agent to another without losing the thread \u2014 typed handoff briefs in your repo, lifecycle hooks that write and resume them on Claude Code, Codex and Antigravity, and CI-graded evals.",
   "contextFileName": "AGENTS.md"
 }

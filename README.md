@@ -34,7 +34,7 @@ Every long agent session ends the same way: `/compact`, a context limit, or you 
 | Host | Skills | `SessionStart` (resume) | `PreCompact` (auto-write) | Status |
 |---|---|---|---|---|
 | Claude Code | ✓ | ✓ | ✓ | verified |
-| Codex CLI | ✓ | ✓ after one-time `/hooks` trust | ✓ after trust | hooks load verified |
+| Codex CLI | ✓ | ✓ after one-time `/hooks` trust | ✓ after trust | verified |
 | Antigravity CLI | ✓ (+ commands as skills) | ✓ after a one-time `~/.gemini/config/hooks.json` entry (`PreInvocation`, first model call) | no compaction event | verified on agy 1.1.27 |
 | GitHub Copilot (VS Code, CLI) | ✓ | Claude-format compatible | Claude-format compatible | unverified |
 | Gemini CLI | ✓ + `AGENTS.md` as context | — | — | unverified |
@@ -85,6 +85,17 @@ npx skills add adrijshikhar/catalyst --agent cursor   # or kiro-cli, windsurf, o
 ```
 
 Requires Python 3 for the handoff scripts and `jq` for the hooks. Pin or roll back on Claude Code with `/plugin install catalyst@catalyst@<version>`.
+
+## Tested, not asserted
+
+Every skill behaviour above is an eval: a real prompt run through the real CLI in an isolated workspace, graded by deterministic checks on the files it wrote and the tools it called. Snapshots are committed and CI fails if they go stale or drop below threshold.
+
+| Host | Model | handoff (18 capability + 1 regression) | hooks (4) |
+|---|---|---|---|
+| Claude Code | Sonnet, 3 runs | pass@3 **1.00**, regression pass^3 **1.00** — enforced in CI | pass@3 **1.00** |
+| Antigravity CLI | Gemini 3.8 Flash, 1 run | pass@1 **1.00** (18/18) — report-only | — |
+
+Regenerate locally with `scripts/eval-run.py --skill handoff --model sonnet --now "$(date -u +%FT%TZ)"`; add `--host antigravity` to run the same evals through `agy`. Details and the assertion grammar: `skills/*/evals/evals.md`.
 
 ## Skills
 
