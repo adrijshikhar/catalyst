@@ -256,6 +256,8 @@ To cut a release:
    `scripts/release.sh` bumps the patch, commits `chore: bump version to X.Y.Z [skip ci]`,
    tags `vX.Y.Z`, pushes both, then `gh release create` generates notes.
 
+**Branch protection and the bump push.** `scripts/release.sh` pushes the `chore: bump version` commit straight to `main`. A *required status check* on `main` rejects that push (`GH006`, seen 2026-09-08: the tag landed on an orphan commit and the release had to be deleted and re-cut). Keep `main` protected with no-force-push + linear history only; CI still runs on every PR and merges go through `--admin`.
+
 **Re-enabling auto-release:** restore the `push: branches: [main]` trigger in
 `release.yml`. The loop guards remain intact — the job-level `if` skips the CI's
 own bump commits (by `github-actions[bot]` committer identity) and any `[skip ci]`
