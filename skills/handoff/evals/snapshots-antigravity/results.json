@@ -10,7 +10,17 @@
   "model": "gemini-3.8-flash-high",
   "runs_per_eval": 1,
   "max_turns": 30,
-  "n_evals": 19
+  "n_evals": 19,
+  "partial_seeds": [
+   {
+    "generated_at": "2026-09-08T07:43:22Z",
+    "evals": [
+     "22"
+    ],
+    "runs": 3,
+    "note": "re-run after the normaliser learned agy's subagent step type"
+   }
+  ]
  },
  "evals": {
   "0": {
@@ -188,6 +198,20 @@
     {
      "run": 0,
      "transcript_file": "22-run0.jsonl",
+     "files": {
+      "README.md": "# report-tool\n\nCommand-line report generator used for handoff evals.\n\n## Runtime requirement\n\nRequires **Python 3.11 or newer**. No other runtime is supported.\n\n## Run\n\n    python3 -m report_tool --help\n"
+     }
+    },
+    {
+     "run": 1,
+     "transcript_file": "22-run1.jsonl",
+     "files": {
+      "README.md": "# report-tool\n\nCommand-line report generator used for handoff evals.\n\n## Runtime requirement\n\nRequires **Python 3.11 or newer**. No other runtime is supported.\n\n## Run\n\n    python3 -m report_tool --help\n"
+     }
+    },
+    {
+     "run": 2,
+     "transcript_file": "22-run2.jsonl",
      "files": {
       "README.md": "# report-tool\n\nCommand-line report generator used for handoff evals.\n\n## Runtime requirement\n\nRequires **Python 3.11 or newer**. No other runtime is supported.\n\n## Run\n\n    python3 -m report_tool --help\n"
      }

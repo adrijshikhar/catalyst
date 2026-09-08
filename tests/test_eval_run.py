@@ -51,6 +51,21 @@ class TestNormalizeAntigravity(unittest.TestCase):
         results = [c["content"] for l in self.lines if l["type"] == "user" for c in l["message"]["content"]]
         self.assertEqual(results, ["/ws\n", "done"])
 
+    def test_define_subagent_is_not_a_dispatch(self):
+        t = eval_run.normalize_antigravity('{"event":"step_update","step_update":{"step_index":1,"state":"ACTIVE","step_type":"tool","tool_name":"define_subagent","tool_info":{"name":"define_subagent","parameters":{}}}}')
+        names = [c["name"] for l in t.splitlines() for c in json.loads(l).get("message", {}).get("content", []) if c.get("type") == "tool_use"]
+        self.assertEqual(names, ["define_subagent"])
+
+    def test_subagent_step_is_a_dispatch(self):
+        raw = "\n".join([
+            '{"event":"step_update","step_update":{"step_index":2,"state":"ACTIVE","step_type":"subagent","tool_name":"invoke_subagent","subagent_info":{"subagents":[{"role":"r","initial_prompt":"p"}]}}}',
+            '{"event":"step_update","step_update":{"step_index":2,"state":"DONE","step_type":"subagent","tool_name":"invoke_subagent","subagent_info":{"subagents":[{"role":"r"}]}}}',
+        ])
+        lines = [json.loads(l) for l in eval_run.normalize_antigravity(raw).splitlines()]
+        uses = [c for l in lines if l["type"] == "assistant" for c in l["message"]["content"] if c["type"] == "tool_use"]
+        self.assertEqual([(u["name"], u["host_tool"]) for u in uses], [("Agent", "invoke_subagent")])
+        self.assertTrue(any(l["type"] == "user" for l in lines))
+
     def test_result_line_carries_host_and_status(self):
         r = self.lines[-1]
         self.assertEqual((r["type"], r["host"], r["is_error"], r["result"]), ("result", "antigravity", False, "Resumed from feat-x."))
