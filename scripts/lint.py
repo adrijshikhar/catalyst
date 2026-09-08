@@ -535,12 +535,13 @@ _ANTIGRAVITY_FLAT_EVENTS = {"PreInvocation", "PostInvocation", "Stop"}
 
 
 def _check_antigravity_hooks(data: dict, base: Path, rel_path: str, errors: list[str]) -> None:
-    """hooks.json is dual-shape: Claude Code and Codex read the `hooks` key; Antigravity
-    reads every OTHER top-level key as a named hook in its own schema (per-hook parse
-    failures are isolated, verified on agy 1.1.27). The `catalyst` key must therefore be
-    Antigravity-valid: known events, flat handlers for the non-tool events, commands
-    that are plugin-root-relative (Antigravity runs them with cwd = the hooks.json
-    directory) and point at an existing executable script."""
+    """hooks/antigravity.hooks.json holds Antigravity's declaration in its own schema
+    (every top-level key is a named hook). It cannot live in the root hooks.json: Codex
+    rejects any top-level key other than description/hooks and then loads NO hooks
+    (seen on codex 0.153 with 0.1.1). agy does not execute plugin hooks anyway; users
+    register the adapter in ~/.gemini/config/hooks.json, and this file is the checked
+    declaration of record. Known events, flat handlers for non-tool events, commands
+    plugin-root-relative and pointing at an existing executable script."""
     for name, spec in data.items():
         if name == "hooks" or not isinstance(spec, dict):
             continue
@@ -558,7 +559,7 @@ def _check_antigravity_hooks(data: dict, base: Path, rel_path: str, errors: list
                     fail(f"{rel_path}: {name}.{event} is a flat event — no matcher/hooks wrapper", errors)
                 cmd = h.get("command", "")
                 if not cmd.startswith("./hooks/"):
-                    fail(f"{rel_path}: {name}.{event} command must be `./hooks/<script>` (cwd is the plugin root) — got {cmd!r}", errors)
+                    fail(f"{rel_path}: {name}.{event} command must be `./hooks/<script>` (plugin-root relative) — got {cmd!r}", errors)
                     continue
                 script = base / cmd.split()[0]
                 if not script.exists() or not os.access(script, os.X_OK):
@@ -587,7 +588,17 @@ def check_hooks_json(
     except (json.JSONDecodeError, OSError) as exc:
         fail(f"{rel_path}: invalid JSON — {exc}", errors)
         return
-    _check_antigravity_hooks(data, base, rel_path, errors)
+    for key in data:
+        if key not in ("hooks", "description"):
+            fail(f"{rel_path}: top-level key `{key}` — Codex rejects anything but `description`/`hooks` "
+                 "('failed to parse plugin hooks config'), which disables every hook. Antigravity's "
+                 "declaration lives in hooks/antigravity.hooks.json", errors)
+    agy_path = base / "hooks" / "antigravity.hooks.json"
+    if agy_path.exists():
+        try:
+            _check_antigravity_hooks(json.loads(agy_path.read_text(encoding="utf-8")), base, "hooks/antigravity.hooks.json", errors)
+        except (json.JSONDecodeError, OSError) as exc:
+            fail(f"hooks/antigravity.hooks.json: invalid JSON — {exc}", errors)
     for event, groups in (data.get("hooks") or {}).items():
         if event not in _KNOWN_HOOK_EVENTS:
             fail(f"{rel_path}: unknown hook event `{event}`", errors)

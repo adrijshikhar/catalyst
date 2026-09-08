@@ -43,6 +43,15 @@ class TestBlockScalarGuard(unittest.TestCase):
         self.assertTrue(any("strict yaml" in e.lower() for e in errors))
 
 
+class TestHooksJsonCodexClean(unittest.TestCase):
+    def test_extra_top_level_key_fails(self):
+        # codex 0.153 rejects any top-level key other than description/hooks and then
+        # loads no hooks at all — shipped in 0.1.1 as an Antigravity dual-shape key.
+        errors: list[str] = []
+        lint.check_hooks_json(errors, root=FIXTURES, rel_path="bad_hooks_extra_key.json")
+        self.assertTrue(any("top-level key `catalyst`" in e for e in errors), errors)
+
+
 class TestNoPersonalPaths(unittest.TestCase):
     def test_flags_users_path(self):
         errors: list[str] = []

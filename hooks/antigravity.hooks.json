@@ -1,0 +1,11 @@
+{
+  "catalyst": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "./hooks/PreInvocation-handoff-read.sh",
+        "timeout": 10
+      }
+    ]
+  }
+}
