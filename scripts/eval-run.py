@@ -158,7 +158,10 @@ def infra_failure(transcript: str) -> str | None:
 
 # ---------------------------------------------------------------- hosts
 
-_SUBAGENT_TOOLS = {"invoke_subagent", "define_subagent", "browser_subagent", "manage_subagents"}
+# Only tools that actually RUN a subagent count as dispatch. define_subagent and
+# manage_subagents are setup/bookkeeping: on 2026-09-08 three Flash runs defined a
+# subagent, never invoked it, did the task themselves and narrated a "subagent report".
+_SUBAGENT_TOOLS = {"invoke_subagent", "browser_subagent"}
 
 
 def stage_antigravity_skills(ws: Path) -> None:
@@ -198,6 +201,16 @@ def normalize_antigravity(raw: str) -> str:
                     text_by_step.setdefault(idx, []).append(body["text_delta"])
                 if body.get("state") == "DONE" and text_by_step.get(idx):
                     out.append(json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "".join(text_by_step.pop(idx))}]}}))
+            elif st == "subagent":
+                # agy reports subagent dispatch as its own step type (tool_name
+                # invoke_subagent, details in subagent_info), not as a `tool` step.
+                info = body.get("subagent_info") or {}
+                if body.get("state") == "ACTIVE":
+                    tool_steps += 1
+                    out.append(json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Agent",
+                               "host_tool": body.get("tool_name") or "invoke_subagent", "input": info}]}}))
+                elif body.get("state") == "DONE":
+                    out.append(json.dumps({"type": "user", "message": {"content": [{"type": "tool_result", "content": json.dumps(info)[:4000]}]}}))
             elif st == "tool":
                 info = body.get("tool_info") or {}
                 name = body.get("tool_name") or info.get("name") or "tool"
