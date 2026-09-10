@@ -1,6 +1,6 @@
 {
   "name": "catalyst",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Hand a coding session from one agent to another without losing the thread — typed handoff briefs in your repo, lifecycle hooks that write and resume them on Claude Code, Codex and Antigravity, and CI-graded evals.",
   "contextFileName": "AGENTS.md"
 }
