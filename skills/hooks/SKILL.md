@@ -27,7 +27,7 @@ None — hooks are active as soon as the plugin is installed.
 /hooks disable sessionstart
 ```
 
-Writes `hooks.precompact_prompt` / `hooks.sessionstart_resume` to `false` in `.claude/catalyst.json` — the only state. `/hooks enable <hook>` reverses it. **Falsy, case-insensitive: `false`, `0`, `no`, `off`.** Anything else — including the word `"disabled"` — is truthy; the hook stays enabled.
+Writes `hooks.precompact_prompt` / `hooks.sessionstart_resume` to `false` in `.catalyst/config.json` — the only state (a legacy `.claude/catalyst.json` is still read when no canonical file exists, never written). `/hooks enable <hook>` reverses it. **Falsy, case-insensitive: `false`, `0`, `no`, `off`.** Anything else — including the word `"disabled"` — is truthy; the hook stays enabled.
 
 ## Authoring and linting
 
@@ -60,7 +60,7 @@ See [`hooks/README.md`](../../hooks/README.md) for stdin/output shape, exit code
 
 ## Anti-patterns
 
-- **Editing `.claude/settings.json` or `.claude/catalyst.json` by hand for hook state.** Use `/hooks` commands.
+- **Editing `.claude/settings.json` or `.catalyst/config.json` by hand for hook state.** Use `/hooks` commands.
 - **Writing a hook that depends on Python/Node, or skipping `set -euo pipefail`.** POSIX bash + jq only; the strict mode catches typos that would otherwise silently misfire.
 - **Returning JSON without `hookEventName`.** Claude Code, Codex and Copilot use it to route output; missing it means the decision is ignored.
 

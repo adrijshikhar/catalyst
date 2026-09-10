@@ -4,7 +4,7 @@
 #   catalyst_project_root [dir]          -> main-worktree root (parent of the
 #                                           shared .git), else dir itself
 #   catalyst_store_dir [dir]             -> <root>/.catalyst/handoffs
-#   catalyst_config_get <key> [default]  -> scalar; env > catalyst.json > default
+#   catalyst_config_get <key> [default]  -> scalar; env > .catalyst/config.json (legacy .claude/catalyst.json) > default
 #   catalyst_config_json <key>           -> raw JSON value, or nothing
 #
 # Env-name rule: CATALYST_ + dotted key uppercased, '.' -> '_'.
@@ -46,9 +46,19 @@ catalyst_brief_path() {
   printf '%s\n' "$path"
 }
 
-_catalyst_config_file() {
-  printf '%s/.claude/catalyst.json\n' \
+# Canonical knobs file (writes): <main>/.catalyst/config.json.
+catalyst_config_write_file() {
+  printf '%s/.catalyst/config.json\n' \
     "$(catalyst_project_root "${CLAUDE_PROJECT_DIR:-$(pwd)}")"
+}
+
+# Read path: canonical if present, else legacy .claude/catalyst.json (read-only
+# compatibility — never written, never moved), else canonical.
+_catalyst_config_file() {
+  local root canon legacy
+  root=$(catalyst_project_root "${CLAUDE_PROJECT_DIR:-$(pwd)}")
+  canon="$root/.catalyst/config.json"; legacy="$root/.claude/catalyst.json"
+  if [ ! -e "$canon" ] && [ -f "$legacy" ]; then printf '%s\n' "$legacy"; else printf '%s\n' "$canon"; fi
 }
 
 _catalyst_env_name() {

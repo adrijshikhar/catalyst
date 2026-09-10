@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared config reader: env > .claude/catalyst.json > default.
+"""Shared config reader: env > .catalyst/config.json (legacy .claude/catalyst.json read-only) > default.
 
 Mirrors hooks/lib/config.sh — the two are held together by
 tests/test_catalyst_config.py::TestParity. Change one, change both.
@@ -46,12 +46,35 @@ def project_root(cwd: Path | None = None) -> Path:
 
 
 def config_path(cwd: Path | None = None) -> Path:
-    return project_root(cwd) / ".claude" / "catalyst.json"
+    """Canonical, host-neutral knobs file: <main>/.catalyst/config.json. Writes go
+    here. .claude/catalyst.json is legacy: read when the canonical file is absent,
+    never written, never moved (same policy as .claude/handoffs/)."""
+    return project_root(cwd) / ".catalyst" / "config.json"
+
+
+LEGACY_CONFIG = Path(".claude") / "catalyst.json"
+
+
+def config_read_path(cwd: Path | None = None) -> Path:
+    canonical = config_path(cwd)
+    legacy = project_root(cwd) / LEGACY_CONFIG
+    return legacy if (not canonical.exists() and legacy.is_file()) else canonical
+
+
+def narrative_path(cwd: Path | None = None) -> Path:
+    """Canonical narrative: <main>/.catalyst/PROJECT_STATE.md (writes)."""
+    return project_root(cwd) / ".catalyst" / "PROJECT_STATE.md"
+
+
+def narrative_read_path(cwd: Path | None = None) -> Path:
+    canonical = narrative_path(cwd)
+    legacy = project_root(cwd) / ".claude" / "PROJECT_STATE.md"
+    return legacy if (not canonical.exists() and legacy.is_file()) else canonical
 
 
 def _load(cwd: Path | None = None) -> dict:
     try:
-        return json.loads(config_path(cwd).read_text(encoding="utf-8"))
+        return json.loads(config_read_path(cwd).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, ValueError):
         return {}
 

@@ -16,7 +16,7 @@
 | 3 | new-event-scaffold | `/hooks new PostToolUse my-custom-hook` produces a valid hook script template at hooks/PostToolUse-my-custom-hook.sh |
 | 4 | lint-catches-bad-matcher | `/hooks lint <path>` flags a hook with matcher ".*" as too broad |
 | 5 | status-report | `/hooks status` prints both hooks with event and state, names `hooks.json` as the registration surface, dispatches no subagent |
-| 6 | disable-precompact-knob | `/hooks disable precompact` writes only `hooks.precompact_prompt: false` to `.claude/catalyst.json`, leaves the other knob unwritten, never edits `hooks.json` |
+| 6 | disable-precompact-knob | `/hooks disable precompact` writes only `hooks.precompact_prompt: false` to `.catalyst/config.json`, leaves the other knob unwritten, never edits `hooks.json` |
 
 ## Regression evals (0)
 
