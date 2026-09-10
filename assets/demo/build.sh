@@ -13,7 +13,7 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 DEMO=/tmp/catalyst-demo
 
 rm -rf "$DEMO"
-mkdir -p "$DEMO/.claude/handoffs" "$DEMO/skills/handoff"
+mkdir -p "$DEMO/.catalyst/handoffs" "$DEMO/skills/handoff"
 # Physical path — render.py resolves symlinks (/tmp -> /private/tmp on macOS);
 # store the resolved path so worktree.git_common_dir matches and no false mismatch.
 DEMO="$(cd "$DEMO" && pwd -P)"
@@ -29,7 +29,7 @@ echo "demo" > "$DEMO/README.md"
 git -C "$DEMO" add -A && git -C "$DEMO" commit -qm "init"
 
 # A realistic brief — what /catalyst:handoff WROTE before the last /compact.
-cat > "$DEMO/.claude/handoffs/feat-jwt-expiry.json" <<EOF
+cat > "$DEMO/.catalyst/handoffs/feat-jwt-expiry.json" <<EOF
 {
   "schema_version": "1",
   "key": "feat-jwt-expiry",
@@ -54,7 +54,7 @@ cat > "$DEMO/.claude/handoffs/feat-jwt-expiry.json" <<EOF
 EOF
 
 # Validate the brief is real and well-formed before we film it.
-python3 "$DEMO/scripts/handoff-validate.py" "$DEMO/.claude/handoffs/feat-jwt-expiry.json"
+python3 "$DEMO/scripts/handoff-validate.py" "$DEMO/.catalyst/handoffs/feat-jwt-expiry.json"
 
 cd "$REPO"
 vhs assets/demo/handoff.tape
