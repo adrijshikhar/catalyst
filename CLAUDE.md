@@ -158,7 +158,8 @@ referenced script exists and is executable.
 
 ## Configuration knobs
 
-`.claude/catalyst.json` is the canonical knobs file, read through one reader per
+`.catalyst/config.json` is the canonical knobs file (legacy `.claude/catalyst.json` is read
+when it is absent, never written), read through one reader per
 language — `hooks/lib/config.sh` (bash, sourced by hooks) and
 `scripts/catalyst_config.py` (Python, used by scripts). Precedence is
 **env > json > built-in default**.
@@ -286,9 +287,9 @@ resume the normal dispatch afterwards.
 |---------|--------|
 | `*.log` | Generic — most logs are noise |
 | `!skills/*/evals/evals.log` | Override — eval logs are the regression trace and must be durable |
-| `.catalyst/` | Canonical checkpoint and external-task state; write preparation ensures this rule in the consumer Git repository |
-| `.claude/handoffs/`, `.claude/HANDOFF.md`, `.claude/PROJECT_STATE.md` | Legacy checkpoints (read compatibility) and existing narrative — never committed unless team wants shared state |
-| `.claude/catalyst.json` | Per-project config knobs — see "Configuration knobs" above |
+| `.catalyst/` | Everything Catalyst writes: `handoffs/`, `tasks/`, `PROJECT_STATE.md`, `config.json`; write preparation ensures this rule in the consumer Git repository |
+| `.claude/handoffs/`, `.claude/HANDOFF.md`, `.claude/PROJECT_STATE.md` | Legacy checkpoints and narrative (read compatibility only; canonical narrative is `.catalyst/PROJECT_STATE.md`) |
+| `.claude/catalyst.json` | Legacy config location, read-only compatibility — canonical is `.catalyst/config.json` (covered by `.catalyst/`) |
 | `skills/*-workspace/` | Eval run scratch — outputs, graders, snapshots |
 | `.DS_Store`, `.idea/`, `.vscode/`, `*.swp` | Standard editor/OS noise |
 

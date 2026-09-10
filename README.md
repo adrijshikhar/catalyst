@@ -40,7 +40,7 @@ Every long agent session ends the same way: `/compact`, a context limit, or you 
 | Gemini CLI | ✓ + `AGENTS.md` as context | — | — | unverified |
 | ~76 others via the `skills` CLI | ✓ | — | — | skills only |
 
-Hooks never block anything and fail open; they only inject context. Before writing, Catalyst adds `.catalyst/` to the main worktree's `.gitignore` if needed. Outside Git, it creates no ignore file. Legacy `.claude/handoffs/` briefs remain readable; new writes use `.catalyst/handoffs/`. Transfer the file explicitly if the next agent runs on another machine.
+Hooks never block anything and fail open; they only inject context. Everything Catalyst writes — briefs, task files, the `PROJECT_STATE.md` narrative, config — lives under `.catalyst/` in the main worktree; it adds `.catalyst/` to `.gitignore` if needed. Outside Git, it creates no ignore file. Legacy `.claude/handoffs/` briefs remain readable; new writes use `.catalyst/handoffs/`. Transfer the file explicitly if the next agent runs on another machine.
 
 ## Install
 

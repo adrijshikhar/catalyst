@@ -68,7 +68,7 @@ Both advisory hooks (PreCompact, SessionStart) are active on Claude Code as soon
 ## Configuration
 
 Everything works with no configuration. When you do want to tune something,
-`.claude/catalyst.json` is the single file, and the precedence is
+`.catalyst/config.json` is the single file (a legacy `.claude/catalyst.json` is read when it is absent), and the precedence is
 **environment variable > that file > built-in default**:
 
 ```json
