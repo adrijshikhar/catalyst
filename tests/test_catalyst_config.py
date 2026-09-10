@@ -25,9 +25,10 @@ KNOBS = [
 ]
 
 
-def _write_config(root: Path, data: dict) -> None:
-    (root / ".claude").mkdir(parents=True, exist_ok=True)
-    (root / ".claude" / "catalyst.json").write_text(json.dumps(data), encoding="utf-8")
+def _write_config(root: Path, data: dict, legacy: bool = False) -> None:
+    d = root / (".claude" if legacy else ".catalyst")
+    d.mkdir(parents=True, exist_ok=True)
+    (d / ("catalyst.json" if legacy else "config.json")).write_text(json.dumps(data), encoding="utf-8")
 
 
 def _cli(args: list[str], cwd: Path, env: dict | None = None) -> str:
@@ -176,6 +177,40 @@ class TestParity(unittest.TestCase):
                 self.assertEqual(py, sh)
             finally:
                 del os.environ["CATALYST_HANDOFF_STALE_HOURS"]
+
+
+
+
+class TestConfigLocation(unittest.TestCase):
+    """Config lives in .catalyst/ (host-neutral). .claude/catalyst.json is read
+    when the canonical file is absent; it is never written and never moved."""
+
+    def test_canonical_path_is_catalyst_dir(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.assertEqual(cc.config_path(root), root / ".catalyst" / "config.json")
+
+    def test_legacy_read_when_canonical_absent(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            _write_config(root, {"handoff": {"stale_hours": 5}}, legacy=True)
+            self.assertEqual(cc.get("handoff.stale_hours", "24", root), 5)
+
+    def test_canonical_wins_over_legacy(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            _write_config(root, {"handoff": {"stale_hours": 5}}, legacy=True)
+            _write_config(root, {"handoff": {"stale_hours": 9}})
+            self.assertEqual(cc.get("handoff.stale_hours", "24", root), 9)
+
+    def test_narrative_path_canonical_then_legacy(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            self.assertEqual(cc.narrative_path(root), root / ".catalyst" / "PROJECT_STATE.md")
+            (root / ".claude").mkdir(); (root / ".claude" / "PROJECT_STATE.md").write_text("# old")
+            self.assertEqual(cc.narrative_read_path(root), root / ".claude" / "PROJECT_STATE.md")
+            (root / ".catalyst").mkdir(); (root / ".catalyst" / "PROJECT_STATE.md").write_text("# new")
+            self.assertEqual(cc.narrative_read_path(root), root / ".catalyst" / "PROJECT_STATE.md")
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ A handoff is a **state packet** the next session or subagent can act on without 
 | File | Purpose | Lifetime | Loaded |
 |------|---------|----------|--------|
 | `<store>/<key>.json` (legacy slot `<store>/HANDOFF.json`) | **Ephemeral brief** — minimum payload to resume; points at durable artifacts | Overwritten on every WRITE for that key | Start of the next session for that key |
-| `.claude/PROJECT_STATE.md` | **Persistent narrative** — decisions, why, rejected paths, surprises | Prepended forever, newest first; one file per repo, never split per feature | On demand, when a brief points at it |
+| `<main>/.catalyst/PROJECT_STATE.md` | **Persistent narrative** — decisions, why, rejected paths, surprises | Prepended forever, newest first; one file per repo, never split per feature | On demand, when a brief points at it |
 
 ## Feature key resolution
 
@@ -22,7 +22,7 @@ A handoff is a **state packet** the next session or subagent can act on without 
 | 2 | `git branch --show-current` (sanitized `/`→`-`, cap 80) | `<store>/<branch>.json` | Default |
 | 3 | Not in a git repo, or detached HEAD | `<store>/HANDOFF.json` | Legacy single-slot fallback |
 
-`<store>` is `<main>/.catalyst/handoffs/` where `<main>` is the main worktree (parent of `git rev-parse --git-common-dir`; the current directory outside Git). Print it with `bash "$SCR/handoff-dir.sh"` or `python3 "$SCR/handoff_paths.py"`. Every linked worktree shares one store keyed by branch. Detect "in a repo?" with `git rev-parse --git-dir`, never `[ -d .git ]`. Readers also find a key under the legacy `<main>/.claude/handoffs/` when the canonical file is absent; old files are never moved or deleted, and inventory lists both locations.
+`<store>` is `<main>/.catalyst/handoffs/` where `<main>` is the main worktree (parent of `git rev-parse --git-common-dir`; the current directory outside Git). Print it with `bash "$SCR/handoff-dir.sh"` or `python3 "$SCR/handoff_paths.py"`. Every linked worktree shares one store keyed by branch. Detect "in a repo?" with `git rev-parse --git-dir`, never `[ -d .git ]`. Everything Catalyst writes lives under `<main>/.catalyst/`: briefs in `handoffs/`, task files in `tasks/`, the narrative `PROJECT_STATE.md`, knobs in `config.json`. Nothing new is written under `.claude/`. Legacy locations (`.claude/handoffs/<key>.json`, `.claude/PROJECT_STATE.md`, `.claude/catalyst.json`) are read when the canonical file is absent; old files are never moved or deleted, and inventory lists both locations.
 
 **Before any write:** `python3 "$SCR/handoff_paths.py" --init` (add `--tasks` for task files). It creates only the selected store and, in Git, ensures `.catalyst/` is in the main worktree's `.gitignore`. If it fails, stop and report. READ, REGROUND, `list` and the hooks are read-only.
 
@@ -32,7 +32,7 @@ A handoff is a **state packet** the next session or subagent can act on without 
 
 | Mode | Trigger | Persists? | Consumer |
 |------|---------|-----------|----------|
-| **WRITE** | Ending a session, context limit, before `/clear` or `/compact`, "handoff" / `/handoff` | `<store>/<key>.json` (validated) + prepend `PROJECT_STATE.md` | Next session |
+| **WRITE** | Ending a session, context limit, before `/clear` or `/compact`, "handoff" / `/handoff` | `<store>/<key>.json` (validated) + prepend `.catalyst/PROJECT_STATE.md` | Next session |
 | **READ** | Fresh session with brief(s) present, user wants to resume | None | Current session |
 | **RECOVER** | Context degraded mid-session — re-reads, contradictions, forgotten decisions | Overwrites the brief; no narrative entry | Current session, post-`/clear` |
 | **REGROUND** | Recall drifting mid-session | None (read-only re-injection) | Current session |
@@ -57,7 +57,7 @@ The brief is typed JSON validated against the bundled `brief.schema.json`: `sche
 1. **Key** — apply the ladder; sticky within the session.
 2. **Gather state** — run in parallel where supported: `git branch --show-current`, `git status --short`, `git diff --stat`, `git log --oneline -10`, `git rev-parse HEAD` (→ `state.head_sha`), and `git rev-parse --path-format=absolute --git-common-dir` (→ `state.worktree.git_common_dir`; never `--absolute-git-dir`, which returns the worktree-private dir in a linked worktree and fires a false `REPO MISMATCH`). From the transcript note tests run, commands that advanced the work, decisions the next session depends on, rejected paths, open risks and the next concrete acceptance check.
 3. **Build and validate** — write the typed object to a temp file, run `python3 "$SCR/handoff-validate.py" <tmp>.json`, fix every reported field until it prints `handoff-validate: OK`, then move it to `<store>/<key>.json` (store from `handoff_paths.py --init`).
-4. **Narrative** — prepend an entry to `.claude/PROJECT_STATE.md`, directly below the header and above earlier entries. Create the header first if the file is new, and verify the first line is still `# Project state` afterwards.
+4. **Narrative** — prepend an entry to `<main>/.catalyst/PROJECT_STATE.md`, directly below the header and above earlier entries. Create the header first if the file is new, and verify the first line is still `# Project state` afterwards. If a legacy `.claude/PROJECT_STATE.md` exists and the canonical file does not, create the canonical file with the header plus one line `Earlier entries: .claude/PROJECT_STATE.md` — do not move or edit the legacy file.
 
 ```markdown
 # Project state — narrative log
@@ -89,7 +89,7 @@ ALWAYS print the Resume prompt verbatim at the end of the confirmation. The user
 ```
 Handoff written (key: <key>, tier: <1|2|3>):
   <store>/<key>.json         (validated JSON)
-  .claude/PROJECT_STATE.md   (+<n> lines prepended)
+  .catalyst/PROJECT_STATE.md (+<n> lines prepended)
 
 Next session — run `/catalyst:handoff resume` (or paste the Resume prompt):
 
@@ -107,7 +107,7 @@ The resume prompt MUST route through `/catalyst:handoff resume` — never a bare
 1. Resolve `$SCR`, then inventory with `python3 "$SCR/handoff-list.py" --json` (canonical + legacy stores, including `HANDOFF.json`). For a duplicate key the canonical file wins unless the user names the legacy path.
 2. Multiple briefs: surface ALL of them, name the current-branch match as the primary suggestion, list the others with mtime + key, and wait for the user. Never silently choose.
 3. `python3 "$SCR/handoff-render.py" <key>` and follow its output. Heed every `!!` line before continuing, in the order printed: `REPO MISMATCH` > `BRANCH MISMATCH` > `STALE` > `MISSING`, plus `Commits since brief written: N`. If the brief was written in another (linked) worktree, say so and offer to `cd` there rather than resuming in the wrong tree.
-4. Read `files_read_first`. Do **not** read `.claude/PROJECT_STATE.md` unless the brief says to or you need a decision's rationale.
+4. Read `files_read_first`. Do **not** read `PROJECT_STATE.md` (canonical `.catalyst/`, legacy `.claude/`) unless the brief says to or you need a decision's rationale.
 5. Confirm: "Resumed from `<key>`. Next acceptance check: <quote from brief>. Starting now." The key becomes the sticky session key.
 
 ---
@@ -116,7 +116,7 @@ The resume prompt MUST route through `/catalyst:handoff resume` — never a bare
 
 The session is degraded: forgotten goals, re-reads, contradicted decisions, repeated rejected approaches.
 
-1. Key via the ladder. Render the existing brief (`handoff-render.py <key>`; canonical first, legacy fallback) and read the 2–3 newest `PROJECT_STATE.md` entries.
+1. Key via the ladder. Render the existing brief (`handoff-render.py <key>`; canonical first, legacy fallback) and read the 2–3 newest `PROJECT_STATE.md` entries (`.catalyst/` first, then legacy `.claude/`).
 2. `git log --oneline -20` and `git diff` on the working branch.
 3. `handoff_paths.py --init`, rebuild the typed object from git + transcript, validate, write `<store>/<key>.json`. Keep the old copy when recovering from legacy storage.
 4. Do **not** prepend to `PROJECT_STATE.md` — recovery is re-assembly, not fresh signal.

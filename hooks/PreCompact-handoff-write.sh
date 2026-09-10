@@ -35,7 +35,7 @@ if ! command -v catalyst_store_dir >/dev/null 2>&1; then
   exit 0
 fi
 
-# Opt out: `hooks.precompact_prompt: false` in .claude/catalyst.json, or
+# Opt out: `hooks.precompact_prompt: false` in .catalyst/config.json (legacy .claude/catalyst.json), or
 # CATALYST_HOOKS_PRECOMPACT_PROMPT=false. Silent by design — a disabled hook
 # that still prints has not been disabled.
 if ! catalyst_config_enabled hooks.precompact_prompt; then

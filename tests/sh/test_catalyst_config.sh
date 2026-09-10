@@ -13,7 +13,7 @@ check() { # label expected actual
   if [ "$2" = "$3" ]; then echo "PASS $1"; else echo "FAIL $1: expected '$2', got '$3'"; fail=1; fi
 }
 
-mkdir -p "$TMP/.claude"
+mkdir -p "$TMP/.claude" "$TMP/.catalyst"
 
 # T1: default when nothing is configured
 check "T1 default" "24" \
@@ -32,6 +32,13 @@ check "T3 env beats json" "7" \
 printf '%s' '{not json' > "$TMP/.claude/catalyst.json"
 check "T4 malformed json fails open" "24" \
   "$(CLAUDE_PROJECT_DIR="$TMP" bash "$CLI" get handoff.stale_hours 24)"
+
+# T2b: canonical .catalyst/config.json beats legacy .claude/catalyst.json
+printf '%s' '{"handoff":{"stale_hours":1}}' > "$TMP/.claude/catalyst.json"
+printf '%s' '{"handoff":{"stale_hours":3}}' > "$TMP/.catalyst/config.json"
+check "T2b canonical beats legacy" "3" \
+  "$(CLAUDE_PROJECT_DIR="$TMP" bash "$CLI" get handoff.stale_hours 24)"
+rm -f "$TMP/.catalyst/config.json"
 
 # T5: structured value is NOT returned by the scalar reader
 printf '%s' '{"example":{"items":[{"writes_to":"x.json"}]}}' > "$TMP/.claude/catalyst.json"

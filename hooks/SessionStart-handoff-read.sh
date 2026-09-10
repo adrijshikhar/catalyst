@@ -33,7 +33,7 @@ if ! command -v catalyst_brief_path >/dev/null 2>&1; then
   exit 0
 fi
 
-# Opt out: `hooks.sessionstart_resume: false` in .claude/catalyst.json, or
+# Opt out: `hooks.sessionstart_resume: false` in .catalyst/config.json (legacy .claude/catalyst.json), or
 # CATALYST_HOOKS_SESSIONSTART_RESUME=false.
 if ! catalyst_config_enabled hooks.sessionstart_resume; then
   exit 0

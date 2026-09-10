@@ -4,7 +4,7 @@
 # Hooks are registered by hooks.json and always run from the plugin
 # cache, so there is nothing to install and nothing to drift. What a user can
 # change is whether the two ADVISORY hooks act; that lives in
-# .claude/catalyst.json, which is the only state. This script is a front door
+# .catalyst/config.json (legacy .claude/catalyst.json read-only), which is the only state. This script is a front door
 # onto that file, not a second source of truth.
 set -euo pipefail
 
@@ -15,7 +15,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 command -v jq >/dev/null 2>&1 || { echo "ERROR: jq is required." >&2; exit 1; }
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-CFG="$(catalyst_project_root "$PROJECT_DIR")/.claude/catalyst.json"
+CFG_READ="$(CLAUDE_PROJECT_DIR="$PROJECT_DIR" _catalyst_config_file)"
+CFG="$(CLAUDE_PROJECT_DIR="$PROJECT_DIR" catalyst_config_write_file)"   # writes always canonical
 
 # hook alias -> config key
 key_for() {
@@ -31,7 +32,11 @@ key_for() {
 set_key() { # <dotted.key> <true|false>
   local key="$1" val="$2"
   mkdir -p "$(dirname "$CFG")"
-  [ -f "$CFG" ] || printf '%s' '{}' > "$CFG"
+  # First canonical write while only a legacy file exists: start from a copy so
+  # existing knobs carry over; the legacy file itself is never modified.
+  if [ ! -f "$CFG" ]; then
+    if [ -f "$CFG_READ" ] && [ "$CFG_READ" != "$CFG" ] && jq -e . "$CFG_READ" >/dev/null 2>&1; then cp "$CFG_READ" "$CFG"; else printf '%s' '{}' > "$CFG"; fi
+  fi
   if ! jq --argjson v "$val" --arg k "${key#hooks.}" \
        '.hooks //= {} | .hooks[$k] = $v' "$CFG" > "$CFG.tmp"; then
     rm -f "$CFG.tmp"

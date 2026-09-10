@@ -81,7 +81,7 @@ def _missing_files(obj: dict) -> list[str]:
 
 
 def _stale_hours() -> float:
-    """Staleness threshold: CATALYST_HANDOFF_STALE_HOURS > catalyst.json > 24."""
+    """Staleness threshold: CATALYST_HANDOFF_STALE_HOURS > .catalyst/config.json > 24."""
     try:
         return float(_cc.get("handoff.stale_hours", 24))
     except (TypeError, ValueError):

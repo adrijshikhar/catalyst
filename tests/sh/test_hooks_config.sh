@@ -11,7 +11,7 @@ fail=0
 . "$REPO_ROOT/hooks/lib/config.sh"
 
 mkdir -p "$TMP/.claude"
-cfg() { printf '%s' "$1" > "$TMP/.claude/catalyst.json"; }
+cfg() { mkdir -p "$TMP/.catalyst"; printf '%s' "$1" > "$TMP/.catalyst/config.json"; }
 
 check() { # label expected-rc actual-rc
   if [ "$2" = "$3" ]; then echo "PASS $1"; else echo "FAIL $1: expected rc=$2, got rc=$3"; fail=1; fi
@@ -128,13 +128,13 @@ v=$(CLAUDE_PROJECT_DIR="$P2" bash "$REPO_ROOT/scripts/catalyst-config.sh" get ho
 check "T16 enable writes true" "true" "$v"
 
 # T17: the config file stays valid JSON and other keys survive
-printf '%s' '{"handoff":{"stale_hours":30}}' > "$P2/.claude/catalyst.json"
+mkdir -p "$P2/.catalyst"; printf '%s' '{"handoff":{"stale_hours":30}}' > "$P2/.catalyst/config.json"
 CLAUDE_PROJECT_DIR="$P2" bash "$HC" disable sessionstart >/dev/null 2>&1
 if jq -e '.handoff.stale_hours == 30 and .hooks.sessionstart_resume == false' \
-     "$P2/.claude/catalyst.json" >/dev/null 2>&1; then
+     "$P2/.catalyst/config.json" >/dev/null 2>&1; then
   echo "PASS T17 unrelated config keys preserved"
 else
-  echo "FAIL T17: clobbered other keys: $(cat "$P2/.claude/catalyst.json")"; fail=1
+  echo "FAIL T17: clobbered other keys: $(cat "$P2/.catalyst/config.json")"; fail=1
 fi
 
 # T19: status warns about legacy installed copies, which double-fire and freeze
@@ -151,20 +151,30 @@ rm -rf "${P2:?}"
 # T20: a write that fails must not report success, must not leave a stray
 # temp file, and must not touch the original (malformed) config.
 P3="$(mktemp -d)"
-mkdir -p "$P3/.claude"
-printf '%s' '{not json' > "$P3/.claude/catalyst.json"
+mkdir -p "$P3/.catalyst"
+printf '%s' '{not json' > "$P3/.catalyst/config.json"
 rc=0
 out=$(CLAUDE_PROJECT_DIR="$P3" bash "$HC" disable precompact 2>&1) || rc=$?
 if [ "$rc" -ne 0 ] \
    && ! printf '%s' "$out" | grep -q 'Set hooks.precompact_prompt' \
-   && [ ! -e "$P3/.claude/catalyst.json.tmp" ] \
-   && [ "$(cat "$P3/.claude/catalyst.json")" = '{not json' ]; then
+   && [ ! -e "$P3/.catalyst/config.json.tmp" ] \
+   && [ "$(cat "$P3/.catalyst/config.json")" = '{not json' ]; then
   echo "PASS T20 failed write reports failure, leaves no tmp file, config untouched"
 else
   echo "FAIL T20: rc=$rc out=$out tmp=$([ -e "$P3/.claude/catalyst.json.tmp" ] && echo present || echo absent) cfg=$(cat "$P3/.claude/catalyst.json")"
   fail=1
 fi
 rm -rf "${P3:?}"
+
+# T21: disable writes the CANONICAL file even when only a legacy one exists; legacy untouched
+L21="$(mktemp -d)"; mkdir -p "$L21/.claude"; printf '%s' '{"hooks":{"sessionstart_resume":true}}' > "$L21/.claude/catalyst.json"
+CLAUDE_PROJECT_DIR="$L21" bash "$REPO_ROOT/scripts/hooks-config.sh" disable precompact >/dev/null 2>&1 || true
+if [ -f "$L21/.catalyst/config.json" ] && jq -e '.hooks.precompact_prompt == false' "$L21/.catalyst/config.json" >/dev/null \
+   && [ "$(cat "$L21/.claude/catalyst.json")" = '{"hooks":{"sessionstart_resume":true}}' ]; then
+  echo "PASS T21 disable writes .catalyst/config.json, legacy .claude/catalyst.json untouched"
+else
+  echo "FAIL T21: canonical write / legacy preservation"; ls -R "$L21"; fail=1
+fi
 
 [ "$fail" -eq 0 ] && echo "test_hooks_config: ALL PASS" || echo "test_hooks_config: FAILURES"
 exit $fail

@@ -23,9 +23,9 @@ Type "# Yesterday: you ran  /catalyst:handoff  before /compact." Enter
 Sleep 900ms
 Type "# It wrote a typed, validated brief — one per branch:" Enter
 Sleep 700ms
-Type "ls .claude/handoffs/" Enter
+Type "ls .catalyst/handoffs/" Enter
 Sleep 1200ms
-Type "jq '{key, resume, next: .state.next_acceptance_check}' .claude/handoffs/feat-jwt-expiry.json" Enter
+Type "jq '{key, resume, next: .state.next_acceptance_check}' .catalyst/handoffs/feat-jwt-expiry.json" Enter
 Sleep 3000ms
 
 Type "clear" Enter

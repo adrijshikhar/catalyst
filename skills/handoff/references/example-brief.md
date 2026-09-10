@@ -42,7 +42,7 @@ Moved out of SKILL.md 2026-09-06; the shape is enforced by `brief.schema.json` +
   "files_skip": [
     {"path": "src/auth/types.ts", "why": "stable"},
     {"path": "src/users/*", "why": "unrelated"},
-    {"path": ".claude/PROJECT_STATE.md", "why": "historical only; decisions above are binding"}
+    {"path": ".catalyst/PROJECT_STATE.md", "why": "historical only; decisions above are binding"}
   ]
 }
 ```
