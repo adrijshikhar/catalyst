@@ -57,6 +57,16 @@ class TestGrammar(unittest.TestCase):
         self.assertTrue(eg.grade_assertion("resume_summary.md quotes the next acceptance check: 'pnpm test passes 6/6'", "", FILES))
         self.assertFalse(eg.grade_assertion("resume_summary.md quotes 'nothing here'", "", FILES))
 
+    def test_output_line_does_not_accept_a_negated_quote(self):
+        assertion = "drift_report.md has output line '- Commits since brief written: 1'"
+        self.assertFalse(eg.grade_assertion(assertion, "", {
+            "drift_report.md": "No '- Commits since brief written: 1' line appeared.\n"}))
+        self.assertTrue(eg.grade_assertion(assertion, "", {
+            "drift_report.md": "- Commits since brief written: 1\nACK COMMITS: 1\n"}))
+        for report in ("> - Commits since brief written: 1\n", "`- Commits since brief written: 1`\n"):
+            self.assertTrue(eg.grade_assertion(assertion, "", {"drift_report.md": report}))
+        self.assertFalse(eg.grade_assertion(assertion, "- Commits since brief written: 1", {}))
+
     def test_rendered_output_contains(self):
         self.assertTrue(eg.grade_assertion("The rendered output of `python3 scripts/handoff-render.py --file .claude/handoffs/feat-x.json` contains 'c'", "", FILES))
 

@@ -203,7 +203,7 @@
       "id": 20,
       "name": "read-drift-commits-since",
       "category": "capability",
-      "prompt": "You are at the root of the catalyst repository (real git history; HEAD descends from the #69 merge commit 82de465). A typed handoff brief is committed at skills/handoff/evals/fixtures/eval-20-read-drift-commits-since/.catalyst/handoffs/catalyst-read-drift.json. Follow the handoff skill READ mode: render the brief with `python3 scripts/handoff-render.py --file skills/handoff/evals/fixtures/eval-20-read-drift-commits-since/.catalyst/handoffs/catalyst-read-drift.json --now 2026-07-07T19:00:00Z` (pinned clock).\n\nThen write `drift_report.md` in the current working directory containing, in order: (1) every renderer output line that begins with `!!`, copied verbatim, each followed by an `ACK <TYPE>: <verification step>` line where TYPE is REPO, BRANCH, STALE or MISSING; (2) the Summary line that begins `- Commits since brief written:` (or the `not in current history` line if that appeared instead), copied verbatim; (3) one line `ACK COMMITS: <N>` where N is the number shown, followed on the next line by the exact command you would run to review what landed: `git log --oneline 82de465..HEAD`.\n\nDo NOT resume the work itself, do NOT create any missing file, and do NOT read .catalyst/PROJECT_STATE.md.",
+      "prompt": "You are in an isolated disposable eval repository. First run `python3 skills/handoff/evals/fixtures/eval-20-read-drift-commits-since/setup.py` to prepare a real brief at the initial fixture commit and one subsequent commit. It creates the review reference `brief-base`. Follow the handoff skill READ mode: render with `python3 scripts/handoff-render.py --file .catalyst/handoffs/catalyst-read-drift.json --now 2026-07-07T19:00:00Z`.\n\nWrite drift_report.md containing every renderer warning with an ACK and verification step, then copy the exact commits-since line from the renderer. Add `ACK COMMITS: <N>` using the actual count, followed by `git log --oneline brief-base..HEAD`. If no count appears, report that failure instead of inventing one. Do not resume the work or read PROJECT_STATE.md.",
       "files": [
         {
           "path": ".git-HEAD",
@@ -211,14 +211,14 @@
         },
         {
           "path": ".catalyst/handoffs/catalyst-read-drift.json",
-          "content": "{\"schema_version\":\"1\",\"key\":\"catalyst-read-drift\",\"timestamp\":\"2026-07-07T18:32:09Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"v0.6.21 released with drift-validation evals recorded in skills/handoff/evals/evals.log.\",\"resume_by\":\"Run /catalyst:handoff resume, then close the loop on #69: behavioral evals, evals.log record, release.\",\"prompt\":\"run /catalyst:handoff resume and continue. next acceptance check: python3 -m unittest tests.test_handoff_render passes.\"},\"state\":{\"branch\":\"main\",\"next_acceptance_check\":\"python3 -m unittest tests.test_handoff_render passes with TestDriftFiles, TestDriftAge and TestDriftCommits green.\",\"worktree\":{\"root\":\"/workspace/catalyst\",\"is_linked\":false,\"git_common_dir\":\"/workspace/catalyst/.git\"},\"head_sha\":\"82de465a0e5058d6a67799306394682b30cdda3c\",\"decisions\":[\"READ-time drift checks are fail-open and deterministic (PRINCIPLES P9, P10)\",\"Warning order is REPO MISMATCH > BRANCH MISMATCH > STALE > MISSING > resume body\"]}}"
+          "content": "{\"schema_version\":\"1\",\"key\":\"catalyst-read-drift\",\"timestamp\":\"2026-07-07T18:32:09Z\",\"mode\":\"WRITE\",\"resume\":{\"done_when\":\"v0.6.21 released with drift-validation evals recorded in skills/handoff/evals/evals.log.\",\"resume_by\":\"Run /catalyst:handoff resume, then close the loop on #69: behavioral evals, evals.log record, release.\",\"prompt\":\"run /catalyst:handoff resume and continue. next acceptance check: python3 -m unittest tests.test_handoff_render passes.\"},\"state\":{\"branch\":\"main\",\"next_acceptance_check\":\"python3 -m unittest tests.test_handoff_render passes with TestDriftFiles, TestDriftAge and TestDriftCommits green.\",\"worktree\":{\"root\":\"/workspace/catalyst\",\"is_linked\":false,\"git_common_dir\":\"/workspace/catalyst/.git\"},\"decisions\":[\"READ-time drift checks are fail-open and deterministic (PRINCIPLES P9, P10)\",\"Warning order is REPO MISMATCH > BRANCH MISMATCH > STALE > MISSING > resume body\"]}}"
         }
       ],
       "assertions": [
         "drift_report.md exists",
-        "Renderer computed commit drift from state.head_sha and the line is quoted in drift_report.md: 'Commits since brief written:'",
-        "Agent acknowledged the drift count with a sentinel only it can author: 'ACK COMMITS'",
-        "Agent named the exact review command for the landed commits: 'git log --oneline 82de465..HEAD'"
+        "drift_report.md has output line '- Commits since brief written: 1'",
+        "drift_report.md has output line 'ACK COMMITS: 1'",
+        "drift_report.md contains 'git log --oneline brief-base..HEAD'"
       ]
     },
     {
@@ -401,7 +401,7 @@
         ".catalyst/handoffs/feat-rate-limit.json exists",
         ".catalyst/handoffs/feat-jwt-expiry.json exists",
         "Chat response mentions feat-rate-limit (the candidate is shown to the user)",
-        "Chat response mentions at least one of: 'confirm', '--apply', 'apply' (asks before deleting)",
+        "Chat response mentions at least one of: 'confirm', '--apply', 'apply', 'Want me to delete' (asks before deleting)",
         "No PROJECT_STATE.md file was written"
       ]
     }

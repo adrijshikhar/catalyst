@@ -1,8 +1,9 @@
 ---
-description: Invoke handoff. Task-delegation requests route to BRIEF for native subagent dispatch or external task-file delivery. Otherwise no argument runs WRITE with a branch-derived key. Keywords — "brief" → BRIEF; "read" / "resume" → READ; "recover" / "rebuild" → RECOVER; "reground" → REGROUND; "list" → inventory; "prune" → propose orphan deletion. Other arguments are explicit checkpoint keys.
+description: Use for every handoff or task-brief request, including "prepare an inline handoff brief for Codex", read-only tasks, and briefs the user will paste themselves without launching an agent. These still need the handoff skill's acceptance checklist and return contract. Task briefs route to BRIEF; checkpoints use WRITE. Also handles resume, recover, reground, list, and prune.
 ---
 
-Invoke the `handoff` skill.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/handoff/SKILL.md` and follow its selected
+mode. This command is the entry point; the skill file owns the procedure.
 
 Task delegation takes precedence over checkpoint WRITE: “handoff this to a
 subagent” routes to BRIEF native dispatch; “handoff this to Codex” (or another

@@ -26,7 +26,7 @@ tier-3 (no-git fallback) uses `<store>/HANDOFF.json`. READ renders via `python3 
 | 13 | fresh-session-resumes-from-brief | Real-world dogfood: subagent reads `catalyst-dogfood-build.json` via `handoff-render.py`, quotes the next acceptance check, surfaces locked decisions + a rejected path, and lists the dogfood plan steps in order. Anti-context-bleed check: PROJECT_STATE.md is NOT auto-read. |
 | 18 | read-drift-missing-file | READ surfaces `!! MISSING: <path>` for a `files_read_first` path that no longer exists (relative, resolved against `state.worktree.root`), and the agent acknowledges it (`ACK MISSING`) instead of resuming blind |
 | 19 | read-drift-stale-brief | READ surfaces `!! STALE: brief written ~10d ago (…)` for a brief 10 days older than the injected `--now`; the agent acknowledges it (`ACK STALE`) with a git-diff step |
-| 20 | read-drift-commits-since | READ shows `- Commits since brief written: N` from `state.head_sha` (real git at the repo root; sha = the #69 merge `82de465`); the agent acknowledges it (`ACK COMMITS`) and names `git log --oneline 82de465..HEAD` |
+| 20 | read-drift-commits-since | A disposable fixture records its real base SHA and adds one commit; READ reports exactly 1 and the agent names `git log --oneline brief-base..HEAD` |
 | 22–26 | brief-* | BRIEF delivery: native dispatch, external file default, inline opt-in, workspace choice, completion round-trip (added with #10) |
 | 27 | reground-mid-session | REGROUND re-injects goal + locked decisions + files-to-keep from the brief, omits READ-only sections (no `Rejected paths`), writes nothing, dispatches nothing |
 | 28 | list-store-inventory | `list` prints every brief with branch liveness; the dead-branch brief is flagged `orphan`; the current-branch brief is named; nothing is deleted |
@@ -52,7 +52,7 @@ Historical note: the former `regression-v0.2-legacy-mode` eval was removed in th
 - Every assertion is grader-deterministic per `scripts/eval-grade.py` (`X exists` or quoted needles, all required). No negative assertions — the grader cannot express them.
 - The transcript grader cannot tell tool output from agent output, so agent behavior is asserted through sentinels only the agent can author: `ACK MISSING` / `ACK STALE` / `ACK COMMITS` / `DRIFT: clean`. Raw `!! …` needles prove the renderer fired; sentinels prove the agent heeded it.
 - Prompts reference the committed fixture path via `handoff-render.py --file <path> --now <ISO>`. `scripts/eval-run.py` runs prompts at the repo root and does not stage `files[]`, so the fixture must be reachable from there; the `files[]` mirror is kept for the subagent runner. `--now` makes the age deterministic (eval 19 → exactly `~10d`).
-- Eval 20 requires a real catalyst git checkout at the working root (it counts `82de465..HEAD`); in a git-less scratch dir the renderer emits no commits line by design (fail-open) and the eval fails.
+- Eval 20 originally assumed the historical `82de465` existed in the isolated workspace. On 2026-09-25 Jev exposed that its substring checks could accept a report saying no count appeared. The fixture now creates a real local base and one later commit; output-line assertions require the count and acknowledgement to be 1.
 - Fixture worktree roots are placeholders (`/workspace/project`, `/workspace/catalyst`), so a `!! REPO MISMATCH` line appears on real machines; the evals ask for a drift *report*, not a resume, so it is acknowledged, not fatal. Positive file-existence is covered at unit level (`test_existing_relative_file_no_warning`) because a portable absolute root cannot be committed.
 - Snapshot status: **none** — Lane B (`scripts/eval-run.py`) was deliberately not run on 2026-09-02; `eval-grade.py` reports `WARN handoff: no snapshot` and enforces nothing until a snapshot is seeded.
 
@@ -198,3 +198,11 @@ Deterministic unittest and shell checks independently cover canonical/legacy
 storage, Git ignore initialization and BRIEF rendering without decision loss.
 
 One scratch round-trip passed on 2026-09-06 against `5cc59eb`: an independent agent generated a file-default task (37 lines) and short launch prompt; a fresh recipient used the file alone, updated Completion, and returned a short pointer. Binary artifact checks confirmed Git ignore coverage, unchanged task body/source, correct runtime evidence, and no checkpoint/narrative writes. Local artifacts: `skills/handoff-workspace/agent-roundtrip/result.json` (gitignored). This is a one-run smoke check, not pass@3 or a committed snapshot.
+
+
+## Output-line assertions (2026-09-25)
+
+`drift_report.md has output line '- Commits since brief written: 1'` checks a
+complete output line in the captured file, allowing Markdown blockquote and
+inline-code wrappers. A negated mention in a sentence does not satisfy it, and
+transcript text cannot substitute for a missing file.

@@ -114,6 +114,12 @@ Regenerate locally with `scripts/eval-run.py --skill handoff --model sonnet --no
 
 Full brief anatomy, design principles and the host matrix in depth: **[docs/HARNESS.md](./docs/HARNESS.md)**. Grounded in Anthropic's [harness engineering](https://www.anthropic.com/engineering/harness-design-long-running-apps) patterns.
 
+Optional: [Jev handoff verification](./integrations/jev/README.md) is a separately
+installed skill that checks checkpoint claims against evidence. Set
+`handoff.verification` to `"jev"` in project configuration to use it on normal
+WRITE handoffs. It defaults to off; Catalyst installs no Jev MCP server and
+requires no Jev connection.
+
 ## Contributing & license
 
 [CONTRIBUTING.md](./CONTRIBUTING.md). MIT — see [LICENSE](./LICENSE).

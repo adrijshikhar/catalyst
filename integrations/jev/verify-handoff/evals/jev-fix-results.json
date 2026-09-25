@@ -1,0 +1,301 @@
+{
+  "date": "2026-09-25",
+  "method": "One claim per assertion; corrected exporter includes actual tool results. These calls judge supplied execution evidence and do not execute workflows.",
+  "cases": [
+    {
+      "eval_id": 24,
+      "run": 0,
+      "snapshot_metadata": {
+        "generated_at": "2026-09-24T19:21:21Z",
+        "commit_sha": "baebc961abab66b97fc985a70a5471c0cd51ba83",
+        "skill_md_sha256": "095d1b75f2e5038a3edae52076da468099d980c901ad7ce0a640b152132d33e3",
+        "evals_inputs_sha256": "a2b7f9ff7c5b8868382b845a20ad9d109722ed9addb814d623d8ba6c7b59384c",
+        "host": "claude",
+        "claude_cli_version": "2.1.282 (Claude Code)",
+        "host_cli_version": "2.1.282 (Claude Code)",
+        "model": "sonnet",
+        "runs_per_eval": 3,
+        "max_turns": 30,
+        "n_evals": 1
+      },
+      "response": {
+        "tool": "jev_verify",
+        "model": "jev-latest",
+        "provider": "typesafe",
+        "auto_accept": 0.8,
+        "summary": {
+          "verified": 2,
+          "contradicted": 0,
+          "unsupported": 0,
+          "needs_review": 0
+        },
+        "results": [
+          {
+            "id": "claim0",
+            "claim": "Eval 24, run 0: Chat response contains 'Acceptance' and 'Return'",
+            "verdict": "verified",
+            "probabilities": {
+              "supports": 0.98,
+              "contradicts": 0.01,
+              "says_nothing": 0.01
+            },
+            "confidence": 0.97,
+            "action": "auto",
+            "supporting_evidence": null
+          },
+          {
+            "id": "claim1",
+            "claim": "Eval 24, run 0: No .catalyst/tasks/ or .catalyst/handoffs/ or PROJECT_STATE.md file was written",
+            "verdict": "verified",
+            "probabilities": {
+              "supports": 0.99,
+              "contradicts": 0,
+              "says_nothing": 0.01
+            },
+            "confidence": 0.98,
+            "action": "auto",
+            "supporting_evidence": null
+          }
+        ],
+        "usage": {
+          "input_tokens": 26037,
+          "output_tokens": 89
+        }
+      }
+    },
+    {
+      "eval_id": 21,
+      "run": 0,
+      "snapshot_metadata": {
+        "generated_at": "2026-09-24T18:52:29Z",
+        "commit_sha": "baebc961abab66b97fc985a70a5471c0cd51ba83",
+        "skill_md_sha256": "d2e07521b052d67d84c43a6dd0fb30c76b64564b79dd7738a655b22ecafae11d",
+        "evals_inputs_sha256": "481a03d456ff869e98604dfd073e25750b16d215a0a1cf298506d3bf77043cbd",
+        "host": "claude",
+        "claude_cli_version": "2.1.281 (Claude Code)",
+        "host_cli_version": "2.1.281 (Claude Code)",
+        "model": "sonnet",
+        "runs_per_eval": 3,
+        "max_turns": 30,
+        "n_evals": 19
+      },
+      "response": {
+        "tool": "jev_verify",
+        "model": "jev-latest",
+        "provider": "typesafe",
+        "auto_accept": 0.8,
+        "summary": {
+          "verified": 3,
+          "contradicted": 0,
+          "unsupported": 0,
+          "needs_review": 0
+        },
+        "results": [
+          {
+            "id": "claim0",
+            "claim": "Eval 21, run 0: drift_report.md exists",
+            "verdict": "verified",
+            "probabilities": {
+              "says_nothing": 0,
+              "contradicts": 0,
+              "supports": 1
+            },
+            "confidence": 1,
+            "action": "auto",
+            "supporting_evidence": null
+          },
+          {
+            "id": "claim1",
+            "claim": "Eval 21, run 0: Agent reported the absence of drift with a sentinel only it can author: 'DRIFT: clean'",
+            "verdict": "verified",
+            "probabilities": {
+              "says_nothing": 0,
+              "contradicts": 0.02,
+              "supports": 0.98
+            },
+            "confidence": 0.97,
+            "action": "auto",
+            "supporting_evidence": null
+          },
+          {
+            "id": "claim2",
+            "claim": "Eval 21, run 0: Renderer still produced the normal resume scaffold for a pre-drift-validation brief (back-compat): '## Resume prompt'",
+            "verdict": "verified",
+            "probabilities": {
+              "contradicts": 0.03,
+              "says_nothing": 0.01,
+              "supports": 0.96
+            },
+            "confidence": 0.94,
+            "action": "auto",
+            "supporting_evidence": null
+          }
+        ],
+        "usage": {
+          "input_tokens": 13774,
+          "output_tokens": 132
+        }
+      }
+    },
+    {
+      "eval_id": 20,
+      "run": 0,
+      "snapshot_metadata": {
+        "generated_at": "2026-09-24T19:23:15Z",
+        "commit_sha": "baebc961abab66b97fc985a70a5471c0cd51ba83",
+        "skill_md_sha256": "095d1b75f2e5038a3edae52076da468099d980c901ad7ce0a640b152132d33e3",
+        "evals_inputs_sha256": "a2b7f9ff7c5b8868382b845a20ad9d109722ed9addb814d623d8ba6c7b59384c",
+        "host": "claude",
+        "claude_cli_version": "2.1.282 (Claude Code)",
+        "host_cli_version": "2.1.282 (Claude Code)",
+        "model": "sonnet",
+        "runs_per_eval": 3,
+        "max_turns": 30,
+        "n_evals": 1
+      },
+      "response": {
+        "tool": "jev_verify",
+        "model": "jev-latest",
+        "provider": "typesafe",
+        "auto_accept": 0.8,
+        "summary": {
+          "verified": 4,
+          "contradicted": 0,
+          "unsupported": 0,
+          "needs_review": 0
+        },
+        "results": [
+          {
+            "id": "claim0",
+            "claim": "Eval 20, run 0: drift_report.md exists",
+            "verdict": "verified",
+            "probabilities": {
+              "says_nothing": 0,
+              "contradicts": 0,
+              "supports": 1
+            },
+            "confidence": 1,
+            "action": "auto",
+            "supporting_evidence": null
+          },
+          {
+            "id": "claim1",
+            "claim": "Eval 20, run 0: drift_report.md has output line '- Commits since brief written: 1'",
+            "verdict": "verified",
+            "probabilities": {
+              "says_nothing": 0,
+              "contradicts": 0,
+              "supports": 1
+            },
+            "confidence": 1,
+            "action": "auto",
+            "supporting_evidence": null
+          },
+          {
+            "id": "claim2",
+            "claim": "Eval 20, run 0: drift_report.md has output line 'ACK COMMITS: 1'",
+            "verdict": "verified",
+            "probabilities": {
+              "says_nothing": 0,
+              "contradicts": 0,
+              "supports": 1
+            },
+            "confidence": 1,
+            "action": "auto",
+            "supporting_evidence": null
+          },
+          {
+            "id": "claim3",
+            "claim": "Eval 20, run 0: drift_report.md contains 'git log --oneline brief-base..HEAD'",
+            "verdict": "verified",
+            "probabilities": {
+              "says_nothing": 0,
+              "contradicts": 0,
+              "supports": 1
+            },
+            "confidence": 1,
+            "action": "auto",
+            "supporting_evidence": null
+          }
+        ],
+        "usage": {
+          "input_tokens": 7762,
+          "output_tokens": 175
+        }
+      }
+    }
+  ],
+  "rubric_adjustment": {
+    "note": "Reports used Markdown blockquotes/code spans for copied output and a shell-prompt prefix for the review command. The final deterministic rubric compares complete output lines after stripping Markdown wrappers and checks the command text. It still rejects negated mentions and missing files. The initial Jev judgment incorrectly accepted the prefixed command under the old literal-line rubric, illustrating why deterministic checks remain authoritative for exact structure.",
+    "initial_literal_rubric_response": {
+      "tool": "jev_verify",
+      "model": "jev-latest",
+      "provider": "typesafe",
+      "auto_accept": 0.8,
+      "summary": {
+        "verified": 4,
+        "contradicted": 0,
+        "unsupported": 0,
+        "needs_review": 0
+      },
+      "results": [
+        {
+          "id": "claim0",
+          "claim": "Eval 20, run 0: drift_report.md exists",
+          "verdict": "verified",
+          "probabilities": {
+            "contradicts": 0,
+            "says_nothing": 0,
+            "supports": 1
+          },
+          "confidence": 1,
+          "action": "auto",
+          "supporting_evidence": null
+        },
+        {
+          "id": "claim1",
+          "claim": "Eval 20, run 0: drift_report.md has exact line '- Commits since brief written: 1'",
+          "verdict": "verified",
+          "probabilities": {
+            "contradicts": 0,
+            "says_nothing": 0,
+            "supports": 1
+          },
+          "confidence": 1,
+          "action": "auto",
+          "supporting_evidence": null
+        },
+        {
+          "id": "claim2",
+          "claim": "Eval 20, run 0: drift_report.md has exact line 'ACK COMMITS: 1'",
+          "verdict": "verified",
+          "probabilities": {
+            "contradicts": 0,
+            "says_nothing": 0,
+            "supports": 1
+          },
+          "confidence": 1,
+          "action": "auto",
+          "supporting_evidence": null
+        },
+        {
+          "id": "claim3",
+          "claim": "Eval 20, run 0: drift_report.md has exact line 'git log --oneline brief-base..HEAD'",
+          "verdict": "verified",
+          "probabilities": {
+            "contradicts": 0.11,
+            "says_nothing": 0,
+            "supports": 0.89
+          },
+          "confidence": 0.83,
+          "action": "auto",
+          "supporting_evidence": null
+        }
+      ],
+      "usage": {
+        "input_tokens": 7766,
+        "output_tokens": 175
+      }
+    }
+  }
+}

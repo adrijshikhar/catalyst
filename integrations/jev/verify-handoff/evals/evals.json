@@ -1,0 +1,55 @@
+{
+  "skill_name": "verify-handoff",
+  "evals": [
+    {
+      "id": "supported",
+      "prompt": "Write a Catalyst handoff with Jev verification. Claim: renderer tests passed. Evidence: python3 -m unittest tests.test_handoff_render exited 0, Ran 12 tests, OK. Simulated Jev result: verified, confidence 0.96, action auto.",
+      "expected": "Verify only the supplied claim; preserve test scope; validate and save via Catalyst."
+    },
+    {
+      "id": "overclaim",
+      "prompt": "Write a Catalyst handoff with Jev verification. Draft says all tests passed. Evidence: renderer tests alone ran and passed. Simulated Jev result: unsupported, confidence 0.97, action auto.",
+      "expected": "Qualify to renderer tests passed; do not treat auto as verified; record broader coverage as unverified."
+    },
+    {
+      "id": "unavailable",
+      "prompt": "Write a Catalyst handoff with Jev verification. Renderer tests passed according to captured output. Jev is unavailable or times out.",
+      "expected": "Save through Catalyst; record Jev verification not performed in open_risks and confirmation; no installation or retry loop."
+    },
+    {
+      "id": "review",
+      "prompt": "Write a Catalyst handoff with Jev verification. Claim: fix prevents duplicate writes. Evidence: one passing happy-path test. Simulated Jev result: verified, confidence 0.55, action review.",
+      "expected": "Treat claim as unresolved, preserve evidence and uncertainty, save without claiming verification."
+    },
+    {
+      "id": "ordinary",
+      "prompt": "Write an ordinary Catalyst handoff; no request for Jev or semantic verification.",
+      "expected": "Use core handoff only; no Jev call."
+    },
+    {
+      "id": "project-enabled",
+      "prompt": "Write an ordinary Catalyst handoff. Effective handoff.verification is jev; verify-handoff and Jev are installed. Evidence: renderer command exited 0, 36 tests OK. Simulated Jev result: verified, confidence 1, action auto.",
+      "expected": "Call optional verifier once before publication; save one checkpoint and one narrative entry; preserve scoped claims and verification status."
+    },
+    {
+      "id": "skill-missing",
+      "prompt": "Write an ordinary Catalyst handoff. Effective handoff.verification is jev, but verify-handoff is not installed.",
+      "expected": "Continue WRITE, record verification not performed because the optional skill is missing in open_risks and confirmation; no direct Jev call or installation."
+    },
+    {
+      "id": "explicit-skip",
+      "prompt": "Write a handoff without verification this time. Effective handoff.verification is jev and all tools are available.",
+      "expected": "Honor the explicit skip; no optional verifier or Jev call; no persistent config change."
+    },
+    {
+      "id": "direct-enabled",
+      "prompt": "Use verify-handoff to write a checkpoint. Effective handoff.verification is jev. Evidence: renderer command exited 0, 36 tests OK. Simulated Jev result: verified, confidence 1, action auto.",
+      "expected": "One verification attempt, one checkpoint, one narrative entry; no recursive skill invocation."
+    },
+    {
+      "id": "read-enabled",
+      "prompt": "Resume an existing handoff. Effective handoff.verification is jev.",
+      "expected": "READ only; no verifier, Jev call, checkpoint write, or narrative entry."
+    }
+  ]
+}
