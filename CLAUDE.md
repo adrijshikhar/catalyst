@@ -172,7 +172,7 @@ lookup table — the rule is the contract.
 |-----|---------|----------|
 | `handoff.stale_hours` | `24` | `handoff-render.py` READ `!! STALE` |
 | `handoff.brief_max_lines` | `30` | `handoff-render.py --brief` |
-| `handoff.verification` | `off` | WRITE skill; `jev` invokes the separately installed optional verifier |
+| `handoff.verification` | `off` | WRITE (`verify-handoff`), BRIEF (`verify-task`), and READ drift; `jev` invokes optional verifiers |
 | `hooks.precompact_prompt` | `true` | `PreCompact-handoff-write.sh` |
 | `hooks.sessionstart_resume` | `true` | `SessionStart-handoff-read.sh` |
 
