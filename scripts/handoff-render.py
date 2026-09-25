@@ -30,6 +30,13 @@ _cspec = importlib.util.spec_from_file_location(
 _cc = importlib.util.module_from_spec(_cspec)
 _cspec.loader.exec_module(_cc)
 
+_jspec = importlib.util.spec_from_file_location(
+    "jev_helpers", ROOT / "scripts" / "jev_helpers.py")
+_jh = None
+if (ROOT / "scripts" / "jev_helpers.py").exists():
+    _jh = importlib.util.module_from_spec(_jspec)
+    _jspec.loader.exec_module(_jh)
+
 
 def _git_root(p: str) -> str:
     """Normalize a git dir to its SHARED common dir for repo comparison.
@@ -104,7 +111,9 @@ def _stale_note(timestamp: str, now: datetime) -> str | None:
 
 def render(obj: dict, current_branch: str | None = None,
            current_common_dir: str | None = None, now: datetime | None = None,
-           commits_since: int | None = None, sha_in_history: bool = True) -> str:
+           commits_since: int | None = None, sha_in_history: bool = True,
+           drift_status: str | None = None,
+           drift_conflict_alert: str | None = None) -> str:
     key = obj.get("key", "?")
     resume = obj.get("resume", {})
     state = obj.get("state", {})
@@ -158,7 +167,12 @@ def render(obj: dict, current_branch: str | None = None,
     if state.get("diff_summary"):
         out.append(f"- Diff: {state['diff_summary']}")
     if commits_since is not None:
-        out.append(f"- Commits since brief written: {commits_since}")
+        drift_line = f"- Commits since brief written: {commits_since}"
+        if drift_status:
+            drift_line += f" ({drift_status})"
+        out.append(drift_line)
+        if drift_conflict_alert:
+            out.append(f"!! DRIFT CONFLICT: {drift_conflict_alert}")
     elif (state.get("head_sha")) and not sha_in_history:
         out.append(
             f"- Brief HEAD {state['head_sha'][:7]} not in current history — tree diverged since WRITE."
@@ -345,6 +359,29 @@ def main(argv: list[str]) -> int:
     else:
         brief = False
 
+    prepare_drift = False
+    if "--prepare-drift-verify" in rest:
+        prepare_drift = True
+        rest = [a for a in rest if a != "--prepare-drift-verify"]
+
+    drift_status = None
+    if "--drift-status" in rest:
+        idx = rest.index("--drift-status")
+        try:
+            drift_status = rest[idx + 1]
+        except IndexError:
+            pass
+        del rest[idx:idx + 2]
+
+    drift_conflict = None
+    if "--drift-conflict" in rest:
+        idx = rest.index("--drift-conflict")
+        try:
+            drift_conflict = rest[idx + 1]
+        except IndexError:
+            pass
+        del rest[idx:idx + 2]
+
     now = datetime.now(timezone.utc)
     if "--now" in rest:
         i = rest.index("--now")
@@ -368,7 +405,7 @@ def main(argv: list[str]) -> int:
             print(f"handoff-render: key '{rest[0]}' escapes the handoffs store", file=sys.stderr)
             return 1
     else:
-        print("usage: handoff-render.py [--reground] <key> | --file <path> | --brief <path>", file=sys.stderr)
+        print("usage: handoff-render.py [--reground] [--prepare-drift-verify] <key> | --file <path> | --brief <path>", file=sys.stderr)
         return 2
 
     if path is None or not path.exists():
@@ -401,8 +438,22 @@ def main(argv: list[str]) -> int:
     brief_sha = (obj.get("state") or {}).get("head_sha")
     if brief_sha and head:
         commits_since, sha_in_history = _commits_since(cwd, brief_sha)
+
+    if prepare_drift:
+        if not brief_sha or not head or not _jh:
+            print(json.dumps({"error": "Cannot prepare drift verification: missing head_sha, git head, or jev_helpers"}), file=sys.stderr)
+            return 1
+        log_res = subprocess.run(["git", "log", "--oneline", f"{brief_sha}..HEAD"], cwd=cwd, capture_output=True, text=True)
+        stat_res = subprocess.run(["git", "diff", "--stat", f"{brief_sha}..HEAD"], cwd=cwd, capture_output=True, text=True)
+        decisions = (obj.get("state") or {}).get("decisions", [])
+        next_check = (obj.get("state") or {}).get("next_acceptance_check", "")
+        payload = _jh.prepare_drift_verify(brief_sha, head, decisions, next_check, log_res.stdout, stat_res.stdout)
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0
+
     print(render(obj, branch, common, now=now,
-                 commits_since=commits_since, sha_in_history=sha_in_history))
+                 commits_since=commits_since, sha_in_history=sha_in_history,
+                 drift_status=drift_status, drift_conflict_alert=drift_conflict))
     return 0
 
 
