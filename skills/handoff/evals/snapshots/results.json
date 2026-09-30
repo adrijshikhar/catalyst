@@ -2,7 +2,7 @@
  "meta": {
   "generated_at": "2026-09-10T16:44:22Z",
   "commit_sha": "f3b827d11d3bfa5a95027faa5190987667126761",
-  "skill_md_sha256": "3689ae097bd652290a338d32c20780998d453045c628ea131cf1aaae09053a12",
+  "skill_md_sha256": "3f63a3d8c3384b3c4344e959ddf406526e0556891ffb154ef1af0ad9b69c4e6b",
   "evals_inputs_sha256": "481a03d456ff869e98604dfd073e25750b16d215a0a1cf298506d3bf77043cbd",
   "host": "claude",
   "claude_cli_version": "2.1.267 (Claude Code)",

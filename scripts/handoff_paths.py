@@ -18,7 +18,19 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SCHEMA_PATH = ROOT / "skills" / "handoff" / "brief.schema.json"
+
+
+def schema_path() -> Path:
+    skill_path = ROOT / "skills" / "handoff" / "brief.schema.json"
+    if skill_path.exists():
+        return skill_path
+    scripts_path = ROOT / "scripts" / "brief.schema.json"
+    if scripts_path.exists():
+        return scripts_path
+    return skill_path
+
+
+SCHEMA_PATH = schema_path()
 _spec = importlib.util.spec_from_file_location("catalyst_config", ROOT / "scripts/catalyst_config.py")
 _cc = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_cc)
@@ -93,7 +105,11 @@ if __name__ == "__main__":
     parser.add_argument("--dir", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--tasks", action="store_true", help="resolve task storage instead of checkpoints")
     parser.add_argument("--init", action="store_true", help="ensure Git ignore rule and create the store before writing")
+    parser.add_argument("--schema", action="store_true", help="resolve path to brief.schema.json")
     args = parser.parse_args()
+    if args.schema:
+        print(schema_path())
+        sys.exit(0)
     try:
         store = tasks_dir(args.path) if args.tasks else handoffs_dir(args.path)
         print(initialize(store) if args.init else store)

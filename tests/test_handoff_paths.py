@@ -187,6 +187,35 @@ class TestHandoffsDir(unittest.TestCase):
         self.assertIn("$schema", schema)
         self.assertEqual(schema["properties"]["schema_version"]["const"], "1")
 
+    def test_schema_locations_match(self):
+        skill_schema = (ROOT / "skills" / "handoff" / "brief.schema.json").read_text(encoding="utf-8")
+        scripts_schema = (ROOT / "scripts" / "brief.schema.json").read_text(encoding="utf-8")
+        self.assertEqual(skill_schema, scripts_schema, "scripts/brief.schema.json and skills/handoff/brief.schema.json must match")
+
+    def test_schema_cli_flag(self):
+        result = subprocess.run(
+            ["python3", str(ROOT / "scripts" / "handoff_paths.py"), "--schema"],
+            capture_output=True, text=True, check=True
+        )
+        resolved = Path(result.stdout.strip())
+        self.assertTrue(resolved.is_file())
+        self.assertEqual(resolved.name, "brief.schema.json")
+
+    def test_schema_fallback_when_skill_missing(self):
+        with tempfile.TemporaryDirectory() as d:
+            fake_root = Path(d)
+            fake_scripts = fake_root / "scripts"
+            fake_scripts.mkdir(parents=True)
+            fake_schema = fake_scripts / "brief.schema.json"
+            fake_schema.write_text('{"schema_version": "1"}', encoding="utf-8")
+            orig_root = hp.ROOT
+            try:
+                hp.ROOT = fake_root
+                self.assertEqual(hp.schema_path(), fake_schema)
+            finally:
+                hp.ROOT = orig_root
+
 
 if __name__ == "__main__":
     unittest.main()
+
