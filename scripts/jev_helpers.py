@@ -135,12 +135,22 @@ def prepare_drift_verify(
     """Prepare payload for jev_verify to check semantic commit drift during READ mode.
 
     jev_verify does not impose artificial item or character limits in its schema.
+    Emits granular claims per decision to avoid monolithic false-unsupported verdicts.
     """
-    decisions_summary = "; ".join(decisions) if decisions else "None specified"
-    claims = [
-        f"Landed commits between {stored_sha} and {head_sha} do not conflict with locked decisions: {decisions_summary}",
-        f"Landed commits between {stored_sha} and {head_sha} do not invalidate next acceptance check: {next_acceptance_check}",
-    ]
+    claims = []
+    if decisions:
+        for d in decisions:
+            claims.append(
+                f"Landed commits between {stored_sha} and {head_sha} do not conflict with locked decision: {d}"
+            )
+    else:
+        claims.append(
+            f"Landed commits between {stored_sha} and {head_sha} do not conflict with locked decisions: None specified"
+        )
+
+    claims.append(
+        f"Landed commits between {stored_sha} and {head_sha} do not invalidate next acceptance check: {next_acceptance_check}"
+    )
 
     evidence_items = [
         {"id": "git-log", "text": git_log},
@@ -156,28 +166,95 @@ def prepare_drift_verify(
 
 
 def parse_drift_result(result: dict[str, Any]) -> dict[str, Any]:
-    """Parse output from jev_verify for semantic commit drift."""
+    """Parse output from jev_verify for semantic commit drift.
+
+    Distinguishes actual contradictions (drift conflicts) from unmentioned/unsupported
+    decisions where commits simply did not touch that domain.
+    """
     claims = result.get("claims") or result.get("results") or []
     conflicts: list[str] = []
+    unverified: list[str] = []
+    verified: list[str] = []
 
     for c in claims:
         verdict = str(c.get("verdict", "")).lower()
         action = str(c.get("action", "")).lower()
         claim_text = str(c.get("claim", ""))
-        if verdict in ("contradicted", "unsupported") or action in ("escalate", "review"):
+        probs = c.get("probabilities") if isinstance(c.get("probabilities"), dict) else {}
+        contradicts_prob = float(probs.get("contradicts", 0.0))
+
+        if verdict == "contradicted" or action == "escalate" or contradicts_prob >= 0.5:
             conflicts.append(f"{claim_text} ({verdict}/{action})")
+        elif verdict == "verified" and action in ("auto", "verified"):
+            verified.append(claim_text)
+        else:
+            unverified.append(f"{claim_text} ({verdict}/{action})")
 
     is_clean = len(conflicts) == 0 and len(claims) > 0
-    if is_clean:
-        summary = "Jev: clean — no conflict with active task"
-    elif conflicts:
-        summary = f"Jev: semantic drift conflict detected ({len(conflicts)} unverified claim{'s' if len(conflicts) > 1 else ''})"
+    if conflicts:
+        summary = f"Jev: semantic drift conflict detected ({len(conflicts)} conflict{'s' if len(conflicts) > 1 else ''})"
+    elif is_clean and unverified:
+        summary = f"Jev: clean ({len(verified)} verified, {len(unverified)} unmentioned/unverified)"
+    elif is_clean and not unverified:
+        summary = "Jev: clean — all decisions and acceptance checks verified"
     else:
         summary = "Jev: drift verification inconclusive"
 
     return {
         "is_clean": is_clean,
         "conflicts": conflicts,
+        "unverified": unverified,
+        "verified": verified,
         "summary": summary,
         "claims": claims,
     }
+
+
+def format_gate_markdown(parsed: dict[str, Any]) -> str:
+    """Format parsed gate result as a GitHub-ready markdown card."""
+    action = str(parsed.get("action", "review")).upper()
+    safe_to_apply = float(parsed.get("safe_to_apply", 0.0))
+    composite = float(parsed.get("composite", 0.0))
+    scores = parsed.get("scores", {})
+    unresolved = parsed.get("unresolved_claims", [])
+
+    badge = "🟢 AUTO" if action == "AUTO" else ("🟡 REVIEW" if action == "REVIEW" else "🔴 ESCALATE")
+
+    lines = [
+        f"### {badge} — Jev Task Gate (Safe to Apply: {safe_to_apply * 100:.0f}%, Composite: {composite:.2f})",
+        "",
+        "| Rubric | Score (0-2) | Status |",
+        "| :--- | :--- | :--- |",
+    ]
+
+    rubric_names = [
+        ("spec_match", "Spec Match"),
+        ("correctness", "Correctness"),
+        ("test_gap", "Test Gap"),
+        ("blast_radius", "Blast Radius"),
+    ]
+    for key, label in rubric_names:
+        val = scores.get(key)
+        if isinstance(val, dict):
+            s_val = float(val.get("score", 0.0))
+        elif isinstance(val, (int, float)):
+            s_val = float(val)
+        else:
+            s_val = 0.0
+
+        if key in ("spec_match", "correctness"):
+            status = "✅ Pass" if s_val >= 1.5 else ("⚠️ Review" if s_val >= 0.8 else "❌ Low")
+        else:
+            status = "✅ Low" if s_val <= 1.0 else "⚠️ High gap/risk"
+
+        lines.append(f"| **{label}** | {s_val:.2f} / 2.0 | {status} |")
+
+    lines.append("")
+    if unresolved:
+        lines.append("**Unresolved / Unsupported Claims:**")
+        for u in unresolved:
+            lines.append(f"- ⚠️ *{u}*")
+    else:
+        lines.append("**All claims verified against evidence.**")
+
+    return "\n".join(lines) + "\n"

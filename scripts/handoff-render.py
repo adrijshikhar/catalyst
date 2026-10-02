@@ -177,6 +177,14 @@ def render(obj: dict, current_branch: str | None = None,
         out.append(
             f"- Brief HEAD {state['head_sha'][:7]} not in current history — tree diverged since WRITE."
         )
+        if drift_status:
+            out.append(f"- Drift verification: {drift_status}")
+        if drift_conflict_alert:
+            out.append(f"!! DRIFT CONFLICT: {drift_conflict_alert}")
+    elif drift_status:
+        out.append(f"- Drift verification: {drift_status}")
+        if drift_conflict_alert:
+            out.append(f"!! DRIFT CONFLICT: {drift_conflict_alert}")
     body = ""
     body += _bullets("Decisions", state.get("decisions"))
     body += _bullets("Rejected paths", state.get("rejected_paths"))
@@ -365,6 +373,25 @@ def main(argv: list[str]) -> int:
         rest = [a for a in rest if a != "--prepare-drift-verify"]
 
     drift_status = None
+    drift_conflict = None
+
+    if "--drift-json" in rest:
+        idx = rest.index("--drift-json")
+        try:
+            raw_drift = rest[idx + 1]
+            if Path(raw_drift).exists():
+                drift_data = json.loads(Path(raw_drift).read_text(encoding="utf-8"))
+            else:
+                drift_data = json.loads(raw_drift)
+            if _jh:
+                parsed_drift = _jh.parse_drift_result(drift_data)
+                drift_status = parsed_drift.get("summary")
+                if parsed_drift.get("conflicts"):
+                    drift_conflict = "; ".join(parsed_drift["conflicts"])
+        except Exception as e:
+            drift_status = f"Jev: could not parse drift json ({e})"
+        del rest[idx:idx + 2]
+
     if "--drift-status" in rest:
         idx = rest.index("--drift-status")
         try:
@@ -373,7 +400,6 @@ def main(argv: list[str]) -> int:
             pass
         del rest[idx:idx + 2]
 
-    drift_conflict = None
     if "--drift-conflict" in rest:
         idx = rest.index("--drift-conflict")
         try:

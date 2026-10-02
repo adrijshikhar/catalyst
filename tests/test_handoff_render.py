@@ -348,6 +348,23 @@ class TestDriftCLI(unittest.TestCase):
                 cwd=d, capture_output=True, text=True)
             self.assertIn(result.returncode, (0, 1))
 
+    def test_cli_drift_json_flag(self):
+        with tempfile.TemporaryDirectory() as d:
+            source = Path(d) / "brief.json"
+            source.write_text(json.dumps(_valid()))
+            drift_file = Path(d) / "drift.json"
+            drift_file.write_text(json.dumps({
+                "results": [
+                    {"claim": "decision intact", "verdict": "verified", "action": "auto"}
+                ]
+            }))
+            result = subprocess.run(
+                ["python3", str(ROOT / "scripts/handoff-render.py"), "--file", str(source),
+                 "--drift-json", str(drift_file)],
+                cwd=d, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("Jev: clean", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

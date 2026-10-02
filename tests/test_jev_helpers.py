@@ -142,8 +142,9 @@ class TestJevHelpersDriftVerify(unittest.TestCase):
         )
         self.assertIn("claims", payload)
         self.assertIn("evidence", payload)
-        self.assertEqual(len(payload["claims"]), 2)
-        self.assertTrue(any("locked decisions" in c for c in payload["claims"]))
+        self.assertEqual(len(payload["claims"]), 3)
+        self.assertTrue(any("Use Redis for session store" in c for c in payload["claims"]))
+        self.assertTrue(any("Fail open on network error" in c for c in payload["claims"]))
         self.assertTrue(any("next acceptance check" in c for c in payload["claims"]))
 
     def test_prepare_drift_verify_no_artificial_truncation(self):
@@ -185,6 +186,19 @@ class TestJevHelpersDriftVerify(unittest.TestCase):
         self.assertTrue(parsed["is_clean"])
         self.assertEqual(len(parsed["conflicts"]), 0)
 
+    def test_parse_drift_result_unverified_not_conflict(self):
+        result = {
+            "results": [
+                {"claim": "No conflict with locked decisions", "verdict": "unsupported", "action": "review", "probabilities": {"says_nothing": 0.9}},
+                {"claim": "Next acceptance check remains valid", "verdict": "verified", "action": "auto"},
+            ]
+        }
+        parsed = jev_helpers.parse_drift_result(result)
+        self.assertTrue(parsed["is_clean"])
+        self.assertEqual(len(parsed["conflicts"]), 0)
+        self.assertEqual(len(parsed["unverified"]), 1)
+        self.assertIn("unmentioned/unverified", parsed["summary"])
+
     def test_parse_drift_result_with_conflict(self):
         mock_result = {
             "claims": [
@@ -195,6 +209,20 @@ class TestJevHelpersDriftVerify(unittest.TestCase):
         parsed = jev_helpers.parse_drift_result(mock_result)
         self.assertFalse(parsed["is_clean"])
         self.assertGreater(len(parsed["conflicts"]), 0)
+
+    def test_format_gate_markdown(self):
+        parsed = {
+            "action": "auto",
+            "safe_to_apply": 0.95,
+            "composite": 0.88,
+            "scores": {"spec_match": 1.9, "correctness": 1.8, "test_gap": 0.2, "blast_radius": 0.3},
+            "unresolved_claims": []
+        }
+        md = jev_helpers.format_gate_markdown(parsed)
+        self.assertIn("AUTO", md)
+        self.assertIn("Safe to Apply: 95%", md)
+        self.assertIn("Spec Match", md)
+        self.assertIn("All claims verified", md)
 
 
 if __name__ == "__main__":
