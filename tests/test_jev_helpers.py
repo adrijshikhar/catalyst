@@ -108,6 +108,27 @@ Ran `pytest tests/test_auth.py`:
         self.assertFalse(parsed["is_accepted"])
         self.assertIn("All tests pass", parsed["unresolved_claims"])
 
+    def test_parse_gate_result_nested_live_format(self):
+        nested_result = {
+            "action": "auto",
+            "review": {
+                "safe_to_apply": 0.92,
+                "composite": 0.85,
+                "scores": {"correctness": 2, "spec_match": 2, "test_gap": 0, "blast_radius": 0},
+            },
+            "verification": {
+                "results": [
+                    {"claim": "All tests pass", "verdict": "verified", "action": "auto", "confidence": 0.98}
+                ]
+            }
+        }
+        parsed = jev_helpers.parse_gate_result(nested_result)
+        self.assertEqual(parsed["action"], "auto")
+        self.assertTrue(parsed["is_accepted"])
+        self.assertEqual(parsed["safe_to_apply"], 0.92)
+        self.assertEqual(parsed["composite"], 0.85)
+        self.assertEqual(len(parsed["unresolved_claims"]), 0)
+
 
 class TestJevHelpersDriftVerify(unittest.TestCase):
     def test_prepare_drift_verify_formats_claims_and_evidence(self):
@@ -136,6 +157,17 @@ class TestJevHelpersDriftVerify(unittest.TestCase):
         self.assertTrue(parsed["is_clean"])
         self.assertEqual(len(parsed["conflicts"]), 0)
         self.assertIn("clean", parsed["summary"].lower())
+
+    def test_parse_drift_result_live_results_format(self):
+        live_result = {
+            "results": [
+                {"claim": "No conflict with locked decisions", "verdict": "verified", "action": "auto"},
+                {"claim": "Next acceptance check remains valid", "verdict": "verified", "action": "auto"},
+            ]
+        }
+        parsed = jev_helpers.parse_drift_result(live_result)
+        self.assertTrue(parsed["is_clean"])
+        self.assertEqual(len(parsed["conflicts"]), 0)
 
     def test_parse_drift_result_with_conflict(self):
         mock_result = {

@@ -95,10 +95,13 @@ def prepare_task_gate(
 def parse_gate_result(result: dict[str, Any]) -> dict[str, Any]:
     """Parse output from jev_gate tool."""
     action = str(result.get("action", "review"))
-    safe_to_apply = float(result.get("safe_to_apply", 0.0))
-    composite = float(result.get("composite", 0.0))
-    scores = result.get("scores", {})
-    claims = result.get("claims", [])
+    review = result.get("review") if isinstance(result.get("review"), dict) else {}
+    safe_to_apply = float(result.get("safe_to_apply") if "safe_to_apply" in result else review.get("safe_to_apply", 0.0))
+    composite = float(result.get("composite") if "composite" in result else review.get("composite", 0.0))
+    scores = result.get("scores") if isinstance(result.get("scores"), dict) else review.get("scores", {})
+
+    verification = result.get("verification") if isinstance(result.get("verification"), dict) else {}
+    claims = result.get("claims") or verification.get("results") or result.get("results") or []
 
     unresolved_claims: list[str] = []
     for c in claims:
@@ -151,7 +154,7 @@ def prepare_drift_verify(
 
 def parse_drift_result(result: dict[str, Any]) -> dict[str, Any]:
     """Parse output from jev_verify for semantic commit drift."""
-    claims = result.get("claims", [])
+    claims = result.get("claims") or result.get("results") or []
     conflicts: list[str] = []
 
     for c in claims:
