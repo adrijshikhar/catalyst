@@ -132,7 +132,10 @@ def prepare_drift_verify(
     git_diff_stat: str,
     diff_excerpts: str = "",
 ) -> dict[str, Any]:
-    """Prepare payload for jev_verify to check semantic commit drift during READ mode."""
+    """Prepare payload for jev_verify to check semantic commit drift during READ mode.
+
+    jev_verify does not impose artificial item or character limits in its schema.
+    """
     decisions_summary = "; ".join(decisions) if decisions else "None specified"
     claims = [
         f"Landed commits between {stored_sha} and {head_sha} do not conflict with locked decisions: {decisions_summary}",
@@ -140,11 +143,11 @@ def prepare_drift_verify(
     ]
 
     evidence_items = [
-        {"id": "git-log", "text": _truncate_text(git_log, 30000)},
-        {"id": "git-diff-stat", "text": _truncate_text(git_diff_stat, 30000)},
+        {"id": "git-log", "text": git_log},
+        {"id": "git-diff-stat", "text": git_diff_stat},
     ]
     if diff_excerpts:
-        evidence_items.append({"id": "diff-excerpts", "text": _truncate_text(diff_excerpts, 120000)})
+        evidence_items.append({"id": "diff-excerpts", "text": diff_excerpts})
 
     return {
         "claims": claims,

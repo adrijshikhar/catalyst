@@ -146,6 +146,22 @@ class TestJevHelpersDriftVerify(unittest.TestCase):
         self.assertTrue(any("locked decisions" in c for c in payload["claims"]))
         self.assertTrue(any("next acceptance check" in c for c in payload["claims"]))
 
+    def test_prepare_drift_verify_no_artificial_truncation(self):
+        large_log = "commit\n" * 50000
+        large_diff = "diff\n" * 50000
+        payload = jev_helpers.prepare_drift_verify(
+            stored_sha="1111111",
+            head_sha="2222222",
+            decisions=[],
+            next_acceptance_check="tests pass",
+            git_log=large_log,
+            git_diff_stat=large_diff,
+            diff_excerpts=large_diff,
+        )
+        for item in payload["evidence"]:
+            self.assertFalse(item["text"].endswith("[truncated]"))
+            self.assertGreater(len(item["text"]), 100000)
+
     def test_parse_drift_result_clean(self):
         mock_result = {
             "claims": [
