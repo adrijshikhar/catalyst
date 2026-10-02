@@ -1,0 +1,299 @@
+{
+  "date": "2026-09-25",
+  "scope": "Jev grading of run 0 from all 19 newly executed Catalyst handoff evals (two batches). Jev did not execute the workflows; the CLI ran three executions per scenario.",
+  "evidence_source": "Initial export of refreshed core snapshots: captured files, assistant tool calls, and final results. Correction: the runner retained tool-result messages, but the manual export omitted them. Use prepare.py for complete execution evidence.",
+  "response": {
+    "tool": "jev_verify",
+    "model": "jev-latest",
+    "provider": "typesafe",
+    "auto_accept": 0.8,
+    "summary": {
+      "verified": 7,
+      "contradicted": 3,
+      "unsupported": 0,
+      "needs_review": 3
+    },
+    "results": [
+      {
+        "id": "claim0",
+        "claim": "Eval 0, run 0 satisfies all these expected assertions: [\"Brief was written to .catalyst/handoffs/feat-jwt-expiry.json (tier 2 \\u2014 branch sanitized)\", \"Brief was NOT written to .catalyst/handoffs/HANDOFF.json (tier 3 should not be used)\", \"The written .catalyst/handoffs/feat-jwt-expiry.json is valid JSON with schema_version '1' and key 'feat-jwt-expiry'\", \"`python3 scripts/handoff-validate.py .catalyst/handoffs/feat-jwt-expiry.json` exits 0 (WRITE-gate passes)\", \"Brief state.next_acceptance_check mentions '6/6'\", \"Brief state.branch is feat/jwt-expiry\", \"Brief state.rejected_paths names at least one rejected path (new Date() or '<')\", \"PROJECT_STATE.md was created at .catalyst/PROJECT_STATE.md with header + dated entry\", \"PROJECT_STATE.md entry title includes the feature key (e.g., '[feat-jwt-expiry]')\", \"The rendered output of `python3 scripts/handoff-render.py feat-jwt-expiry` contains the next acceptance check\", \"Chat response names the tier chosen: 'tier: 2' or 'tier 2' or 'Tier used: 2' (branch-derived, tier 2)\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "contradicts": 0.19,
+          "says_nothing": 0.02,
+          "supports": 0.79
+        },
+        "confidence": 0.68,
+        "action": "review",
+        "supporting_evidence": "eval-0-run-0"
+      },
+      {
+        "id": "claim1",
+        "claim": "Eval 1, run 0 satisfies all these expected assertions: [\"Brief was written to .catalyst/handoffs/HANDOFF.json (tier 3 \\u2014 legacy single-slot fallback)\", \"Brief was NOT written to .catalyst/handoffs/main.json\", \"The written .catalyst/handoffs/HANDOFF.json is valid JSON with schema_version '1' and key 'HANDOFF'\", \"`python3 scripts/handoff-validate.py .catalyst/handoffs/HANDOFF.json` exits 0 (WRITE-gate passes)\", \".catalyst/handoffs/HANDOFF.json mentions 'console.log'\", \"Chat response names the tier chosen: 'tier: 3' or 'tier 3' or 'Tier used: 3' (legacy / no-git)\", \"PROJECT_STATE.md was created at .catalyst/PROJECT_STATE.md (repo-level, not feature-scoped)\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "contradicts": 0.02,
+          "says_nothing": 0,
+          "supports": 0.98
+        },
+        "confidence": 0.96,
+        "action": "auto",
+        "supporting_evidence": "eval-1-run-0"
+      },
+      {
+        "id": "claim2",
+        "claim": "Eval 2, run 0 satisfies all these expected assertions: [\"resume_summary.md exists in the working directory\", \"resume_summary.md mentions 'feat-jwt-expiry' or 'feat/jwt-expiry'\", \"Chat response lists feat-rate-limit as the other available brief\", \"resume_summary.md quotes the next acceptance check: '6/6'\", \"resume_summary.md names at least one of: 'jose', '<=', 'Date.now()'\", \"Skill did NOT auto-read or summarize PROJECT_STATE.md\", \"Chat response mentions feat-rate-limit (the alternative brief was surfaced)\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "contradicts": 0.02,
+          "says_nothing": 0,
+          "supports": 0.98
+        },
+        "confidence": 0.96,
+        "action": "auto",
+        "supporting_evidence": "eval-2-run-0"
+      },
+      {
+        "id": "claim3",
+        "claim": "Eval 3, run 0 satisfies all these expected assertions: [\"resume_summary.md exists\", \"resume_summary.md quotes 'console.log'\", \"resume_summary.md names src/utils/logger.ts as a file to read first\", \"resume_summary.md mentions at least one of: 'HANDOFF', 'single-slot', 'legacy'\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "contradicts": 0.01,
+          "says_nothing": 0,
+          "supports": 0.99
+        },
+        "confidence": 0.98,
+        "action": "auto",
+        "supporting_evidence": "eval-3-run-0"
+      },
+      {
+        "id": "claim4",
+        "claim": "Eval 4, run 0 satisfies all these expected assertions: [\"Brief was written to .catalyst/handoffs/feat-jwt-expiry.json (sticky key)\", \"`python3 scripts/handoff-validate.py .catalyst/handoffs/feat-jwt-expiry.json` exits 0 after recovery\", \"`python3 scripts/handoff-validate.py .catalyst/handoffs/feat-jwt-expiry.json` exits 0\", \".catalyst/handoffs/feat-jwt-expiry.json mentions 'jose' and 'Date.now()'\", \"Chat response mentions /clear (then resume)\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "contradicts": 0.14,
+          "says_nothing": 0.01,
+          "supports": 0.85
+        },
+        "confidence": 0.77,
+        "action": "review",
+        "supporting_evidence": "eval-4-run-0"
+      },
+      {
+        "id": "claim5",
+        "claim": "Eval 5, run 0 satisfies all these expected assertions: [\"brief.md exists in the working directory\", \"brief.md is 30 lines or fewer\", \"brief.md does NOT contain the string '# Project state \\u2014 narrative log' (no PROJECT_STATE inlined)\", \"brief.md names 'verify' call sites\", \"brief.md names at least one of: 'new Date()', 'Date.now()'\", \"brief.md names at least one file to read (middleware.ts or verify.ts)\", \"brief.md does NOT contain a 'Resume prompt' section (BRIEF mode is for subagents, not sessions)\", \"No HANDOFF.json or .catalyst/handoffs/ file was written\", \"PROJECT_STATE.md was NOT created or modified\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "contradicts": 0.01,
+          "says_nothing": 0,
+          "supports": 0.99
+        },
+        "confidence": 0.98,
+        "action": "auto",
+        "supporting_evidence": "eval-5-run-0"
+      },
+      {
+        "id": "claim6",
+        "claim": "Eval 13, run 0 satisfies all these expected assertions: [\"resume_response.md exists\", \"resume_response.md contains 'Tier 2' (next acceptance check surfaced)\", \"resume_response.md contains at least one of: 'evaluator-library', 'failure-pattern-detector', 'pipeline-templates', 'PIPELINE' (dogfood plan actions surfaced)\", \"resume_response.md contains at least one of: 'POSIX bash', 'jq', 'EDD', 'anti-self-grade' (decisions surfaced)\", \"resume_response.md contains at least one rejected path: 'tool-output' OR 'rtk' OR 'caveman' OR 'Company Brain' OR 'autonomous' OR 'Autonomous' OR 'harness scaffolder' OR 'Skipping evals'\", \"resume_response.md mentions at least one of: 'handoff resume', 'handoff-render.py', '/handoff'\", \"resume_response.md mentions at least one of: 'hooks install', '/hooks'\", \"PROJECT_STATE.md was NOT created or read (file does NOT exist in working dir after eval)\"]",
+        "verdict": "contradicted",
+        "probabilities": {
+          "contradicts": 0.61,
+          "says_nothing": 0.01,
+          "supports": 0.38
+        },
+        "confidence": 0.41,
+        "action": "review",
+        "supporting_evidence": "eval-13-run-0"
+      },
+      {
+        "id": "claim7",
+        "claim": "Eval 19, run 0 satisfies all these expected assertions: [\"drift_report.md exists\", \"drift_report.md quotes the age line with the deterministic 10-day age verbatim: '!! STALE: brief written ~10d ago (2026-06-28T10:00:00Z)'\", \"Agent acknowledged staleness with a sentinel only it can author: 'ACK STALE'\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "contradicts": 0.02,
+          "says_nothing": 0,
+          "supports": 0.98
+        },
+        "confidence": 0.97,
+        "action": "auto",
+        "supporting_evidence": "eval-19-run-0"
+      },
+      {
+        "id": "claim8",
+        "claim": "Eval 20, run 0 satisfies all these expected assertions: [\"drift_report.md exists\", \"Renderer computed commit drift from state.head_sha and the line is quoted in drift_report.md: 'Commits since brief written:'\", \"Agent acknowledged the drift count with a sentinel only it can author: 'ACK COMMITS'\", \"Agent named the exact review command for the landed commits: 'git log --oneline 82de465..HEAD'\"]",
+        "verdict": "contradicted",
+        "probabilities": {
+          "contradicts": 0.99,
+          "says_nothing": 0,
+          "supports": 0.01
+        },
+        "confidence": 0.99,
+        "action": "auto",
+        "supporting_evidence": "eval-20-run-0"
+      },
+      {
+        "id": "claim9",
+        "claim": "Eval 21, run 0 satisfies all these expected assertions: [\"drift_report.md exists\", \"Agent reported the absence of drift with a sentinel only it can author: 'DRIFT: clean'\", \"Renderer still produced the normal resume scaffold for a pre-drift-validation brief (back-compat): '## Resume prompt'\"]",
+        "verdict": "contradicted",
+        "probabilities": {
+          "contradicts": 0.97,
+          "says_nothing": 0,
+          "supports": 0.03
+        },
+        "confidence": 0.95,
+        "action": "auto",
+        "supporting_evidence": "eval-21-run-0"
+      }
+    ],
+    "usage": {
+      "input_tokens": 34040,
+      "output_tokens": 1963
+    }
+  },
+  "adjudication": {
+    "0": "Review verdict; deterministic artifact checks passed.",
+    "1": "Jev accepts semantic tier-3 wording; deterministic grader missed its exact text assertion in this sample. Other two executions passed the deterministic assertion.",
+    "4": "Review verdict; deterministic artifact checks passed.",
+    "13": "Low-confidence contradiction requires review. Captured resume_response.md contains the expected acceptance check, decisions, rejected path, and command references.",
+    "20": "Confirmed fixture weakness: isolated repository lacks the hardcoded historical SHA. Report explicitly says no count was available, but substring assertions pass. This is not evidence that commit-count behavior was exercised.",
+    "21": "Initial contradiction was based on an incomplete export. With retained tool-result output included and assertions graded individually, Jev verified all three assertions; see jev-fix-results.json.",
+    "24": "Confirmed format miss: all three executions omit the required Acceptance heading, though they include task constraints and a return contract. Capability remains below target for this individual scenario.",
+    "25": "Low-confidence review; run 0 passes deterministic checks. Do not treat a low-confidence contradiction as a confirmed defect.",
+    "29": "False-negative wording check: all three runs explicitly ask 'Want me to delete feat-rate-limit.json?' and preserve both briefs. Added 'Want me to delete' as accepted confirmation wording without changing prompts, fixture inputs, or deletion safeguards."
+  },
+  "additional_response": {
+    "tool": "jev_verify",
+    "model": "jev-latest",
+    "provider": "typesafe",
+    "auto_accept": 0.8,
+    "summary": {
+      "verified": 6,
+      "contradicted": 3,
+      "unsupported": 0,
+      "needs_review": 7
+    },
+    "results": [
+      {
+        "id": "claim0",
+        "claim": "Eval 18, run 0 satisfies all these expected assertions: [\"drift_report.md exists\", \"drift_report.md quotes the stale-file guard line verbatim: '!! MISSING: src/auth/legacy/verify-old.ts'\", \"Agent acknowledged the missing file with a sentinel only it can author (never present in tool output): 'ACK MISSING'\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "says_nothing": 0,
+          "supports": 0.82,
+          "contradicts": 0.18
+        },
+        "confidence": 0.73,
+        "action": "review",
+        "supporting_evidence": "eval-18-run-0"
+      },
+      {
+        "id": "claim1",
+        "claim": "Eval 22, run 0 satisfies all these expected assertions: [\"Agent tool dispatch occurs once (scoped brief with return instructions)\", \"Chat response contains 'README.md' and 'Python 3' (returned answer cites the source and the requirement)\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "says_nothing": 0.01,
+          "supports": 0.65,
+          "contradicts": 0.34
+        },
+        "confidence": 0.49,
+        "action": "review",
+        "supporting_evidence": "eval-22-run-0"
+      },
+      {
+        "id": "claim2",
+        "claim": "Eval 23, run 0 satisfies all these expected assertions: [\".catalyst/tasks/ contains 'Task', 'Workspace', 'Acceptance', 'Return', 'Completion'\", \".catalyst/tasks/ mentions 'lifecycle'\", \"Chat response mentions .catalyst/tasks/ (launch prompt points at the file)\", \"No .catalyst/handoffs/ or PROJECT_STATE.md file was written\", \"Agent tool dispatch occurs 0 times (no native agent launched)\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "says_nothing": 0,
+          "supports": 0.54,
+          "contradicts": 0.46
+        },
+        "confidence": 0.31,
+        "action": "review",
+        "supporting_evidence": "eval-23-run-0"
+      },
+      {
+        "id": "claim3",
+        "claim": "Eval 24, run 0 satisfies all these expected assertions: [\"Chat response contains 'Acceptance' and 'Return'\", \"No .catalyst/tasks/ or .catalyst/handoffs/ or PROJECT_STATE.md file was written\"]",
+        "verdict": "contradicted",
+        "probabilities": {
+          "says_nothing": 0.12,
+          "supports": 0.16,
+          "contradicts": 0.72
+        },
+        "confidence": 0.58,
+        "action": "review",
+        "supporting_evidence": "eval-24-run-0"
+      },
+      {
+        "id": "claim4",
+        "claim": "Eval 25, run 0 satisfies all these expected assertions: [\"Chat response contains 'worktree' and 'current workspace'\", \"Agent tool dispatch occurs 0 times (nothing starts before the workspace choice)\"]",
+        "verdict": "contradicted",
+        "probabilities": {
+          "says_nothing": 0.01,
+          "supports": 0.44,
+          "contradicts": 0.55
+        },
+        "confidence": 0.33,
+        "action": "review",
+        "supporting_evidence": "eval-25-run-0"
+      },
+      {
+        "id": "claim5",
+        "claim": "Eval 26, run 0 satisfies all these expected assertions: [\"The bytes before \\\"## Completion\\\" are unchanged; compare the artifact against its input.\", \"Completion records \\\"Python 3\\\" with actual evidence and a completed acceptance checklist.\", \"Chat response mentions task.md (for review)\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "says_nothing": 0.02,
+          "supports": 0.64,
+          "contradicts": 0.34
+        },
+        "confidence": 0.45,
+        "action": "review",
+        "supporting_evidence": "eval-26-run-0"
+      },
+      {
+        "id": "claim6",
+        "claim": "Eval 27, run 0 satisfies all these expected assertions: [\"reground.md exists\", \"reground.md contains '6/6' (next acceptance check re-injected verbatim)\", \"reground.md names at least one of: 'jose', '<=', 'Date.now()' (locked decisions)\", \"reground.md contains 'src/auth/middleware.ts' (files to keep in view)\", \"reground.md does not contain 'Rejected paths' (REGROUND omits READ-only sections)\", \"No PROJECT_STATE.md file was written\", \"Agent tool dispatch occurs 0 times (REGROUND is inline, no subagent)\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "says_nothing": 0,
+          "supports": 0.88,
+          "contradicts": 0.12
+        },
+        "confidence": 0.82,
+        "action": "auto",
+        "supporting_evidence": "eval-27-run-0"
+      },
+      {
+        "id": "claim7",
+        "claim": "Eval 28, run 0 satisfies all these expected assertions: [\"list-output.txt exists\", \"list-output.txt contains 'feat-jwt-expiry' and 'feat-rate-limit' (every brief inventoried)\", \"list-output.txt contains 'orphan' (the dead-branch brief is flagged)\", \"Chat response mentions feat-jwt-expiry (current-branch brief identified)\", \".catalyst/handoffs/feat-rate-limit.json exists\", \"No PROJECT_STATE.md file was written\"]",
+        "verdict": "verified",
+        "probabilities": {
+          "says_nothing": 0,
+          "supports": 1,
+          "contradicts": 0
+        },
+        "confidence": 1,
+        "action": "auto",
+        "supporting_evidence": "eval-28-run-0"
+      },
+      {
+        "id": "claim8",
+        "claim": "Eval 29, run 0 satisfies all these expected assertions: [\".catalyst/handoffs/feat-rate-limit.json exists\", \".catalyst/handoffs/feat-jwt-expiry.json exists\", \"Chat response mentions feat-rate-limit (the candidate is shown to the user)\", \"Chat response mentions at least one of: 'confirm', '--apply', 'apply' (asks before deleting)\", \"No PROJECT_STATE.md file was written\"]",
+        "verdict": "contradicted",
+        "probabilities": {
+          "says_nothing": 0.03,
+          "supports": 0.43,
+          "contradicts": 0.54
+        },
+        "confidence": 0.32,
+        "action": "review",
+        "supporting_evidence": "eval-29-run-0"
+      }
+    ],
+    "usage": {
+      "input_tokens": 16040,
+      "output_tokens": 1710
+    }
+  }
+}

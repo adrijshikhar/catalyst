@@ -250,6 +250,22 @@ class TestDriftCommits(unittest.TestCase):
         self.assertNotIn("Commits since", out)
         self.assertNotIn("not in current history", out)
 
+    def test_semantic_drift_clean(self):
+        obj = _valid(); obj["state"]["head_sha"] = "abc1234"
+        out = hr.render(obj, current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", commits_since=3, sha_in_history=True,
+                        drift_status="Jev: clean — no conflict with active task")
+        self.assertIn("Commits since brief written: 3 (Jev: clean — no conflict with active task)", out)
+        self.assertNotIn("DRIFT CONFLICT", out)
+
+    def test_semantic_drift_conflict_alert(self):
+        obj = _valid(); obj["state"]["head_sha"] = "abc1234"
+        out = hr.render(obj, current_branch="feat/jwt-expiry",
+                        current_common_dir="/repo/.git", commits_since=3, sha_in_history=True,
+                        drift_conflict_alert="Landed commit 82de465 touched auth module")
+        self.assertIn("Commits since brief written: 3", out)
+        self.assertIn("!! DRIFT CONFLICT: Landed commit 82de465 touched auth module", out)
+
 
 class TestBrief(unittest.TestCase):
     def test_brief_preserves_all_locked_decisions(self):
@@ -307,6 +323,47 @@ class TestBrief(unittest.TestCase):
     def test_brief_under_cap_is_within_thirty_lines(self):
         out = hr.render_brief(self._obj())
         self.assertLessEqual(len(out.rstrip("\n").split("\n")), 30)
+
+
+class TestDriftCLI(unittest.TestCase):
+    def test_cli_drift_status_flag(self):
+        with tempfile.TemporaryDirectory() as d:
+            source = Path(d) / "brief.json"
+            source.write_text(json.dumps(_valid()))
+            result = subprocess.run(
+                ["python3", str(ROOT / "scripts/handoff-render.py"), "--file", str(source),
+                 "--drift-status", "Jev: clean"],
+                cwd=d, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0)
+
+    def test_cli_prepare_drift_verify(self):
+        with tempfile.TemporaryDirectory() as d:
+            source = Path(d) / "brief.json"
+            obj = _valid()
+            obj["state"]["head_sha"] = "0000000"
+            source.write_text(json.dumps(obj))
+            result = subprocess.run(
+                ["python3", str(ROOT / "scripts/handoff-render.py"), "--file", str(source),
+                 "--prepare-drift-verify"],
+                cwd=d, capture_output=True, text=True)
+            self.assertIn(result.returncode, (0, 1))
+
+    def test_cli_drift_json_flag(self):
+        with tempfile.TemporaryDirectory() as d:
+            source = Path(d) / "brief.json"
+            source.write_text(json.dumps(_valid()))
+            drift_file = Path(d) / "drift.json"
+            drift_file.write_text(json.dumps({
+                "results": [
+                    {"claim": "decision intact", "verdict": "verified", "action": "auto"}
+                ]
+            }))
+            result = subprocess.run(
+                ["python3", str(ROOT / "scripts/handoff-render.py"), "--file", str(source),
+                 "--drift-json", str(drift_file)],
+                cwd=d, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("Jev: clean", result.stdout)
 
 
 if __name__ == "__main__":

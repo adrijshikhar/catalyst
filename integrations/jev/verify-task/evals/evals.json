@@ -1,0 +1,25 @@
+{
+  "skill_name": "verify-task",
+  "evals": [
+    {
+      "id": "task-supported",
+      "prompt": "Use verify-task to check the completed task .catalyst/tasks/add-auth-refresh.md. Diff adds /auth/refresh with 3 tests. Completion claims tests pass. Evidence shows pytest output 3 passed. Simulated Jev jev_gate result: action auto, safe_to_apply 0.95, composite 0.90, all claims verified.",
+      "expected": "Verify completion claims against diff and evidence; report auto acceptance; recommend proceeding to integration."
+    },
+    {
+      "id": "task-test-gap",
+      "prompt": "Use verify-task to check completed task .catalyst/tasks/refactor-router.md. Diff modifies 8 routing files, but test evidence shows only 1 test run. Simulated Jev jev_gate result: action review, test_gap score 2, claim untested coverage unsupported.",
+      "expected": "Report review verdict; surface test gap and unverified claim to the user before integrating."
+    },
+    {
+      "id": "task-contradicted",
+      "prompt": "Use verify-task to check completed task .catalyst/tasks/fix-race-condition.md. Completion claims race condition fixed, but test logs in evidence show a timeout failure. Simulated Jev jev_gate result: action escalate, claim contradicted.",
+      "expected": "Escalate and reject completion; flag contradiction in test evidence; provide feedback for the worker to fix."
+    },
+    {
+      "id": "task-jev-unavailable",
+      "prompt": "Use verify-task to check completed task .catalyst/tasks/update-docs.md. Jev MCP server is unavailable or times out.",
+      "expected": "Fall back to manual checklist inspection; report Jev verification not performed; do not crash or loop."
+    }
+  ]
+}

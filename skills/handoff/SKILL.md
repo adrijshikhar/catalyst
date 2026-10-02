@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Use when handing a task to a native subagent or an external agent, ending a session, switching context, approaching compaction, resuming a prior handoff, or recovering degraded context. Five modes — WRITE saves a session checkpoint, READ resumes it, RECOVER rebuilds it, REGROUND re-injects its essentials, and BRIEF delegates a selected task with an explicit completion contract. BRIEF dispatches native subagents directly; external agents receive a self-contained task file and short launch prompt by default, with inline output only on explicit request. Trigger phrases include "handoff this to a subagent", "handoff this to Codex", "handoff this to <any agent>", "brief a subagent", "prepare a brief for <agent>", "inline handoff brief", "handoff", "resume", and "reground". Writing a task brief for another agent by hand, without this skill, drops the acceptance checklist and return contract the recipient needs. Any request to hand a task to another agent goes through this skill even when that agent's CLI is installed — never run the other agent directly. Use this skill liberally for decisions worth preserving and isolated tasks worth delegating.
+description: Use when writing any handoff or task brief, including an inline brief for Codex or another agent that the user will paste themselves. An inline-only, read-only, or do-not-launch request still needs this skill to preserve the acceptance checklist and return contract. Also use when ending a session, approaching compaction, switching context, resuming a prior handoff, recovering degraded context, or delegating to native subagents. Triggers include "prepare an inline handoff", "handoff this to Codex", "brief a subagent", "handoff", "resume", and "reground". Five modes cover WRITE, READ, RECOVER, REGROUND, and BRIEF. Use this skill liberally for decisions worth preserving and isolated tasks worth delegating.
 ---
 
 # Handoff
@@ -56,7 +56,7 @@ The brief is typed JSON validated against `brief.schema.json` (canonical path bu
 
 1. **Key** — apply the ladder; sticky within the session.
 2. **Gather state** — run in parallel where supported: `git branch --show-current`, `git status --short`, `git diff --stat`, `git log --oneline -10`, `git rev-parse HEAD` (→ `state.head_sha`), and `git rev-parse --path-format=absolute --git-common-dir` (→ `state.worktree.git_common_dir`; never `--absolute-git-dir`, which returns the worktree-private dir in a linked worktree and fires a false `REPO MISMATCH`). From the transcript note tests run (`tests`: list of `{cmd, result: "pass" | "fail"}` — `result` must be strictly `"pass"` or `"fail"`, put details in `cmd`), commands that advanced the work, decisions the next session depends on, rejected paths, open risks and the next concrete acceptance check.
-3. **Build and validate** — write the typed object to a temp file, run `python3 "$SCR/handoff-validate.py" <tmp>.json`, fix every reported field until it prints `handoff-validate: OK`, then move it to `<store>/<key>.json` (store from `handoff_paths.py --init`).
+3. **Build, optionally verify, and validate** — build the typed object, apply the optional verification step below, then write it to a temp file. Run `python3 "$SCR/handoff-validate.py" <tmp>.json`, fix every reported field until it prints `handoff-validate: OK`, then move it to `<store>/<key>.json` (store from `handoff_paths.py --init`).
 4. **Narrative** — prepend an entry to `<main>/.catalyst/PROJECT_STATE.md`, directly below the header and above earlier entries. Create the header first if the file is new, and verify the first line is still `# Project state` afterwards. If a legacy `.claude/PROJECT_STATE.md` exists and the canonical file does not, create the canonical file with the header plus one line `Earlier entries: .claude/PROJECT_STATE.md` — do not move or edit the legacy file.
 
 ```markdown
@@ -84,6 +84,8 @@ Read sections selectively. The brief at `<store>/<key>.json` is the entry point;
 
 ### Step 5 — Confirm
 
+If verification was requested, include its status and any unresolved coverage before the Resume prompt. Never describe a skipped or failed verification as successful.
+
 ALWAYS print the Resume prompt verbatim at the end of the confirmation. The user should never need to open the brief file to find the paste-and-go text.
 
 ```
@@ -98,6 +100,34 @@ Next session — run `/catalyst:handoff resume` (or paste the Resume prompt):
 
 The resume prompt MUST route through `/catalyst:handoff resume` — never a bare `python3 scripts/handoff-render.py <key>`. The helper scripts live in the plugin, not the user's project, so a relative script path fails everywhere except the Catalyst repo itself. The slash command re-enters this skill, which resolves `$SCR` and renders the brief.
 
+### Optional verification (WRITE only)
+
+A direct request to verify with Jev or to skip verification wins for this WRITE;
+do not persist that override. Otherwise read the existing project configuration:
+
+```bash
+bash "$SCR/catalyst-config.sh" get handoff.verification off
+```
+
+Only the exact value `jev` enables verification. `off`, missing configuration,
+or a reader failure leaves it disabled. Report an unknown value and continue
+without verification. No automatic tool discovery or external call occurs when
+disabled. READ, RECOVER, REGROUND, and BRIEF do not run this step.
+
+When enabled, load the separately installed `verify-handoff` skill and give it
+the current draft and captured evidence. Run its verification stage once for
+this draft; if that skill already owns this WRITE, let its stage run here
+without invoking it again. It returns revised claims, risks, and status to this
+workflow; this workflow alone validates and publishes one checkpoint and one
+narrative entry, both using the revised claims.
+
+If the optional skill is unavailable or fails, append
+`Verification not performed: <reason>` to `state.open_risks`, preserve existing
+risks, and continue WRITE with that status in the confirmation. The optional
+skill handles unavailable Jev the same way. Do not install a skill, MCP server,
+or credentials, call Jev directly as a fallback, or retry in a loop. Verification
+is advisory and never bypasses schema validation or project data-sharing rules.
+
 ---
 
 ## Mode: READ
@@ -106,7 +136,7 @@ The resume prompt MUST route through `/catalyst:handoff resume` — never a bare
 
 1. Resolve `$SCR`, then inventory with `python3 "$SCR/handoff-list.py" --json` (canonical + legacy stores, including `HANDOFF.json`). For a duplicate key the canonical file wins unless the user names the legacy path.
 2. Multiple briefs: surface ALL of them, name the current-branch match as the primary suggestion, list the others with mtime + key, and wait for the user. Never silently choose.
-3. `python3 "$SCR/handoff-render.py" <key>` and follow its output. Heed every `!!` line before continuing, in the order printed: `REPO MISMATCH` > `BRANCH MISMATCH` > `STALE` > `MISSING`, plus `Commits since brief written: N`. If the brief was written in another (linked) worktree, say so and offer to `cd` there rather than resuming in the wrong tree.
+3. `python3 "$SCR/handoff-render.py" <key>` and follow its output. Heed every `!!` line before continuing, in the order printed: `REPO MISMATCH` > `BRANCH MISMATCH` > `STALE` > `MISSING`, plus `Commits since brief written: N`. If the brief was written in another (linked) worktree, say so and offer to `cd` there rather than resuming in the wrong tree. When `handoff.verification` is `jev` and commits have landed since the brief was written (`Commits since brief written: N`), Catalyst can semantically evaluate whether landed commits conflict with locked decisions or the next acceptance check: prepare the verification payload via `python3 "$SCR/handoff-render.py" --prepare-drift-verify <key>`, call `jev_verify`, and render the annotated status with `python3 "$SCR/handoff-render.py" <key> --drift-json '<result-json>'` (or `--drift-status "<summary>"`).
 4. Read `files_read_first`. Do **not** read `PROJECT_STATE.md` (canonical `.catalyst/`, legacy `.claude/`) unless the brief says to or you need a decision's rationale.
 5. Confirm: "Resumed from `<key>`. Next acceptance check: <quote from brief>. Starting now." The key becomes the sticky session key.
 
@@ -160,7 +190,7 @@ Extract objective, full agreed requirements, in/out of scope, relevant decisions
 
    > Read `<absolute-task-file>`. Execute its task, follow the workspace instructions, and update only its Completion section. Return a short prompt pointing to that section for the originating agent.
 
-5. The receiving agent preserves everything before `## Completion`, records its status/checklist/evidence/integration instructions there and returns a small pointer message. No automatic cross-host notification, launch or merge. The user relays that message. The originating agent reads Completion, verifies the actual changes against the original checklist and reports readiness; completion text alone is not proof. The task file is a manually updated result, not a live status monitor.
+5. The receiving agent preserves everything before `## Completion`, records its status/checklist/evidence/integration instructions there and returns a small pointer message. No automatic cross-host notification, launch or merge. The user relays that message. The originating agent reads Completion, verifies the actual changes against the original checklist and reports readiness; completion text alone is not proof (when `handoff.verification` is `jev`, invoke the optional `verify-task` skill to gate completion using `jev_gate`). The task file is a manually updated result, not a live status monitor.
 
 **Explicit inline override:** only if the user asks for inline/full-message output, provide the complete task and return contract in the message, using the task template's `## Task`, `## Workspace`, `## Acceptance checklist` and `## Return instructions` headings. Do not create a task file or initialize storage for this path. The recipient returns a structured completion message instead. The workspace-choice rules still apply. Inline is a message the user relays: never launch, probe or install the other agent's CLI (`codex exec`, `agy`, and so on), never dispatch a native subagent in its place, and never run the task yourself — Catalyst prepares the brief; the user delivers it.
 

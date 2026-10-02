@@ -155,6 +155,12 @@ def grade_assertion(assertion: str, transcript: str, files: dict[str, str] | Non
     subject = next((tk for tk in tokens if _subject_content(tk, files) is not None), None)
     any_of = " or " in low or "at least one of" in low
 
+    m = re.match(r"^([\w./-]+) has output line (.+)$", a)
+    if m:
+        content = _subject_content(m.group(1), files)
+        lines = [line.strip().removeprefix("> ").strip("`") for line in (content or "").splitlines()]
+        return content is not None and len(needles) == 1 and needles[0] in lines
+
     m = _CMD_RE.search(a)
     if m:
         return _run_cmd(m.group(1), files)

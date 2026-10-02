@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -7,6 +9,52 @@ ROOT = Path(__file__).resolve().parent.parent
 _spec = importlib.util.spec_from_file_location("eval_run", ROOT / "scripts" / "eval-run.py")
 eval_run = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(eval_run)
+
+
+class TestCommitDriftFixture(unittest.TestCase):
+    def test_fixture_produces_one_real_commit_of_drift(self):
+        spec = json.loads((ROOT / "skills/handoff/evals/evals.json").read_text())
+        ev = next(e for e in spec["evals"] if e["id"] == 20)
+        setup = "skills/handoff/evals/fixtures/eval-20-read-drift-commits-since/setup.py"
+        with tempfile.TemporaryDirectory() as d:
+            ws = Path(d)
+            eval_run.materialize(ev, "handoff", ws)
+            subprocess.run(["python3", str(ws / setup)], cwd=ws, check=True,
+                           capture_output=True, text=True)
+            subprocess.run(["python3", str(ws / setup)], cwd=ws, check=True,
+                           capture_output=True, text=True)
+            brief = ws / ".catalyst/handoffs/catalyst-read-drift.json"
+            subprocess.run(["python3", str(ROOT / "scripts/handoff-validate.py"), str(brief)],
+                           cwd=ws, check=True, capture_output=True, text=True)
+            result = subprocess.run(
+                ["python3", str(ROOT / "scripts/handoff-render.py"), "--file", str(brief),
+                 "--now", "2026-07-07T19:00:00Z"], cwd=ws,
+                check=True, capture_output=True, text=True)
+            self.assertIn("- Commits since brief written: 1\n", result.stdout)
+            self.assertNotIn("!!", result.stdout)
+
+
+class TestJevEvidence(unittest.TestCase):
+    def test_request_retains_failed_tool_output(self):
+        path = ROOT / "integrations/jev/verify-handoff/evals/prepare.py"
+        spec = importlib.util.spec_from_file_location("jev_evidence", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        event = {"type": "user", "message": {"content": [{
+            "type": "tool_result", "tool_use_id": "call1", "is_error": True,
+            "content": "fatal: unknown revision brief-base"}]}}
+        with tempfile.TemporaryDirectory() as d:
+            folder = Path(d)
+            thinking = {"type": "assistant", "message": {"content": [
+                {"type": "thinking", "thinking": "Not execution evidence"}]}}
+            (folder / "run.jsonl").write_text(json.dumps(thinking) + "\n" + json.dumps(event) + "\n")
+            (folder / "results.json").write_text(json.dumps({"meta": {}, "evals": {
+                "20": {"runs": [{"run": 0, "transcript_file": "run.jsonl", "files": {}}]}}}))
+            request = module.prepare(folder, {"id": 20, "prompt": "Check drift",
+                                              "assertions": ["A count was rendered"]}, 0)
+            evidence = json.loads(request["evidence"][0]["text"])
+            self.assertEqual(evidence["transcript"], [event])
+            self.assertIn("A count was rendered", request["claims"][0])
 
 
 class TestInfraFailure(unittest.TestCase):
