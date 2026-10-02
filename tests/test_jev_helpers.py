@@ -129,6 +129,56 @@ Ran `pytest tests/test_auth.py`:
         self.assertEqual(parsed["composite"], 0.85)
         self.assertEqual(len(parsed["unresolved_claims"]), 0)
 
+    def test_parse_gate_result_null_numeric_values(self):
+        result_with_nulls = {
+            "action": "auto",
+            "safe_to_apply": None,
+            "composite": None,
+            "scores": {"spec_match": None, "correctness": 1.9},
+            "claims": [{"claim": "tests pass", "verdict": "verified", "action": "auto"}]
+        }
+        parsed = jev_helpers.parse_gate_result(result_with_nulls)
+        self.assertEqual(parsed["safe_to_apply"], 0.0)
+        self.assertEqual(parsed["composite"], 0.0)
+        self.assertTrue(parsed["is_accepted"])
+
+    def test_prepare_task_gate_filters_metadata_bullets(self):
+        task_with_metadata = """# Task: test
+## Task
+Do work
+## Workspace
+- dir: /foo
+## Completion
+- **Status:** complete
+- **Workspace:** /worktree
+- **Changes:** edited file.py
+- [x] All unit tests pass
+- [x] Endpoints return 200
+"""
+        payload = jev_helpers.prepare_task_gate(task_with_metadata, "diff --git a/x b/x")
+        self.assertEqual(len(payload["claims"]), 2)
+        self.assertIn("All unit tests pass", payload["claims"])
+        self.assertIn("Endpoints return 200", payload["claims"])
+        self.assertFalse(any("Status" in c for c in payload["claims"]))
+
+    def test_prepare_task_gate_empty_diff_fallback(self):
+        payload = jev_helpers.prepare_task_gate(self.sample_task, "")
+        self.assertGreaterEqual(len(payload["diff"]), 1)
+        self.assertIn("No code diff", payload["diff"])
+
+    def test_format_gate_markdown_null_scores(self):
+        parsed = {
+            "action": "review",
+            "safe_to_apply": None,
+            "composite": None,
+            "scores": None,
+            "unresolved_claims": ["unverified claim"]
+        }
+        md = jev_helpers.format_gate_markdown(parsed)
+        self.assertIn("REVIEW", md)
+        self.assertIn("Safe to Apply: 0%", md)
+        self.assertIn("unverified claim", md)
+
 
 class TestJevHelpersDriftVerify(unittest.TestCase):
     def test_prepare_drift_verify_formats_claims_and_evidence(self):
@@ -210,20 +260,29 @@ class TestJevHelpersDriftVerify(unittest.TestCase):
         self.assertFalse(parsed["is_clean"])
         self.assertGreater(len(parsed["conflicts"]), 0)
 
-    def test_format_gate_markdown(self):
-        parsed = {
-            "action": "auto",
-            "safe_to_apply": 0.95,
-            "composite": 0.88,
-            "scores": {"spec_match": 1.9, "correctness": 1.8, "test_gap": 0.2, "blast_radius": 0.3},
-            "unresolved_claims": []
+    def test_parse_drift_result_full_mcp_response(self):
+        full_payload = {
+            "claims": [
+                "The command python3 -m unittest tests.test_handoff_render passed all 36 tests.",
+                "The entire Catalyst test suite was run and passed."
+            ],
+            "evidence": [{"id": "logs", "text": "OK"}],
+            "response": {
+                "tool": "jev_verify",
+                "results": [
+                    {"claim": "The command passed", "verdict": "verified", "action": "auto"},
+                    {"claim": "The entire suite passed", "verdict": "unsupported", "action": "auto", "probabilities": {"contradicts": 0.01}}
+                ]
+            }
         }
-        md = jev_helpers.format_gate_markdown(parsed)
-        self.assertIn("AUTO", md)
-        self.assertIn("Safe to Apply: 95%", md)
-        self.assertIn("Spec Match", md)
-        self.assertIn("All claims verified", md)
+        parsed = jev_helpers.parse_drift_result(full_payload)
+        self.assertTrue(parsed["is_clean"])
+        self.assertEqual(len(parsed["conflicts"]), 0)
+        self.assertEqual(len(parsed["verified"]), 1)
+        self.assertEqual(len(parsed["unverified"]), 1)
 
 
 if __name__ == "__main__":
     unittest.main()
+
+

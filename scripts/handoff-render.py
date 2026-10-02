@@ -379,7 +379,9 @@ def main(argv: list[str]) -> int:
         idx = rest.index("--drift-json")
         try:
             raw_drift = rest[idx + 1]
-            if Path(raw_drift).exists():
+            if raw_drift.strip().startswith(("{", "[")):
+                drift_data = json.loads(raw_drift)
+            elif Path(raw_drift).exists():
                 drift_data = json.loads(Path(raw_drift).read_text(encoding="utf-8"))
             else:
                 drift_data = json.loads(raw_drift)
@@ -469,8 +471,14 @@ def main(argv: list[str]) -> int:
         if not brief_sha or not head or not _jh:
             print(json.dumps({"error": "Cannot prepare drift verification: missing head_sha, git head, or jev_helpers"}), file=sys.stderr)
             return 1
+        if not sha_in_history:
+            print(json.dumps({"error": f"Cannot prepare drift verification: brief SHA {brief_sha} is not in current git history"}), file=sys.stderr)
+            return 1
         log_res = subprocess.run(["git", "log", "--oneline", f"{brief_sha}..HEAD"], cwd=cwd, capture_output=True, text=True)
         stat_res = subprocess.run(["git", "diff", "--stat", f"{brief_sha}..HEAD"], cwd=cwd, capture_output=True, text=True)
+        if log_res.returncode != 0 or stat_res.returncode != 0:
+            print(json.dumps({"error": f"Cannot prepare drift verification: git command failed for range {brief_sha}..HEAD"}), file=sys.stderr)
+            return 1
         decisions = (obj.get("state") or {}).get("decisions", [])
         next_check = (obj.get("state") or {}).get("next_acceptance_check", "")
         payload = _jh.prepare_drift_verify(brief_sha, head, decisions, next_check, log_res.stdout, stat_res.stdout)

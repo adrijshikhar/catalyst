@@ -33,14 +33,29 @@ def prepare_task_gate(
     # Extract claims from completion
     claims: list[str] = []
     if completion_text:
-        # Match markdown list items: "- [x] ...", "- ...", "* [x] ...", etc.
+        # Check if structured checklist items exist (- [x] or * [x])
+        checklist_items = []
+        other_items = []
         for line in completion_text.splitlines():
             line_str = line.strip()
-            m = re.match(r"^[-*]\s+(?:\[[ xX]\]\s+)?(.+)$", line_str)
-            if m:
-                claim_text = m.group(1).strip()
-                if claim_text and not claim_text.startswith("#"):
-                    claims.append(_truncate_text(claim_text, MAX_CLAIM_CHARS, ""))
+            # Match checklist bullet: - [x] or * [x]
+            m_box = re.match(r"^[-*]\s+\[[ xX]\]\s+(.+)$", line_str)
+            if m_box:
+                txt = m_box.group(1).strip()
+                if txt and not txt.startswith("#"):
+                    checklist_items.append(_truncate_text(txt, MAX_CLAIM_CHARS, ""))
+                continue
+
+            # Match regular bullet: - ... or * ...
+            m_bullet = re.match(r"^[-*]\s+(.+)$", line_str)
+            if m_bullet:
+                txt = m_bullet.group(1).strip()
+                # Ignore task-template metadata headers (Status:, Workspace:, Delivery:, etc.)
+                if not re.match(r"^\*\*(?:Status|Workspace|Changes|Checklist results|Verification|Delivery|Remaining issues|Integration):\*\*", txt, re.I):
+                    if txt and not txt.startswith("#"):
+                        other_items.append(_truncate_text(txt, MAX_CLAIM_CHARS, ""))
+
+        claims = checklist_items if checklist_items else other_items
 
     if not claims:
         # Fallback claim if no bullet points found
@@ -48,8 +63,10 @@ def prepare_task_gate(
 
     claims = claims[:MAX_CLAIMS_COUNT]
 
-    # Process and truncate diff
+    # Process and truncate diff; schema requires minLength: 1
     safe_diff = _truncate_text(git_diff, MAX_DIFF_CHARS, "\n[diff truncated]")
+    if not safe_diff.strip():
+        safe_diff = "No code diff (read-only task or no modified files)"
 
     # Extract verification evidence from markdown if not provided
     extracted_evidence_text = ""
@@ -96,12 +113,18 @@ def parse_gate_result(result: dict[str, Any]) -> dict[str, Any]:
     """Parse output from jev_gate tool."""
     action = str(result.get("action", "review"))
     review = result.get("review") if isinstance(result.get("review"), dict) else {}
-    safe_to_apply = float(result.get("safe_to_apply") if "safe_to_apply" in result else review.get("safe_to_apply", 0.0))
-    composite = float(result.get("composite") if "composite" in result else review.get("composite", 0.0))
+
+    raw_safe = result.get("safe_to_apply") if result.get("safe_to_apply") is not None else review.get("safe_to_apply", 0.0)
+    safe_to_apply = float(raw_safe or 0.0)
+
+    raw_comp = result.get("composite") if result.get("composite") is not None else review.get("composite", 0.0)
+    composite = float(raw_comp or 0.0)
+
     scores = result.get("scores") if isinstance(result.get("scores"), dict) else review.get("scores", {})
 
     verification = result.get("verification") if isinstance(result.get("verification"), dict) else {}
-    claims = result.get("claims") or verification.get("results") or result.get("results") or []
+    raw_claims = result.get("claims") or verification.get("results") or result.get("results") or []
+    claims = [c for c in raw_claims if isinstance(c, dict)]
 
     unresolved_claims: list[str] = []
     for c in claims:
@@ -171,7 +194,9 @@ def parse_drift_result(result: dict[str, Any]) -> dict[str, Any]:
     Distinguishes actual contradictions (drift conflicts) from unmentioned/unsupported
     decisions where commits simply did not touch that domain.
     """
-    claims = result.get("claims") or result.get("results") or []
+    resp = result.get("response") if isinstance(result.get("response"), dict) else result
+    raw_results = resp.get("results") or resp.get("claims") or []
+    claims = [c for c in raw_results if isinstance(c, dict)]
     conflicts: list[str] = []
     unverified: list[str] = []
     verified: list[str] = []
@@ -181,7 +206,8 @@ def parse_drift_result(result: dict[str, Any]) -> dict[str, Any]:
         action = str(c.get("action", "")).lower()
         claim_text = str(c.get("claim", ""))
         probs = c.get("probabilities") if isinstance(c.get("probabilities"), dict) else {}
-        contradicts_prob = float(probs.get("contradicts", 0.0))
+        raw_prob = probs.get("contradicts") if probs.get("contradicts") is not None else 0.0
+        contradicts_prob = float(raw_prob or 0.0)
 
         if verdict == "contradicted" or action == "escalate" or contradicts_prob >= 0.5:
             conflicts.append(f"{claim_text} ({verdict}/{action})")
@@ -213,9 +239,9 @@ def parse_drift_result(result: dict[str, Any]) -> dict[str, Any]:
 def format_gate_markdown(parsed: dict[str, Any]) -> str:
     """Format parsed gate result as a GitHub-ready markdown card."""
     action = str(parsed.get("action", "review")).upper()
-    safe_to_apply = float(parsed.get("safe_to_apply", 0.0))
-    composite = float(parsed.get("composite", 0.0))
-    scores = parsed.get("scores", {})
+    safe_to_apply = float(parsed.get("safe_to_apply") or 0.0)
+    composite = float(parsed.get("composite") or 0.0)
+    scores = parsed.get("scores") or {}
     unresolved = parsed.get("unresolved_claims", [])
 
     badge = "🟢 AUTO" if action == "AUTO" else ("🟡 REVIEW" if action == "REVIEW" else "🔴 ESCALATE")
@@ -236,7 +262,7 @@ def format_gate_markdown(parsed: dict[str, Any]) -> str:
     for key, label in rubric_names:
         val = scores.get(key)
         if isinstance(val, dict):
-            s_val = float(val.get("score", 0.0))
+            s_val = float(val.get("score") or 0.0)
         elif isinstance(val, (int, float)):
             s_val = float(val)
         else:
@@ -258,3 +284,28 @@ def format_gate_markdown(parsed: dict[str, Any]) -> str:
         lines.append("**All claims verified against evidence.**")
 
     return "\n".join(lines) + "\n"
+
+
+if __name__ == "__main__":
+    import json
+    import sys
+    from pathlib import Path
+
+    if len(sys.argv) < 2:
+        print("usage: jev_helpers.py prepare-gate <task.md> [diff.patch] | format-gate <result.json>", file=sys.stderr)
+        sys.exit(1)
+
+    cmd = sys.argv[1]
+    if cmd == "prepare-gate" and len(sys.argv) >= 3:
+        task_p = Path(sys.argv[2])
+        diff_text = Path(sys.argv[3]).read_text() if len(sys.argv) > 3 else ""
+        payload = prepare_task_gate(task_p.read_text(), diff_text)
+        print(json.dumps(payload, indent=2))
+    elif cmd == "format-gate" and len(sys.argv) >= 3:
+        data = json.loads(Path(sys.argv[2]).read_text())
+        parsed = parse_gate_result(data)
+        print(format_gate_markdown(parsed))
+    else:
+        print(f"usage: jev_helpers.py prepare-gate <task.md> [diff.patch] | format-gate <result.json>", file=sys.stderr)
+        sys.exit(1)
+
